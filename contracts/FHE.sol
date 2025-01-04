@@ -381,7 +381,7 @@ library Impl {
     }
 
     function square(uint8 returnType, uint256 input) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0));
+        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.mul, Common.createUint256Inputs(input, input), new uint256[](0));
     }
 
     /// @notice Generates a random value of a given type with the given seed, for the provided securityZone
