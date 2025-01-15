@@ -367,12 +367,12 @@ library Impl {
     }
 
     function sealOutput(uint256 value, bytes32 publicKey) internal returns (string memory) {
-        ITaskManager(TASK_MANAGER_ADDRESS).createSealOutputTask(value, publicKey);
+        ITaskManager(TASK_MANAGER_ADDRESS).createSealOutputTask(value, publicKey, msg.sender);
         return Common.bytesToHexString(abi.encodePacked(bytes32(value)));
     }
 
     function decrypt(uint256 input) internal returns (uint256) {
-        ITaskManager(TASK_MANAGER_ADDRESS).createDecryptTask(input);
+        ITaskManager(TASK_MANAGER_ADDRESS).createDecryptTask(input, msg.sender);
         return input;
     }
 

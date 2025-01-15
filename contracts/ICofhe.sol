@@ -39,14 +39,14 @@ enum FunctionId {
 interface ITaskManager {
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedInputs, uint256[] memory extraInputs) external returns (uint256);
 
-    function createDecryptTask(uint256 ctHash) external;
-    function createSealOutputTask(uint256 ctHash, bytes32 publicKey) external;
+    function createDecryptTask(uint256 ctHash, address requestor) external;
+    function createSealOutputTask(uint256 ctHash, bytes32 publicKey, address requestor) external;
     function verifyKey(uint256 ctHash, uint8 uintType, int32 securityZone, string memory signature, uint8 desiredType) external;
 }
 
 interface IAsyncFHEReceiver {
-    function handleDecryptResult(uint256 ctHash, uint256 result) external;
-    function handleSealOutputResult(uint256 ctHash, string memory result) external;
+    function handleDecryptResult(uint256 ctHash, uint256 result, address requestor) external;
+    function handleSealOutputResult(uint256 ctHash, string memory result, address requestor) external;
 }
 
 library Utils {
