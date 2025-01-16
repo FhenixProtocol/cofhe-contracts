@@ -30,7 +30,7 @@ import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 ```solidity
 pragma solidity ^0.8.20;
 
-import {FHE, euint8, inEuint8} from "@fhenixprotocol/contracts/FHE.sol";
+import {FHE, euint8, inEuint8} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract Example {
     
