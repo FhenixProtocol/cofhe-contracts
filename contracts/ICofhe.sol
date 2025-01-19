@@ -45,6 +45,7 @@ interface ITaskManager {
 
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
+    function allowTransient(uint256 ctHash, address account) external;
  }
 
 interface IAsyncFHEReceiver {
