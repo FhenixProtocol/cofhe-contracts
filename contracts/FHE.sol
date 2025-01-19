@@ -3331,6 +3331,165 @@ library FHE {
         uint256 ct = Impl.trivialEncrypt(uint256(uint160(value)), Utils.EADDRESS_TFHE, securityZone);
         return eaddress.wrap(ct);
     }
+    function allow(ebool ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), account);
+    }
+    
+    function allow(euint8 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), account);
+    }
+
+    function allow(euint16 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), account);
+    }
+
+    function allow(euint32 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), account);
+    }
+
+    function allow(euint64 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), account);
+    }
+
+    function allow(euint128 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), account);
+    }
+
+    function allow(euint256 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint256.unwrap(ctHash), account);
+    }
+
+    function allow(eaddress ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), account);
+    }
+
+    function isAllowed(ebool ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ebool.unwrap(ctHash), account);
+    }
+
+    function isAllowed(euint8 ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint8.unwrap(ctHash), account);
+    }
+
+    function isAllowed(euint16 ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint16.unwrap(ctHash), account);
+    }
+
+    function isAllowed(euint32 ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint32.unwrap(ctHash), account);
+    }
+
+    function isAllowed(euint64 ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint64.unwrap(ctHash), account);
+    }
+
+    function isAllowed(euint128 ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint128.unwrap(ctHash), account);
+    }
+
+    function isAllowed(euint256 ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint256.unwrap(ctHash), account);
+    }
+
+    function isAllowed(eaddress ctHash, address account) external returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(eaddress.unwrap(ctHash), account);
+    }
+
+    function allowThis(ebool ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), address(this));
+    }
+
+    function allowThis(euint8 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), address(this));
+    }
+
+    function allowThis(euint16 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), address(this));
+    }
+
+    function allowThis(euint32 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), address(this));
+    }
+
+    function allowThis(euint64 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), address(this));
+    }
+
+    function allowThis(euint128 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), address(this));
+    }
+
+    function allowThis(euint256 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint256.unwrap(ctHash), address(this));
+    }
+
+    function allowThis(eaddress ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), address(this));
+    }
+
+    function allowSender(ebool ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), msg.sender);
+    }
+
+    function allowSender(euint8 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), msg.sender);
+    }
+
+    function allowSender(euint16 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), msg.sender);
+    }
+
+    function allowSender(euint32 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), msg.sender);
+    }
+
+    function allowSender(euint64 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), msg.sender);
+    }
+
+    function allowSender(euint128 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), msg.sender);
+    }
+
+    function allowSender(euint256 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint256.unwrap(ctHash), msg.sender);
+    }
+
+    function allowSender(eaddress ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), msg.sender);
+    }
+
+    function allowTransient(ebool ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ebool.unwrap(ctHash), account);
+    }
+
+    function allowTransient(euint8 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint8.unwrap(ctHash), account);
+    }
+
+    function allowTransient(euint16 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint16.unwrap(ctHash), account);
+    }
+
+    function allowTransient(euint32 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint32.unwrap(ctHash), account);
+    }
+
+    function allowTransient(euint64 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint64.unwrap(ctHash), account);
+    }
+
+    function allowTransient(euint128 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint128.unwrap(ctHash), account);
+    }
+
+    function allowTransient(euint256 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint256.unwrap(ctHash), account);
+    }
+
+    function allowTransient(eaddress ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(eaddress.unwrap(ctHash), account);
+    }
 }
 // ********** BINDING DEFS ************* //
 
@@ -3415,6 +3574,21 @@ library BindingsEbool {
     }
     function decrypt(ebool value) internal returns (ebool) {
         return FHE.decrypt(value);
+    }
+    function allow(ebool ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(ebool ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(ebool ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(ebool ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(ebool ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
     }
 }
 
@@ -3643,6 +3817,21 @@ library BindingsEuint8 {
     function decrypt(euint8 value) internal returns (euint8) {
         return FHE.decrypt(value);
     }
+    function allow(euint8 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(euint8 ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(euint8 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(euint8 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(euint8 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+    }
 }
 
     using BindingsEuint16 for euint16 global;
@@ -3869,6 +4058,21 @@ library BindingsEuint16 {
     }
     function decrypt(euint16 value) internal returns (euint16) {
         return FHE.decrypt(value);
+    }
+    function allow(euint16 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(euint16 ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(euint16 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(euint16 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(euint16 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
     }
 }
 
@@ -4097,6 +4301,21 @@ library BindingsEuint32 {
     function decrypt(euint32 value) internal returns (euint32) {
         return FHE.decrypt(value);
     }
+    function allow(euint32 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(euint32 ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(euint32 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(euint32 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(euint32 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+    }
 }
 
     using BindingsEuint64 for euint64 global;
@@ -4306,6 +4525,21 @@ library BindingsEuint64 {
     function decrypt(euint64 value) internal returns (euint64) {
         return FHE.decrypt(value);
     }
+    function allow(euint64 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(euint64 ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(euint64 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(euint64 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(euint64 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+    }
 }
 
     using BindingsEuint128 for euint128 global;
@@ -4498,6 +4732,21 @@ library BindingsEuint128 {
     function decrypt(euint128 value) internal returns (euint128) {
         return FHE.decrypt(value);
     }
+    function allow(euint128 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(euint128 ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(euint128 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(euint128 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(euint128 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+    }
 }
 
     using BindingsEuint256 for euint256 global;
@@ -4550,6 +4799,21 @@ library BindingsEuint256 {
     function decrypt(euint256 value) internal returns (euint256) {
         return FHE.decrypt(value);
     }
+    function allow(euint256 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(euint256 ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(euint256 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(euint256 ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(euint256 ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+    }
 }
 
     using BindingsEaddress for eaddress global;
@@ -4601,5 +4865,20 @@ library BindingsEaddress {
     }
     function decrypt(eaddress value) internal returns (eaddress) {
         return FHE.decrypt(value);
+    }
+    function allow(eaddress ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+    }
+    function isAllowed(eaddress ctHash, address account) external returns (bool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+    }
+    function allowThis(eaddress ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+    }
+    function allowSender(eaddress ctHash) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+    }
+    function allowTransient(eaddress ctHash, address account) external {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
     }
 }
