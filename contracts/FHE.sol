@@ -3579,7 +3579,7 @@ library BindingsEbool {
         FHE.allow(ctHash, account);
     }
     function isAllowed(ebool ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(ebool ctHash) internal {
         FHE.allowThis(ctHash);
@@ -3821,7 +3821,7 @@ library BindingsEuint8 {
         FHE.allow(ctHash, account);
     }
     function isAllowed(euint8 ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint8 ctHash) internal {
         FHE.allowThis(ctHash);
@@ -4063,7 +4063,7 @@ library BindingsEuint16 {
         FHE.allow(ctHash, account);
     }
     function isAllowed(euint16 ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint16 ctHash) internal {
         FHE.allowThis(ctHash);
@@ -4305,7 +4305,7 @@ library BindingsEuint32 {
         FHE.allow(ctHash, account);
     }
     function isAllowed(euint32 ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint32 ctHash) internal {
         FHE.allowThis(ctHash);
@@ -4529,7 +4529,7 @@ library BindingsEuint64 {
         FHE.allow(ctHash, account);
     }
     function isAllowed(euint64 ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint64 ctHash) internal {
         FHE.allowThis(ctHash);
@@ -4736,7 +4736,7 @@ library BindingsEuint128 {
         FHE.allow(ctHash, account);
     }
     function isAllowed(euint128 ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint128 ctHash) internal {
         FHE.allowThis(ctHash);
@@ -4803,7 +4803,7 @@ library BindingsEuint256 {
         FHE.allow(ctHash, account);
     }
     function isAllowed(euint256 ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint256 ctHash) internal {
         FHE.allowThis(ctHash);
@@ -4870,7 +4870,7 @@ library BindingsEaddress {
         FHE.allow(ctHash, account);
     }
     function isAllowed(eaddress ctHash, address account) internal returns (bool) {
-        FHE.isAllowed(ctHash, account);
+        return FHE.isAllowed(ctHash, account);
     }
     function allowThis(eaddress ctHash) internal {
         FHE.allowThis(ctHash);
