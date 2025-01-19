@@ -3493,7 +3493,7 @@ library FHE {
 }
 // ********** BINDING DEFS ************* //
 
-    using BindingsEbool for ebool global;
+using BindingsEbool for ebool global;
 library BindingsEbool {
 
     /// @notice Performs the eq operation
@@ -3576,23 +3576,23 @@ library BindingsEbool {
         return FHE.decrypt(value);
     }
     function allow(ebool ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(ebool ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(ebool ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(ebool ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(ebool ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
 
-    using BindingsEuint8 for euint8 global;
+using BindingsEuint8 for euint8 global;
 library BindingsEuint8 {
 
     /// @notice Performs the add operation
@@ -3818,23 +3818,23 @@ library BindingsEuint8 {
         return FHE.decrypt(value);
     }
     function allow(euint8 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(euint8 ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint8 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(euint8 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(euint8 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
 
-    using BindingsEuint16 for euint16 global;
+using BindingsEuint16 for euint16 global;
 library BindingsEuint16 {
 
     /// @notice Performs the add operation
@@ -4060,23 +4060,23 @@ library BindingsEuint16 {
         return FHE.decrypt(value);
     }
     function allow(euint16 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(euint16 ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint16 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(euint16 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(euint16 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
 
-    using BindingsEuint32 for euint32 global;
+using BindingsEuint32 for euint32 global;
 library BindingsEuint32 {
 
     /// @notice Performs the add operation
@@ -4302,23 +4302,23 @@ library BindingsEuint32 {
         return FHE.decrypt(value);
     }
     function allow(euint32 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(euint32 ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint32 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(euint32 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(euint32 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
 
-    using BindingsEuint64 for euint64 global;
+using BindingsEuint64 for euint64 global;
 library BindingsEuint64 {
 
     /// @notice Performs the add operation
@@ -4526,23 +4526,23 @@ library BindingsEuint64 {
         return FHE.decrypt(value);
     }
     function allow(euint64 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(euint64 ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint64 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(euint64 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(euint64 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
 
-    using BindingsEuint128 for euint128 global;
+using BindingsEuint128 for euint128 global;
 library BindingsEuint128 {
 
     /// @notice Performs the add operation
@@ -4733,23 +4733,23 @@ library BindingsEuint128 {
         return FHE.decrypt(value);
     }
     function allow(euint128 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(euint128 ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint128 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(euint128 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(euint128 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
 
-    using BindingsEuint256 for euint256 global;
+using BindingsEuint256 for euint256 global;
 library BindingsEuint256 {
 
     /// @notice Performs the eq operation
@@ -4800,23 +4800,23 @@ library BindingsEuint256 {
         return FHE.decrypt(value);
     }
     function allow(euint256 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(euint256 ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(euint256 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(euint256 ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(euint256 ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
 
-    using BindingsEaddress for eaddress global;
+using BindingsEaddress for eaddress global;
 library BindingsEaddress {
 
     /// @notice Performs the eq operation
@@ -4867,18 +4867,18 @@ library BindingsEaddress {
         return FHE.decrypt(value);
     }
     function allow(eaddress ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ctHash, account);
+        FHE.allow(ctHash, account);
     }
     function isAllowed(eaddress ctHash, address account) external returns (bool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ctHash, account);
+        FHE.isAllowed(ctHash, account);
     }
     function allowThis(eaddress ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowThis(ctHash);
+        FHE.allowThis(ctHash);
     }
     function allowSender(eaddress ctHash) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowSender(ctHash);
+        FHE.allowSender(ctHash);
     }
     function allowTransient(eaddress ctHash, address account) external {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ctHash, account);
+        FHE.allowTransient(ctHash, account);
     }
 }
