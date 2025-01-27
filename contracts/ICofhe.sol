@@ -57,14 +57,14 @@ library Utils {
     // Values used to communicate types to the runtime.
     // Must match values defined in warp-drive protobufs for everything to
     // make sense
-    uint8 internal constant EUINT8_TFHE = 0;
-    uint8 internal constant EUINT16_TFHE = 1;
-    uint8 internal constant EUINT32_TFHE = 2;
-    uint8 internal constant EUINT64_TFHE = 3;
-    uint8 internal constant EUINT128_TFHE = 4;
-    uint8 internal constant EUINT256_TFHE = 5;
-    uint8 internal constant EADDRESS_TFHE = 12;
-    uint8 internal constant EBOOL_TFHE = 13;
+    uint8 internal constant EUINT8_TFHE = 2;
+    uint8 internal constant EUINT16_TFHE = 3;
+    uint8 internal constant EUINT32_TFHE = 4;
+    uint8 internal constant EUINT64_TFHE = 5;
+    uint8 internal constant EUINT128_TFHE = 6;
+    uint8 internal constant EUINT256_TFHE = 8;
+    uint8 internal constant EADDRESS_TFHE = 7;
+    uint8 internal constant EBOOL_TFHE = 0;
 
     function functionIdToString(FunctionId _functionId) internal pure returns (string memory) {
         if (_functionId == FunctionId.cast) return "cast";
