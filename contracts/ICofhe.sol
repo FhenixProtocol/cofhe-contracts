@@ -49,8 +49,8 @@ interface ITaskManager {
  }
 
 interface IAsyncFHEReceiver {
-    function handleDecryptResult(uint256 ctHash, uint256 result, address requestor) external;
-    function handleSealOutputResult(uint256 ctHash, string memory result, address requestor) external;
+    function handleDecryptResult(uint256 ctHash, uint256 result, address requestor, string memory transactionHash, uint256 chainId) external;
+    function handleSealOutputResult(uint256 ctHash, string memory result, address requestor, string memory transactionHash, uint256 chainId) external;
 }
 
 library Utils {
