@@ -40,7 +40,6 @@ interface ITaskManager {
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedInputs, uint256[] memory extraInputs) external returns (uint256);
 
     function createDecryptTask(uint256 ctHash, address requestor) external;
-    function createSealOutputTask(uint256 ctHash, bytes32 publicKey, address requestor) external;
     function verifyKey(uint256 ctHash, uint8 uintType, int32 securityZone, string memory signature, uint8 desiredType) external;
 
     function allow(uint256 ctHash, address account) external;
