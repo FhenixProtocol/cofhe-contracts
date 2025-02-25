@@ -45,11 +45,8 @@ interface ITaskManager {
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
     function allowTransient(uint256 ctHash, address account) external;
- }
-
-interface IAsyncFHEReceiver {
-    function handleDecryptResult(uint256 ctHash, uint256 result, address requestor) external;
-    function handleSealOutputResult(uint256 ctHash, string memory result, address requestor) external;
+    function getDecryptResultSafe(uint256 ctHash) external returns (bool, uint256);
+    function getDecryptResult(uint256 ctHash) external returns (uint256);
 }
 
 library Utils {

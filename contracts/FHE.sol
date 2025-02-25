@@ -342,6 +342,14 @@ library Impl {
         return input;
     }
 
+    function getDecryptResult(uint256 input) internal view returns (uint256) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResult(input);
+    }
+
+    function getDecryptResultSafe(uint256 input) internal view returns (uint256 result, bool decrypted) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResultSafe(input);
+    }
+
     function not(uint8 returnType, uint256 input) internal returns (uint256) {
         return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0));
     }
@@ -2490,6 +2498,169 @@ library FHE {
         Impl.decrypt(eaddress.unwrap(input1));
     }
 
+    /// @notice Gets the decrypted value from a previously decrypted ebool ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The ebool ciphertext to get the decrypted value from
+    /// @return The decrypted boolean value
+    function getDecryptResult(ebool input1) internal view returns (bool) {
+        uint256 result = Impl.getDecryptResult(ebool.unwrap(input1));
+        return result != 0;
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted euint8 ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The euint8 ciphertext to get the decrypted value from
+    /// @return The decrypted uint8 value
+    function getDecryptResult(euint8 input1) internal view returns (uint8) {
+        return uint8(Impl.getDecryptResult(euint8.unwrap(input1)));
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted euint16 ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The euint16 ciphertext to get the decrypted value from
+    /// @return The decrypted uint16 value
+    function getDecryptResult(euint16 input1) internal view returns (uint16) {
+        return uint16(Impl.getDecryptResult(euint16.unwrap(input1)));
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted euint32 ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The euint32 ciphertext to get the decrypted value from
+    /// @return The decrypted uint32 value
+    function getDecryptResult(euint32 input1) internal view returns (uint32) {
+        return uint32(Impl.getDecryptResult(euint32.unwrap(input1)));
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted euint64 ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The euint64 ciphertext to get the decrypted value from
+    /// @return The decrypted uint64 value
+    function getDecryptResult(euint64 input1) internal view returns (uint64) {
+        return uint64(Impl.getDecryptResult(euint64.unwrap(input1)));
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted euint128 ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The euint128 ciphertext to get the decrypted value from
+    /// @return The decrypted uint128 value
+    function getDecryptResult(euint128 input1) internal view returns (uint128) {
+        return uint128(Impl.getDecryptResult(euint128.unwrap(input1)));
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted euint256 ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The euint256 ciphertext to get the decrypted value from
+    /// @return The decrypted uint256 value
+    function getDecryptResult(euint256 input1) internal view returns (uint256) {
+        return uint256(Impl.getDecryptResult(euint256.unwrap(input1)));
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted eaddress ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The eaddress ciphertext to get the decrypted value from
+    /// @return The decrypted address value
+    function getDecryptResult(eaddress input1) internal view returns (address) {
+        return address(uint160(Impl.getDecryptResult(eaddress.unwrap(input1))));
+    }
+
+    /// @notice Gets the decrypted value from a previously decrypted raw ciphertext
+    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @param input1 The raw ciphertext to get the decrypted value from
+    /// @return The decrypted uint256 value
+    function getDecryptResult(uint256 input1) internal view returns (uint256) {
+        return Impl.getDecryptResult(input1);
+    }
+
+    /// @notice Safely gets the decrypted value from an ebool ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The ebool ciphertext to get the decrypted value from
+    /// @return result The decrypted boolean value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(ebool input1) internal view returns (bool result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(ebool.unwrap(input1));
+        return (_result != 0, _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from a euint8 ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The euint8 ciphertext to get the decrypted value from
+    /// @return result The decrypted uint8 value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(euint8 input1) internal view returns (uint8 result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(euint8.unwrap(input1));
+        return (uint8(_result), _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from a euint16 ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The euint16 ciphertext to get the decrypted value from
+    /// @return result The decrypted uint16 value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(euint16 input1) internal view returns (uint16 result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(euint16.unwrap(input1));
+        return (uint16(_result), _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from a euint32 ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The euint32 ciphertext to get the decrypted value from
+    /// @return result The decrypted uint32 value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(euint32 input1) internal view returns (uint32 result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(euint32.unwrap(input1));
+        return (uint32(_result), _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from a euint64 ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The euint64 ciphertext to get the decrypted value from
+    /// @return result The decrypted uint64 value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(euint64 input1) internal view returns (uint64 result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(euint64.unwrap(input1));
+        return (uint64(_result), _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from a euint128 ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The euint128 ciphertext to get the decrypted value from
+    /// @return result The decrypted uint128 value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(euint128 input1) internal view returns (uint128 result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(euint128.unwrap(input1));
+        return (uint128(_result), _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from a euint256 ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The euint256 ciphertext to get the decrypted value from
+    /// @return result The decrypted uint256 value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(euint256 input1) internal view returns (uint256 result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(euint256.unwrap(input1));
+        return (uint256(_result), _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from an eaddress ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The eaddress ciphertext to get the decrypted value from
+    /// @return result The decrypted address value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(eaddress input1) internal view returns (address result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(eaddress.unwrap(input1));
+        return (address(uint160(_result)), _decrypted);
+    }
+
+    /// @notice Safely gets the decrypted value from a raw ciphertext
+    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @param input1 The raw ciphertext to get the decrypted value from
+    /// @return result The decrypted uint256 value
+    /// @return decrypted Flag indicating if the value was successfully decrypted
+    function getDecryptResultSafe(uint256 input1) internal view returns (uint256 result, bool decrypted) {
+        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(input1);
+        return (_result, _decrypted);
+    }
+
     /// @notice Performs a multiplexer operation between two ebool values based on a selector
     /// @dev If input1 is true, returns input2, otherwise returns input3. All inputs are initialized to defaults if not set.
     /// @param input1 The selector of type ebool
@@ -3593,6 +3764,8 @@ library FHE {
     function allowTransient(eaddress ctHash, address account) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(eaddress.unwrap(ctHash), account);
     }
+
+
 }
 // ********** BINDING DEFS ************* //
 
