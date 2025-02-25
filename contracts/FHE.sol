@@ -2425,7 +2425,7 @@ library FHE {
             input1 = asEbool(false);
         }
 
-        return ebool.wrap(Impl.decrypt(ebool.unwrap(input1)));
+        ebool.wrap(Impl.decrypt(ebool.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2435,7 +2435,7 @@ library FHE {
             input1 = asEuint8(0);
         }
 
-        return euint8.wrap(Impl.decrypt(euint8.unwrap(input1)));
+        euint8.wrap(Impl.decrypt(euint8.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2445,7 +2445,7 @@ library FHE {
             input1 = asEuint16(0);
         }
 
-        return euint16.wrap(Impl.decrypt(euint16.unwrap(input1)));
+        euint16.wrap(Impl.decrypt(euint16.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2455,7 +2455,7 @@ library FHE {
             input1 = asEuint32(0);
         }
 
-        return euint32.wrap(Impl.decrypt(euint32.unwrap(input1)));
+        euint32.wrap(Impl.decrypt(euint32.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2465,7 +2465,7 @@ library FHE {
             input1 = asEuint64(0);
         }
 
-        return euint64.wrap(Impl.decrypt(euint64.unwrap(input1)));
+        euint64.wrap(Impl.decrypt(euint64.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2475,7 +2475,7 @@ library FHE {
             input1 = asEuint128(0);
         }
 
-        return euint128.wrap(Impl.decrypt(euint128.unwrap(input1)));
+        euint128.wrap(Impl.decrypt(euint128.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2485,7 +2485,7 @@ library FHE {
             input1 = asEuint256(0);
         }
 
-        return euint256.wrap(Impl.decrypt(euint256.unwrap(input1)));
+        euint256.wrap(Impl.decrypt(euint256.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -3842,8 +3842,8 @@ library BindingsEbool {
     function toU256(ebool value) internal returns (euint256) {
         return FHE.asEuint256(value);
     }
-    function decrypt(ebool value) internal returns (ebool) {
-        return FHE.decrypt(value);
+    function decrypt(ebool value) internal {
+        FHE.decrypt(value);
     }
     function allow(ebool ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -4078,8 +4078,8 @@ library BindingsEuint8 {
     function toU256(euint8 value) internal returns (euint256) {
         return FHE.asEuint256(value);
     }
-    function decrypt(euint8 value) internal returns (euint8) {
-        return FHE.decrypt(value);
+    function decrypt(euint8 value) internal {
+        FHE.decrypt(value);
     }
     function allow(euint8 ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -4314,8 +4314,8 @@ library BindingsEuint16 {
     function toU256(euint16 value) internal returns (euint256) {
         return FHE.asEuint256(value);
     }
-    function decrypt(euint16 value) internal returns (euint16) {
-        return FHE.decrypt(value);
+    function decrypt(euint16 value) internal {
+        FHE.decrypt(value);
     }
     function allow(euint16 ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -4550,8 +4550,8 @@ library BindingsEuint32 {
     function toU256(euint32 value) internal returns (euint256) {
         return FHE.asEuint256(value);
     }
-    function decrypt(euint32 value) internal returns (euint32) {
-        return FHE.decrypt(value);
+    function decrypt(euint32 value) internal {
+        FHE.decrypt(value);
     }
     function allow(euint32 ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -4768,8 +4768,8 @@ library BindingsEuint64 {
     function toU256(euint64 value) internal returns (euint256) {
         return FHE.asEuint256(value);
     }
-    function decrypt(euint64 value) internal returns (euint64) {
-        return FHE.decrypt(value);
+    function decrypt(euint64 value) internal {
+        FHE.decrypt(value);
     }
     function allow(euint64 ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -4969,8 +4969,8 @@ library BindingsEuint128 {
     function toU256(euint128 value) internal returns (euint256) {
         return FHE.asEuint256(value);
     }
-    function decrypt(euint128 value) internal returns (euint128) {
-        return FHE.decrypt(value);
+    function decrypt(euint128 value) internal {
+        FHE.decrypt(value);
     }
     function allow(euint128 ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -5030,8 +5030,8 @@ library BindingsEuint256 {
     function toEaddress(euint256 value) internal returns (eaddress) {
         return FHE.asEaddress(value);
     }
-    function decrypt(euint256 value) internal returns (euint256) {
-        return FHE.decrypt(value);
+    function decrypt(euint256 value) internal {
+        FHE.decrypt(value);
     }
     function allow(euint256 ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -5091,8 +5091,8 @@ library BindingsEaddress {
     function toU256(eaddress value) internal returns (euint256) {
         return FHE.asEuint256(value);
     }
-    function decrypt(eaddress value) internal returns (eaddress) {
-        return FHE.decrypt(value);
+    function decrypt(eaddress value) internal {
+        FHE.decrypt(value);
     }
     function allow(eaddress ctHash, address account) internal {
         FHE.allow(ctHash, account);
