@@ -2499,7 +2499,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted ebool ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The ebool ciphertext to get the decrypted value from
     /// @return The decrypted boolean value
     function getDecryptResult(ebool input1) internal view returns (bool) {
@@ -2508,7 +2508,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted euint8 ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The euint8 ciphertext to get the decrypted value from
     /// @return The decrypted uint8 value
     function getDecryptResult(euint8 input1) internal view returns (uint8) {
@@ -2516,7 +2516,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted euint16 ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The euint16 ciphertext to get the decrypted value from
     /// @return The decrypted uint16 value
     function getDecryptResult(euint16 input1) internal view returns (uint16) {
@@ -2524,7 +2524,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted euint32 ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The euint32 ciphertext to get the decrypted value from
     /// @return The decrypted uint32 value
     function getDecryptResult(euint32 input1) internal view returns (uint32) {
@@ -2532,7 +2532,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted euint64 ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The euint64 ciphertext to get the decrypted value from
     /// @return The decrypted uint64 value
     function getDecryptResult(euint64 input1) internal view returns (uint64) {
@@ -2540,7 +2540,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted euint128 ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The euint128 ciphertext to get the decrypted value from
     /// @return The decrypted uint128 value
     function getDecryptResult(euint128 input1) internal view returns (uint128) {
@@ -2548,7 +2548,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted euint256 ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The euint256 ciphertext to get the decrypted value from
     /// @return The decrypted uint256 value
     function getDecryptResult(euint256 input1) internal view returns (uint256) {
@@ -2556,7 +2556,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted eaddress ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The eaddress ciphertext to get the decrypted value from
     /// @return The decrypted address value
     function getDecryptResult(eaddress input1) internal view returns (address) {
@@ -2564,7 +2564,7 @@ library FHE {
     }
 
     /// @notice Gets the decrypted value from a previously decrypted raw ciphertext
-    /// @dev This function assumes the ciphertext has already been decrypted. Use getDecryptResultSafe for a safer alternative
+    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The raw ciphertext to get the decrypted value from
     /// @return The decrypted uint256 value
     function getDecryptResult(uint256 input1) internal view returns (uint256) {
@@ -2572,7 +2572,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from an ebool ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The ebool ciphertext to get the decrypted value from
     /// @return result The decrypted boolean value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2582,7 +2582,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from a euint8 ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The euint8 ciphertext to get the decrypted value from
     /// @return result The decrypted uint8 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2592,7 +2592,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from a euint16 ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The euint16 ciphertext to get the decrypted value from
     /// @return result The decrypted uint16 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2602,7 +2602,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from a euint32 ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The euint32 ciphertext to get the decrypted value from
     /// @return result The decrypted uint32 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2612,7 +2612,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from a euint64 ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The euint64 ciphertext to get the decrypted value from
     /// @return result The decrypted uint64 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2622,7 +2622,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from a euint128 ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The euint128 ciphertext to get the decrypted value from
     /// @return result The decrypted uint128 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2632,7 +2632,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from a euint256 ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The euint256 ciphertext to get the decrypted value from
     /// @return result The decrypted uint256 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2642,7 +2642,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from an eaddress ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The eaddress ciphertext to get the decrypted value from
     /// @return result The decrypted address value
     /// @return decrypted Flag indicating if the value was successfully decrypted
@@ -2652,7 +2652,7 @@ library FHE {
     }
 
     /// @notice Safely gets the decrypted value from a raw ciphertext
-    /// @dev Returns both the decrypted value and a flag indicating if decryption was successful
+    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
     /// @param input1 The raw ciphertext to get the decrypted value from
     /// @return result The decrypted uint256 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
