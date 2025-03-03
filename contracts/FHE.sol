@@ -3,8 +3,8 @@
 
 pragma solidity >=0.8.19 <0.9.0;
 
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "./ICofhe.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {FunctionId, ITaskManager, Utils, EncryptedInput, InEbool, InEuint8, InEuint16, InEuint32, InEuint64, InEuint128, InEuint256, InEaddress} from "./ICofhe.sol";
 
 type ebool is uint256;
 type euint8 is uint256;
@@ -15,62 +15,6 @@ type euint128 is uint256;
 type euint256 is uint256;
 type eaddress is uint256;
 
-struct inEbool {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
-struct inEuint8 {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
-struct inEuint16 {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
-struct inEuint32 {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
-struct inEuint64 {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
-struct inEuint128 {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
-struct inEuint256 {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
-struct inEaddress {
-    int32           securityZone;
-    uint256         hash;
-    uint8           utype;
-    string          signature;
-}
-
 // ================================
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
 // TODO : CHANGE ME AFTER DEPLOYING
@@ -80,147 +24,17 @@ struct inEaddress {
 address constant TASK_MANAGER_ADDRESS = 0xCC0E232aCeb34eC641cDA6A0EeAD161924cdC7f4;
 
 library Common {
+    error InvalidHexCharacter(bytes1 char);
+    error SecurityZoneOutOfBounds(int32 value);
+
     // Default value for temp hash calculation in unary operations
     string private constant DEFAULT_VALUE = "0";
 
-    function bigIntToBool(uint256 i) internal pure returns (bool) {
-        return (i > 0);
-    }
-
-    function bigIntToUint8(uint256 i) internal pure returns (uint8) {
-        return uint8(i);
-    }
-
-    function bigIntToUint16(uint256 i) internal pure returns (uint16) {
-        return uint16(i);
-    }
-
-    function bigIntToUint32(uint256 i) internal pure returns (uint32) {
-        return uint32(i);
-    }
-
-    function bigIntToUint64(uint256 i) internal pure returns (uint64) {
-        return uint64(i);
-    }
-
-    function bigIntToUint128(uint256 i) internal pure returns (uint128) {
-        return uint128(i);
-    }
-
-    function bigIntToUint256(uint256 i) internal pure returns (uint256) {
-        return i;
-    }
-
-    function bigIntToAddress(uint256 i) internal pure returns (address) {
-        return address(uint160(i));
-    }
-
-    function toBytes(uint256 x) internal pure returns (bytes memory b) {
-        b = new bytes(32);
-        assembly { mstore(add(b, 32), x) }
-    }
-
-    function bytesToUint256(bytes memory b) internal pure returns (uint256) {
-        require(b.length == 32, string(abi.encodePacked("Input bytes length must be 32, but got ", Strings.toString(b.length))));
-
-        uint256 result;
-        assembly {
-            result := mload(add(b, 32))
-        }
-        return result;
-    }
-
-    function hexCharToUint8(bytes1 char) internal pure returns (uint8) {
-        if (char >= "0" && char <= "9") {
-            return uint8(char) - uint8(bytes1("0"));
-        } else if (char >= "a" && char <= "f") {
-            return uint8(char) - uint8(bytes1("a")) + 10;
-        } else if (char >= "A" && char <= "F") {
-            return uint8(char) - uint8(bytes1("A")) + 10;
-        } else {
-            revert("Invalid hex character");
-        }
-    }
-
-    function hexStringToUint(string memory hexString) internal pure returns (uint8) {
-        require(bytes(hexString).length == 2, "Invalid hex string length");
-
-        uint8 value = 0;
-        for (uint8 i = 0; i < 2; i++) {
-            value = value * 16 + hexCharToUint8(bytes(hexString)[i]);
-        }
-
-        return value;
-    }
-
-    function hexStringToBytes32(string memory hexString) internal pure returns (bytes memory) {
-        bytes memory hexBytes = bytes(hexString);
-        // Ensure the string has the correct length (64 characters for 32 bytes)
-        require(hexBytes.length == 64, "Invalid hex string length");
-
-        // Iterate every 2 bytes in string, consider them as 1 byte
-        bytes memory bb = new bytes(32);
-        string memory l = "";
-        for (uint i = 0; i < 32; i++) {
-            l = string(abi.encodePacked("", hexBytes[i * 2], hexBytes[i * 2 + 1]));
-            bb[i] = bytes1(hexStringToUint(l));
-        }
-
-        return bb;
-    }
-
-    function bytesArrayToString(bytes memory a) internal pure returns (string memory) {
-        string memory b = "[";
-        for (uint i = 0; i < a.length; i++) {
-            b = string(abi.encodePacked(b, Strings.toHexString(uint8(a[i])), " "));
-        }
-
-        b = string(abi.encodePacked(b, "]"));
-        return b;
-    }
-
-    function functionCodeToBytes1(string memory functionCode) internal pure returns (bytes memory) {
-        // Convert the hex string to bytes
-        bytes memory result = new bytes(1);
-        assembly {
-            result := mload(add(functionCode, 1)) // Load the bytes directly from memory
-        }
-
-        return result;
-    }
-
-    function bytesToHexString(bytes memory buffer) internal pure returns (string memory) {
-        // Each byte takes 2 characters
-        bytes memory hexChars = new bytes(buffer.length * 2);
-
-        for(uint i = 0; i < buffer.length; i++) {
-            uint8 value = uint8(buffer[i]);
-            hexChars[i * 2] = byteToChar(value / 16);
-            hexChars[i * 2 + 1] = byteToChar(value % 16);
-        }
-
-        return string(hexChars);
-    }
-
-    // Helper function for bytesToHexString
-    function byteToChar(uint8 value) internal pure returns (bytes1) {
-        if (value < 10) {
-            return bytes1(uint8(48 + value)); // 0-9
-        } else {
-            return bytes1(uint8(87 + value)); // a-f
-        }
-    }
-
-    function uint256ToBytes32(uint256 value) internal pure returns (bytes memory) {
-        bytes memory result = new bytes(32);
-        assembly {
-            mstore(add(result, 32), value)
-        }
-        return result;
-    }
-
     function convertInt32ToUint256(int32 value) internal pure returns (uint256) {
-        require(value >= 0, "Value must be non-negative");
+        if (value < 0) {
+            revert SecurityZoneOutOfBounds(value);
+        }
+        
         return uint256(uint32(value));
     }
 
@@ -265,34 +79,6 @@ library Common {
 
     function isInitialized(eaddress v) internal pure returns (bool) {
         return isInitialized(eaddress.unwrap(v));
-    }
-
-
-    function getValue(bytes memory a) internal pure returns (uint256 value) {
-        assembly {
-            value := mload(add(a, 0x20))
-        }
-    }
-
-    function createHashInput(uint256 input1) internal pure returns (uint256[] memory) {
-        uint256[] memory inputs = new uint256[](1);
-        inputs[0] = input1;
-        return inputs;
-    }
-
-    function createHashInput(uint256 input1, uint256 input2) internal pure returns (uint256[] memory) {
-        uint256[] memory inputs = new uint256[](2);
-        inputs[0] = input1;
-        inputs[1] = input2;
-        return inputs;
-    }
-
-    function createHashInput(uint256 input1, uint256 input2, uint256 input3) internal pure returns (uint256[] memory) {
-        uint256[] memory inputs = new uint256[](3);
-        inputs[0] = input1;
-        inputs[1] = input2;
-        inputs[2] = input3;
-        return inputs;
     }
 
     function createUint256Inputs(uint256 input1) internal pure returns (uint256[] memory) {
@@ -358,6 +144,10 @@ library Impl {
         return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0));
     }
 
+    function verifyInput(EncryptedInput memory input) internal pure returns (uint256) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input);
+    }
+
     /// @notice Generates a random value of a given type with the given seed, for the provided securityZone
     /// @dev Calls the desired function
     /// @param uintType the type of the random value to generate
@@ -385,6 +175,8 @@ library Impl {
 }
 
 library FHE {
+
+    error InvalidEncryptedInput(uint8 got, uint8 expected);
     /// @notice Perform the addition operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted addition
     /// @param lhs input of type euint8
@@ -3080,72 +2872,111 @@ library FHE {
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An ebool containing the verified encrypted value
-    function asEbool(inEbool memory value) internal returns (ebool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EBOOL_TFHE);
-        return ebool.wrap(value.hash);
+    function asEbool(InEbool memory value) internal returns (ebool) {
+        uint8 expectedUtype = Utils.EBOOL_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return ebool.wrap(Impl.verifyInput(Utils.inputFromEbool(value)));
     }
 
-    /// @notice Verifies and converts an inEuint8 input to an euint8 encrypted type
+    /// @notice Verifies and converts an InEuint8 input to an euint8 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint8 containing the verified encrypted value
-    function asEuint8(inEuint8 memory value) internal returns (euint8) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EUINT8_TFHE);
-        return euint8.wrap(value.hash);
+    function asEuint8(InEuint8 memory value) internal returns (euint8) {
+        uint8 expectedUtype = Utils.EUINT8_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+
+        return euint8.wrap(Impl.verifyInput(Utils.inputFromEuint8(value)));
     }
 
-    /// @notice Verifies and converts an inEuint16 input to an euint16 encrypted type
+    /// @notice Verifies and converts an InEuint16 input to an euint16 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint16 containing the verified encrypted value
-    function asEuint16(inEuint16 memory value) internal returns (euint16) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EUINT16_TFHE);
-        return euint16.wrap(value.hash);
+    function asEuint16(InEuint16 memory value) internal returns (euint16) {
+        uint8 expectedUtype = Utils.EUINT16_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+
+        return euint16.wrap(Impl.verifyInput(Utils.inputFromEuint16(value)));
     }
 
-    /// @notice Verifies and converts an inEuint32 input to an euint32 encrypted type
+    /// @notice Verifies and converts an InEuint32 input to an euint32 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint32 containing the verified encrypted value
-    function asEuint32(inEuint32 memory value) internal returns (euint32) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EUINT32_TFHE);
-        return euint32.wrap(value.hash);
+    function asEuint32(InEuint32 memory value) internal returns (euint32) {
+        uint8 expectedUtype = Utils.EUINT32_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+
+        return euint32.wrap(Impl.verifyInput(Utils.inputFromEuint32(value)));
     }
 
-    /// @notice Verifies and converts an inEuint64 input to an euint64 encrypted type
+    /// @notice Verifies and converts an InEuint64 input to an euint64 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint64 containing the verified encrypted value
-    function asEuint64(inEuint64 memory value) internal returns (euint64) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EUINT64_TFHE);
-        return euint64.wrap(value.hash);
+    function asEuint64(InEuint64 memory value) internal returns (euint64) {
+        uint8 expectedUtype = Utils.EUINT64_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+
+        return euint64.wrap(Impl.verifyInput(Utils.inputFromEuint64(value)));
     }
 
-    /// @notice Verifies and converts an inEuint128 input to an euint128 encrypted type
+    /// @notice Verifies and converts an InEuint128 input to an euint128 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint128 containing the verified encrypted value
-    function asEuint128(inEuint128 memory value) internal returns (euint128) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EUINT128_TFHE);
-        return euint128.wrap(value.hash);
+    function asEuint128(InEuint128 memory value) internal returns (euint128) {
+        uint8 expectedUtype = Utils.EUINT128_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+
+        return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value)));
     }
 
-    /// @notice Verifies and converts an inEuint256 input to an euint256 encrypted type
+    /// @notice Verifies and converts an InEuint256 input to an euint256 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint256 containing the verified encrypted value
-    function asEuint256(inEuint256 memory value) internal returns (euint256) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EUINT256_TFHE);
-        return euint256.wrap(value.hash);
+    function asEuint256(InEuint256 memory value) internal returns (euint256) {
+        uint8 expectedUtype = Utils.EUINT256_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+
+        return euint256.wrap(Impl.verifyInput(Utils.inputFromEuint256(value)));
     }
 
-    /// @notice Verifies and converts an inEaddress input to an eaddress encrypted type
+    /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An eaddress containing the verified encrypted value
-    function asEaddress(inEaddress memory value) internal returns (eaddress) {
-        ITaskManager(TASK_MANAGER_ADDRESS).verifyKey(value.hash, value.utype, value.securityZone, value.signature, Utils.EADDRESS_TFHE);
-        return eaddress.wrap(value.hash);
+    function asEaddress(InEaddress memory value) internal returns (eaddress) {
+        uint8 expectedUtype = Utils.EADDRESS_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+
+        return eaddress.wrap(Impl.verifyInput(Utils.inputFromEaddress(value)));
     }
 
     // ********** TYPE CASTING ************* //
@@ -5109,4 +4940,5 @@ library BindingsEaddress {
     function allowTransient(eaddress ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
     }
+}
 }
