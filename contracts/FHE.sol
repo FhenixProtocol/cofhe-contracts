@@ -34,7 +34,6 @@ library Common {
         if (value < 0) {
             revert SecurityZoneOutOfBounds(value);
         }
-        
         return uint256(uint32(value));
     }
 
@@ -144,8 +143,8 @@ library Impl {
         return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0));
     }
 
-    function verifyInput(EncryptedInput memory input) internal pure returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input);
+    function verifyInput(EncryptedInput memory input) internal returns (uint256) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input, msg.sender);
     }
 
     /// @notice Generates a random value of a given type with the given seed, for the provided securityZone
@@ -4940,5 +4939,4 @@ library BindingsEaddress {
     function allowTransient(eaddress ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
     }
-}
 }

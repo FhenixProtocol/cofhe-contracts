@@ -8,7 +8,6 @@ struct EncryptedInput {
     bytes signature;
 }
 
-
 struct InEbool {
     uint256 ctHash;
     uint8 securityZone;
@@ -105,7 +104,7 @@ interface ITaskManager {
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedInputs, uint256[] memory extraInputs) external returns (uint256);
 
     function createDecryptTask(uint256 ctHash, address requestor) external;
-    function verifyInput(EncryptedInput memory input) external;
+    function verifyInput(EncryptedInput memory input, address sender) external returns (uint256);
 
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
