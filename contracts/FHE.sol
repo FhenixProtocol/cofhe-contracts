@@ -77,7 +77,7 @@ struct inEaddress {
 // /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\
 // ================================
 //solhint-disable const-name-snakecase
-address constant TASK_MANAGER_ADDRESS = 0xc8de5a8a3346b23aEf98aC1b049a03214993D795;
+address constant TASK_MANAGER_ADDRESS = 0xCC0E232aCeb34eC641cDA6A0EeAD161924cdC7f4;
 
 library Common {
     // Default value for temp hash calculation in unary operations
