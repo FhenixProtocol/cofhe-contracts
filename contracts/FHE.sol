@@ -389,15 +389,15 @@ library Impl {
     /// @param uintType the type of the random value to generate
     /// @param seed the seed to use to create a random value from
     /// @param securityZone the security zone to use for the random value
-    function random(uint8 uintType, uint64 seed, int32 securityZone) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(uintType, FunctionId.random, new uint256[](0), Common.createUint256Inputs(seed, Common.convertInt32ToUint256(securityZone)));
+    function random(uint8 uintType, uint256 seed, int32 securityZone) internal returns (uint256) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).createRandomTask(uintType, seed, securityZone);
     }
 
     /// @notice Generates a random value of a given type with the given seed
     /// @dev Calls the desired function
     /// @param uintType the type of the random value to generate
     /// @param seed the seed to use to create a random value from
-    function random(uint8 uintType, uint32 seed) internal returns (uint256) {
+    function random(uint8 uintType, uint256 seed) internal returns (uint256) {
         return random(uintType, seed, 0);
     }
 
@@ -407,7 +407,6 @@ library Impl {
     function random(uint8 uintType) internal returns (uint256) {
         return random(uintType, 0, 0);
     }
-
 }
 
 library FHE {
