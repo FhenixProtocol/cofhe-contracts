@@ -21,7 +21,7 @@ type eaddress is uint256;
 // /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\
 // ================================
 //solhint-disable const-name-snakecase
-address constant TASK_MANAGER_ADDRESS = 0xCC0E232aCeb34eC641cDA6A0EeAD161924cdC7f4;
+address constant TASK_MANAGER_ADDRESS = 0xb90cbA95CaB35cA5BDF84375466f5E2bC1b481d5;
 
 library Common {
     error InvalidHexCharacter(bytes1 char);
