@@ -56,7 +56,6 @@ struct InEuint256 {
     uint8 utype;
     bytes signature;
 }
-
 struct InEaddress {
     uint256 ctHash;
     uint8 securityZone;
