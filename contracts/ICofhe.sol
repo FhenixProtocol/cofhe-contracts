@@ -102,6 +102,7 @@ enum FunctionId {
 
 interface ITaskManager {
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedInputs, uint256[] memory extraInputs) external returns (uint256);
+    function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external returns (uint256);
 
     function createDecryptTask(uint256 ctHash, address requestor) external;
     function verifyInput(EncryptedInput memory input, address sender) external returns (uint256);
