@@ -93,10 +93,11 @@ enum FunctionId {
     eq,             // 24
     ne,             // 25
     trivialEncrypt, // 26
-    random,         // 27
+    random,         // 27 
     rol,            // 28
     ror,            // 29
-    square          // 30
+    square,         // 30
+    _31             // 31
 }
 
 interface ITaskManager {
@@ -107,6 +108,7 @@ interface ITaskManager {
 
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
+    function allowGlobal(uint256 ctHash) external;
     function allowTransient(uint256 ctHash, address account) external;
     function getDecryptResultSafe(uint256 ctHash) external view returns (uint256, bool);
     function getDecryptResult(uint256 ctHash) external view returns (uint256);
