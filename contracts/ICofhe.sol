@@ -93,7 +93,7 @@ enum FunctionId {
     eq,             // 24
     ne,             // 25
     trivialEncrypt, // 26
-    random,         // 27 
+    random,         // 27
     rol,            // 28
     ror,            // 29
     square,         // 30
