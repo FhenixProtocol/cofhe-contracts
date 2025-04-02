@@ -1,4 +1,4 @@
-name: Merge Gatekeeper (PRs)
+name: Merge Gatekeeper
 on:
   pull_request:
     branches:
