@@ -7,9 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          registry-url: 'https://registry.npmjs.org/'
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -17,10 +18,6 @@ jobs:
           run_install: false
       - name: Install deps
         run: cd contracts && pnpm install
-      - name: Set publishing config
-        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
       
       - name: Read package version
         id: package_version
@@ -35,3 +32,5 @@ jobs:
             echo "PRERELEASE=" >> $GITHUB_ENV
           fi
       - run: cd contracts && pnpm publish --no-git-checks ${{ env.PRERELEASE }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

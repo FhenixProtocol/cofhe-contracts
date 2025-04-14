@@ -1,6 +1,69 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.25 <0.9.0;
 
+struct EncryptedInput {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+struct InEbool {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+struct InEuint8 {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+struct InEuint16 {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+struct InEuint32 {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+struct InEuint64 {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+struct InEuint128 {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+struct InEuint256 {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+struct InEaddress {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+    bytes signature;
+}
+
+
 // Order is set as in fheos/precompiles/types/types.go
 enum FunctionId {
     _0,             // 0 - GetNetworkKey
@@ -33,7 +96,8 @@ enum FunctionId {
     random,         // 27
     rol,            // 28
     ror,            // 29
-    square          // 30
+    square,         // 30
+    _31             // 31
 }
 
 interface ITaskManager {
@@ -41,23 +105,19 @@ interface ITaskManager {
     function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external returns (uint256);
 
     function createDecryptTask(uint256 ctHash, address requestor) external;
-    function createSealOutputTask(uint256 ctHash, bytes32 publicKey, address requestor) external;
-    function verifyKey(uint256 ctHash, uint8 uintType, int32 securityZone, string memory signature, uint8 desiredType) external;
+    function verifyInput(EncryptedInput memory input, address sender) external returns (uint256);
 
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
+    function allowGlobal(uint256 ctHash) external;
     function allowTransient(uint256 ctHash, address account) external;
- }
-
-interface IAsyncFHEReceiver {
-    function handleDecryptResult(uint256 ctHash, uint256 result, address requestor) external;
-    function handleSealOutputResult(uint256 ctHash, string memory result, address requestor) external;
+    function getDecryptResultSafe(uint256 ctHash) external view returns (uint256, bool);
+    function getDecryptResult(uint256 ctHash) external view returns (uint256);
 }
 
 library Utils {
     // Values used to communicate types to the runtime.
     // Must match values defined in warp-drive protobufs for everything to
-    // make sense
     uint8 internal constant EUINT8_TFHE = 2;
     uint8 internal constant EUINT16_TFHE = 3;
     uint8 internal constant EUINT32_TFHE = 4;
@@ -98,5 +158,77 @@ library Utils {
         if (_functionId == FunctionId.square) return "square";
 
         return "";
+    }
+
+    function inputFromEbool(InEbool memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EBOOL_TFHE,
+            signature: input.signature
+        });
+    }
+
+    function inputFromEuint8(InEuint8 memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EUINT8_TFHE,
+            signature: input.signature
+        });
+    }
+
+    function inputFromEuint16(InEuint16 memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EUINT16_TFHE,
+            signature: input.signature
+        });
+    }
+
+    function inputFromEuint32(InEuint32 memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EUINT32_TFHE,
+            signature: input.signature
+        });
+    }
+
+    function inputFromEuint64(InEuint64 memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EUINT64_TFHE,
+            signature: input.signature
+        });
+    }
+
+    function inputFromEuint128(InEuint128 memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EUINT128_TFHE,
+            signature: input.signature
+        });
+    }
+
+    function inputFromEuint256(InEuint256 memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EUINT256_TFHE,
+            signature: input.signature
+        });
+    }
+
+    function inputFromEaddress(InEaddress memory input) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: input.ctHash,
+            securityZone: input.securityZone,
+            utype: EADDRESS_TFHE,
+            signature: input.signature
+        });
     }
 }
