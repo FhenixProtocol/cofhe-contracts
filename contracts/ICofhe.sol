@@ -50,12 +50,6 @@ struct InEuint128 {
     bytes signature;
 }
 
-struct InEuint256 {
-    uint256 ctHash;
-    uint8 securityZone;
-    uint8 utype;
-    bytes signature;
-}
 struct InEaddress {
     uint256 ctHash;
     uint8 securityZone;
@@ -209,15 +203,6 @@ library Utils {
             ctHash: input.ctHash,
             securityZone: input.securityZone,
             utype: EUINT128_TFHE,
-            signature: input.signature
-        });
-    }
-
-    function inputFromEuint256(InEuint256 memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EUINT256_TFHE,
             signature: input.signature
         });
     }

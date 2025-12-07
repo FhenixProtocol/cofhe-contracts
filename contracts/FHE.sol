@@ -4,7 +4,7 @@
 pragma solidity >=0.8.19 <0.9.0;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {FunctionId, ITaskManager, Utils, EncryptedInput, InEbool, InEuint8, InEuint16, InEuint32, InEuint64, InEuint128, InEuint256, InEaddress} from "./ICofhe.sol";
+import {FunctionId, ITaskManager, Utils, EncryptedInput, InEbool, InEuint8, InEuint16, InEuint32, InEuint64, InEuint128, InEaddress} from "./ICofhe.sol";
 
 type ebool is uint256;
 type euint8 is uint256;
@@ -12,7 +12,6 @@ type euint16 is uint256;
 type euint32 is uint256;
 type euint64 is uint256;
 type euint128 is uint256;
-type euint256 is uint256;
 type eaddress is uint256;
 
 // ================================
@@ -71,10 +70,6 @@ library Common {
         return isInitialized(euint128.unwrap(v));
     }
 
-    // Return true if the encrypted integer is initialized and false otherwise.
-    function isInitialized(euint256 v) internal pure returns (bool) {
-        return isInitialized(euint256.unwrap(v));
-    }
 
     function isInitialized(eaddress v) internal pure returns (bool) {
         return isInitialized(eaddress.unwrap(v));
@@ -256,21 +251,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.add));
     }
 
-    /// @notice Perform the addition operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted addition
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the addition result
-    function add(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.add));
-    }
 
     /// @notice Perform the less than or equal to operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted comparison
@@ -352,21 +332,6 @@ library FHE {
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.lte));
     }
 
-    /// @notice Perform the less than or equal to operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted comparison
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type ebool containing the comparison result
-    function lte(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return ebool.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.lte));
-    }
 
     /// @notice Perform the subtraction operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted subtraction
@@ -448,21 +413,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.sub));
     }
 
-    /// @notice Perform the subtraction operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted subtraction
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the subtraction result
-    function sub(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.sub));
-    }
 
     /// @notice Perform the multiplication operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted multiplication
@@ -544,21 +494,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.mul));
     }
 
-    /// @notice Perform the multiplication operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted multiplication
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the multiplication result
-    function mul(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.mul));
-    }
 
     /// @notice Perform the less than operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted comparison
@@ -640,21 +575,6 @@ library FHE {
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.lt));
     }
 
-    /// @notice Perform the less than operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted comparison
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type ebool containing the comparison result
-    function lt(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return ebool.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.lt));
-    }
 
     /// @notice Perform the division operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted division
@@ -736,21 +656,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.div));
     }
 
-    /// @notice Perform the division operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted division
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the division result
-    function div(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.div));
-    }
 
     /// @notice Perform the greater than operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted comparison
@@ -832,21 +737,6 @@ library FHE {
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.gt));
     }
 
-    /// @notice Perform the greater than operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted comparison
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type ebool containing the comparison result
-    function gt(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return ebool.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.gt));
-    }
 
     /// @notice Perform the greater than or equal to operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted comparison
@@ -928,21 +818,6 @@ library FHE {
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.gte));
     }
 
-    /// @notice Perform the greater than or equal to operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted comparison
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type ebool containing the comparison result
-    function gte(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return ebool.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.gte));
-    }
 
     /// @notice Perform the remainder operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted remainder calculation
@@ -1024,21 +899,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.rem));
     }
 
-    /// @notice Perform the remainder operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted remainder calculation
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the remainder result
-    function rem(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.rem));
-    }
 
     /// @notice Perform the bitwise AND operation on two parameters of type ebool
     /// @dev Verifies that inputs are initialized, performs encrypted bitwise AND
@@ -1136,21 +996,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.and));
     }
 
-    /// @notice Perform the bitwise AND operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted bitwise AND
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the AND result
-    function and(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.and));
-    }
 
     /// @notice Perform the bitwise OR operation on two parameters of type ebool
     /// @dev Verifies that inputs are initialized, performs encrypted bitwise OR
@@ -1248,21 +1093,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.or));
     }
 
-    /// @notice Perform the bitwise OR operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted bitwise OR
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the OR result
-    function or(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.or));
-    }
 
     /// @notice Perform the bitwise XOR operation on two parameters of type ebool
     /// @dev Verifies that inputs are initialized, performs encrypted bitwise XOR
@@ -1360,21 +1190,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.xor));
     }
 
-    /// @notice Perform the bitwise XOR operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted bitwise XOR
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the XOR result
-    function xor(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.xor));
-    }
 
     /// @notice Perform the equality operation on two parameters of type ebool
     /// @dev Verifies that inputs are initialized, performs encrypted equality check
@@ -1472,21 +1287,6 @@ library FHE {
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.eq));
     }
 
-    /// @notice Perform the equality operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted equality check
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type ebool containing the equality result
-    function eq(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return ebool.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.eq));
-    }
 
     /// @notice Perform the equality operation on two parameters of type eaddress
     /// @dev Verifies that inputs are initialized, performs encrypted equality check
@@ -1600,21 +1400,6 @@ library FHE {
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.ne));
     }
 
-    /// @notice Perform the inequality operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted inequality check
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type ebool containing the inequality result
-    function ne(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return ebool.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.ne));
-    }
 
     /// @notice Perform the inequality operation on two parameters of type eaddress
     /// @dev Verifies that inputs are initialized, performs encrypted inequality check
@@ -1712,21 +1497,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.min));
     }
 
-    /// @notice Perform the minimum operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted minimum comparison
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the minimum value
-    function min(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.min));
-    }
 
     /// @notice Perform the maximum operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted maximum calculation
@@ -1808,21 +1578,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.max));
     }
 
-    /// @notice Perform the maximum operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted maximum comparison
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the maximum value
-    function max(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.max));
-    }
 
     /// @notice Perform the shift left operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted left shift
@@ -1904,21 +1659,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.shl));
     }
 
-    /// @notice Perform the shift left operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted left shift
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the left shift result
-    function shl(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.shl));
-    }
 
     /// @notice Perform the shift right operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted right shift
@@ -2000,21 +1740,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.shr));
     }
 
-    /// @notice Perform the shift right operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted right shift
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the right shift result
-    function shr(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.shr));
-    }
 
     /// @notice Perform the rol operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted left rotation
@@ -2096,21 +1821,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.rol));
     }
 
-    /// @notice Perform the rotate left operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted left rotation
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the left rotation result
-    function rol(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.rol));
-    }
 
     /// @notice Perform the rotate right operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted right rotation
@@ -2192,21 +1902,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.ror));
     }
 
-    /// @notice Perform the rotate right operation on two parameters of type euint256
-    /// @dev Verifies that inputs are initialized, performs encrypted right rotation
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return result of type euint256 containing the right rotation result
-    function ror(euint256 lhs, euint256 rhs) internal returns (euint256) {
-        if (!Common.isInitialized(lhs)) {
-            lhs = asEuint256(0);
-        }
-        if (!Common.isInitialized(rhs)) {
-            rhs = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.mathOp(Utils.EUINT256_TFHE, euint256.unwrap(lhs), euint256.unwrap(rhs), FunctionId.ror));
-    }
 
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2268,15 +1963,7 @@ library FHE {
 
         euint128.wrap(Impl.decrypt(euint128.unwrap(input1)));
     }
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(euint256 input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint256(0);
-        }
 
-        euint256.wrap(Impl.decrypt(euint256.unwrap(input1)));
     }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
@@ -2336,14 +2023,6 @@ library FHE {
     /// @return The decrypted uint128 value
     function getDecryptResult(euint128 input1) internal view returns (uint128) {
         return uint128(Impl.getDecryptResult(euint128.unwrap(input1)));
-    }
-
-    /// @notice Gets the decrypted value from a previously decrypted euint256 ciphertext
-    /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
-    /// @param input1 The euint256 ciphertext to get the decrypted value from
-    /// @return The decrypted uint256 value
-    function getDecryptResult(euint256 input1) internal view returns (uint256) {
-        return uint256(Impl.getDecryptResult(euint256.unwrap(input1)));
     }
 
     /// @notice Gets the decrypted value from a previously decrypted eaddress ciphertext
@@ -2422,15 +2101,6 @@ library FHE {
         return (uint128(_result), _decrypted);
     }
 
-    /// @notice Safely gets the decrypted value from a euint256 ciphertext
-    /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
-    /// @param input1 The euint256 ciphertext to get the decrypted value from
-    /// @return result The decrypted uint256 value
-    /// @return decrypted Flag indicating if the value was successfully decrypted
-    function getDecryptResultSafe(euint256 input1) internal view returns (uint256 result, bool decrypted) {
-        (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(euint256.unwrap(input1));
-        return (uint256(_result), _decrypted);
-    }
 
     /// @notice Safely gets the decrypted value from an eaddress ciphertext
     /// @dev Returns the decrypted value and a flag indicating whether the decryption has finished
@@ -2572,25 +2242,6 @@ library FHE {
         return euint128.wrap(Impl.select(Utils.EUINT128_TFHE, input1, euint128.unwrap(input2), euint128.unwrap(input3)));
     }
 
-    /// @notice Performs a multiplexer operation between two euint256 values based on a selector
-    /// @dev If input1 is true, returns input2, otherwise returns input3. All inputs are initialized to defaults if not set.
-    /// @param input1 The selector of type ebool
-    /// @param input2 First choice of type euint256
-    /// @param input3 Second choice of type euint256
-    /// @return result of type euint256 containing the selected value
-    function select(ebool input1, euint256 input2, euint256 input3) internal returns (euint256) {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEbool(false);
-        }
-        if (!Common.isInitialized(input2)) {
-            input2 = asEuint256(0);
-        }
-        if (!Common.isInitialized(input3)) {
-            input3 = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.select(Utils.EUINT256_TFHE, input1, euint256.unwrap(input2), euint256.unwrap(input3)));
-    }
 
     /// @notice Performs a multiplexer operation between two eaddress values based on a selector
     /// @dev If input1 is true, returns input2, otherwise returns input3. All inputs are initialized to defaults if not set.
@@ -2680,18 +2331,6 @@ library FHE {
         return euint128.wrap(Impl.not(Utils.EUINT128_TFHE, euint128.unwrap(input1)));
     }
 
-    /// @notice Performs the bitwise NOT operation on an encrypted 256-bit unsigned integer
-    /// @dev Verifies that the input is initialized, defaulting to 0 if not.
-    ///      The operation inverts all bits of the input value.
-    /// @param input1 The input ciphertext to negate
-    /// @return An euint256 containing the bitwise NOT of the input
-    function not(euint256 input1) internal returns (euint256) {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.not(Utils.EUINT256_TFHE, euint256.unwrap(input1)));
-    }
 
     /// @notice Performs the square operation on an encrypted 8-bit unsigned integer
     /// @dev Verifies that the input is initialized, defaulting to 0 if not.
@@ -2758,18 +2397,6 @@ library FHE {
         return euint128.wrap(Impl.square(Utils.EUINT128_TFHE, euint128.unwrap(input1)));
     }
 
-    /// @notice Performs the square operation on an encrypted 256-bit unsigned integer
-    /// @dev Verifies that the input is initialized, defaulting to 0 if not.
-    ///      Note: The result may overflow if input * input exceeds 256 bits.
-    /// @param input1 The input ciphertext to square
-    /// @return An euint256 containing the square of the input
-    function square(euint256 input1) internal returns (euint256) {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint256(0);
-        }
-
-        return euint256.wrap(Impl.square(Utils.EUINT256_TFHE, euint256.unwrap(input1)));
-    }
     /// @notice Generates a random value of a euint8 type for provided securityZone
     /// @dev Generates a cryptographically secure random 8-bit unsigned integer in encrypted form.
     ///      The generated value is fully encrypted and cannot be predicted by any party.
@@ -2849,22 +2476,6 @@ library FHE {
     /// @return A randomly generated encrypted 128-bit unsigned integer (euint128)
     function randomEuint128() internal returns (euint128) {
         return randomEuint128(0);
-    }
-    /// @notice Generates a random value of a euint256 type for provided securityZone
-    /// @dev Generates a cryptographically secure random 256-bit unsigned integer in encrypted form.
-    ///      The generated value is fully encrypted and cannot be predicted by any party.
-    /// @param securityZone The security zone identifier to use for random value generation.
-    /// @return A randomly generated encrypted 256-bit unsigned integer (euint256)
-    function randomEuint256(int32 securityZone) internal returns (euint256) {
-        return euint256.wrap(Impl.random(Utils.EUINT256_TFHE, 0, securityZone));
-    }
-    /// @notice Generates a random value of a euint256 type
-    /// @dev Generates a cryptographically secure random 256-bit unsigned integer in encrypted form
-    ///      using the default security zone (0). The generated value is fully encrypted and
-    ///      cannot be predicted by any party.
-    /// @return A randomly generated encrypted 256-bit unsigned integer (euint256)
-    function randomEuint256() internal returns (euint256) {
-        return randomEuint256(0);
     }
 
     /// @notice Verifies and converts an inEbool input to an ebool encrypted type
@@ -2950,18 +2561,7 @@ library FHE {
         return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value)));
     }
 
-    /// @notice Verifies and converts an InEuint256 input to an euint256 encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An euint256 containing the verified encrypted value
-    function asEuint256(InEuint256 memory value) internal returns (euint256) {
-        uint8 expectedUtype = Utils.EUINT256_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
 
-
-        return euint256.wrap(Impl.verifyInput(Utils.inputFromEuint256(value)));
     }
 
     /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type
@@ -2999,10 +2599,6 @@ library FHE {
     function asEuint128(ebool value) internal returns (euint128) {
         return euint128.wrap(Impl.cast(ebool.unwrap(value), Utils.EUINT128_TFHE));
     }
-    /// @notice Converts a ebool to an euint256
-    function asEuint256(ebool value) internal returns (euint256) {
-        return euint256.wrap(Impl.cast(ebool.unwrap(value), Utils.EUINT256_TFHE));
-    }
 
     /// @notice Converts a euint8 to an ebool
     function asEbool(euint8 value) internal returns (ebool) {
@@ -3023,10 +2619,6 @@ library FHE {
     /// @notice Converts a euint8 to an euint128
     function asEuint128(euint8 value) internal returns (euint128) {
         return euint128.wrap(Impl.cast(euint8.unwrap(value), Utils.EUINT128_TFHE));
-    }
-    /// @notice Converts a euint8 to an euint256
-    function asEuint256(euint8 value) internal returns (euint256) {
-        return euint256.wrap(Impl.cast(euint8.unwrap(value), Utils.EUINT256_TFHE));
     }
 
     /// @notice Converts a euint16 to an ebool
@@ -3049,10 +2641,6 @@ library FHE {
     function asEuint128(euint16 value) internal returns (euint128) {
         return euint128.wrap(Impl.cast(euint16.unwrap(value), Utils.EUINT128_TFHE));
     }
-    /// @notice Converts a euint16 to an euint256
-    function asEuint256(euint16 value) internal returns (euint256) {
-        return euint256.wrap(Impl.cast(euint16.unwrap(value), Utils.EUINT256_TFHE));
-    }
 
     /// @notice Converts a euint32 to an ebool
     function asEbool(euint32 value) internal returns (ebool) {
@@ -3073,10 +2661,6 @@ library FHE {
     /// @notice Converts a euint32 to an euint128
     function asEuint128(euint32 value) internal returns (euint128) {
         return euint128.wrap(Impl.cast(euint32.unwrap(value), Utils.EUINT128_TFHE));
-    }
-    /// @notice Converts a euint32 to an euint256
-    function asEuint256(euint32 value) internal returns (euint256) {
-        return euint256.wrap(Impl.cast(euint32.unwrap(value), Utils.EUINT256_TFHE));
     }
 
     /// @notice Converts a euint64 to an ebool
@@ -3099,10 +2683,6 @@ library FHE {
     function asEuint128(euint64 value) internal returns (euint128) {
         return euint128.wrap(Impl.cast(euint64.unwrap(value), Utils.EUINT128_TFHE));
     }
-    /// @notice Converts a euint64 to an euint256
-    function asEuint256(euint64 value) internal returns (euint256) {
-        return euint256.wrap(Impl.cast(euint64.unwrap(value), Utils.EUINT256_TFHE));
-    }
 
     /// @notice Converts a euint128 to an ebool
     function asEbool(euint128 value) internal returns (ebool) {
@@ -3123,39 +2703,6 @@ library FHE {
     /// @notice Converts a euint128 to an euint64
     function asEuint64(euint128 value) internal returns (euint64) {
         return euint64.wrap(Impl.cast(euint128.unwrap(value), Utils.EUINT64_TFHE));
-    }
-    /// @notice Converts a euint128 to an euint256
-    function asEuint256(euint128 value) internal returns (euint256) {
-        return euint256.wrap(Impl.cast(euint128.unwrap(value), Utils.EUINT256_TFHE));
-    }
-
-    /// @notice Converts a euint256 to an ebool
-    function asEbool(euint256 value) internal returns (ebool) {
-        return ne(value, asEuint256(0));
-    }
-    /// @notice Converts a euint256 to an euint8
-    function asEuint8(euint256 value) internal returns (euint8) {
-        return euint8.wrap(Impl.cast(euint256.unwrap(value), Utils.EUINT8_TFHE));
-    }
-    /// @notice Converts a euint256 to an euint16
-    function asEuint16(euint256 value) internal returns (euint16) {
-        return euint16.wrap(Impl.cast(euint256.unwrap(value), Utils.EUINT16_TFHE));
-    }
-    /// @notice Converts a euint256 to an euint32
-    function asEuint32(euint256 value) internal returns (euint32) {
-        return euint32.wrap(Impl.cast(euint256.unwrap(value), Utils.EUINT32_TFHE));
-    }
-    /// @notice Converts a euint256 to an euint64
-    function asEuint64(euint256 value) internal returns (euint64) {
-        return euint64.wrap(Impl.cast(euint256.unwrap(value), Utils.EUINT64_TFHE));
-    }
-    /// @notice Converts a euint256 to an euint128
-    function asEuint128(euint256 value) internal returns (euint128) {
-        return euint128.wrap(Impl.cast(euint256.unwrap(value), Utils.EUINT128_TFHE));
-    }
-    /// @notice Converts a euint256 to an eaddress
-    function asEaddress(euint256 value) internal returns (eaddress) {
-        return eaddress.wrap(Impl.cast(euint256.unwrap(value), Utils.EADDRESS_TFHE));
     }
 
     /// @notice Converts a eaddress to an ebool
@@ -3181,10 +2728,6 @@ library FHE {
     /// @notice Converts a eaddress to an euint128
     function asEuint128(eaddress value) internal returns (euint128) {
         return euint128.wrap(Impl.cast(eaddress.unwrap(value), Utils.EUINT128_TFHE));
-    }
-    /// @notice Converts a eaddress to an euint256
-    function asEuint256(eaddress value) internal returns (euint256) {
-        return euint256.wrap(Impl.cast(eaddress.unwrap(value), Utils.EUINT256_TFHE));
     }
     /// @notice Converts a plaintext boolean value to a ciphertext ebool
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
@@ -3258,17 +2801,6 @@ library FHE {
         uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT128_TFHE, securityZone);
         return euint128.wrap(ct);
     }
-    /// @notice Converts a uint256 to an euint256
-    /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
-    function asEuint256(uint256 value) internal returns (euint256) {
-        return asEuint256(value, 0);
-    }
-    /// @notice Converts a uint256 to an euint256, specifying security zone
-    /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
-    function asEuint256(uint256 value, int32 securityZone) internal returns (euint256) {
-        uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT256_TFHE, securityZone);
-        return euint256.wrap(ct);
-    }
     /// @notice Converts a address to an eaddress
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     /// Allows for a better user experience when working with eaddresses
@@ -3331,14 +2863,6 @@ library FHE {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), account);
     }
 
-    /// @notice Grants permission to an account to operate on the encrypted 256-bit unsigned integer
-    /// @dev Allows the specified account to access the ciphertext
-    /// @param ctHash The encrypted uint256 value to grant access to
-    /// @param account The address being granted permission
-    function allow(euint256 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint256.unwrap(ctHash), account);
-    }
-
     /// @notice Grants permission to an account to operate on the encrypted address
     /// @dev Allows the specified account to access the ciphertext
     /// @param ctHash The encrypted address value to grant access to
@@ -3387,13 +2911,6 @@ library FHE {
     /// @param ctHash The encrypted uint128 value to grant global access to
     function allowGlobal(euint128 ctHash) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint128.unwrap(ctHash));
-    }
-
-    /// @notice Grants global permission to operate on the encrypted 256-bit unsigned integer
-    /// @dev Allows all accounts to access the ciphertext
-    /// @param ctHash The encrypted uint256 value to grant global access to
-    function allowGlobal(euint256 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint256.unwrap(ctHash));
     }
 
     /// @notice Grants global permission to operate on the encrypted address
@@ -3457,14 +2974,6 @@ library FHE {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint128.unwrap(ctHash), account);
     }
 
-    /// @notice Checks if an account has permission to operate on the encrypted 256-bit unsigned integer
-    /// @dev Returns whether the specified account can access the ciphertext
-    /// @param ctHash The encrypted uint256 value to check access for
-    /// @param account The address to check permissions for
-    /// @return True if the account has permission, false otherwise
-    function isAllowed(euint256 ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint256.unwrap(ctHash), account);
-    }
 
     /// @notice Checks if an account has permission to operate on the encrypted address
     /// @dev Returns whether the specified account can access the ciphertext
@@ -3517,13 +3026,6 @@ library FHE {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), address(this));
     }
 
-    /// @notice Grants permission to the current contract to operate on the encrypted 256-bit unsigned integer
-    /// @dev Allows this contract to access the ciphertext
-    /// @param ctHash The encrypted uint256 value to grant access to
-    function allowThis(euint256 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint256.unwrap(ctHash), address(this));
-    }
-
     /// @notice Grants permission to the current contract to operate on the encrypted address
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted address value to grant access to
@@ -3571,13 +3073,6 @@ library FHE {
     /// @param ctHash The encrypted uint128 value to grant access to
     function allowSender(euint128 ctHash) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), msg.sender);
-    }
-
-    /// @notice Grants permission to the message sender to operate on the encrypted 256-bit unsigned integer
-    /// @dev Allows the transaction sender to access the ciphertext
-    /// @param ctHash The encrypted uint256 value to grant access to
-    function allowSender(euint256 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint256.unwrap(ctHash), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted address
@@ -3633,14 +3128,6 @@ library FHE {
     /// @param account The address being granted temporary permission
     function allowTransient(euint128 ctHash, address account) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint128.unwrap(ctHash), account);
-    }
-
-    /// @notice Grants temporary permission to an account to operate on the encrypted 256-bit unsigned integer
-    /// @dev Allows the specified account to access the ciphertext for the current transaction only
-    /// @param ctHash The encrypted uint256 value to grant temporary access to
-    /// @param account The address being granted temporary permission
-    function allowTransient(euint256 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint256.unwrap(ctHash), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted address
@@ -3724,9 +3211,6 @@ library BindingsEbool {
     }
     function toU128(ebool value) internal returns (euint128) {
         return FHE.asEuint128(value);
-    }
-    function toU256(ebool value) internal returns (euint256) {
-        return FHE.asEuint256(value);
     }
     function decrypt(ebool value) internal {
         FHE.decrypt(value);
@@ -3964,9 +3448,6 @@ library BindingsEuint8 {
     function toU128(euint8 value) internal returns (euint128) {
         return FHE.asEuint128(value);
     }
-    function toU256(euint8 value) internal returns (euint256) {
-        return FHE.asEuint256(value);
-    }
     function decrypt(euint8 value) internal {
         FHE.decrypt(value);
     }
@@ -4202,9 +3683,6 @@ library BindingsEuint16 {
     }
     function toU128(euint16 value) internal returns (euint128) {
         return FHE.asEuint128(value);
-    }
-    function toU256(euint16 value) internal returns (euint256) {
-        return FHE.asEuint256(value);
     }
     function decrypt(euint16 value) internal {
         FHE.decrypt(value);
@@ -4442,9 +3920,6 @@ library BindingsEuint32 {
     function toU128(euint32 value) internal returns (euint128) {
         return FHE.asEuint128(value);
     }
-    function toU256(euint32 value) internal returns (euint256) {
-        return FHE.asEuint256(value);
-    }
     function decrypt(euint32 value) internal {
         FHE.decrypt(value);
     }
@@ -4663,9 +4138,6 @@ library BindingsEuint64 {
     function toU128(euint64 value) internal returns (euint128) {
         return FHE.asEuint128(value);
     }
-    function toU256(euint64 value) internal returns (euint256) {
-        return FHE.asEuint256(value);
-    }
     function decrypt(euint64 value) internal {
         FHE.decrypt(value);
     }
@@ -4867,9 +4339,6 @@ library BindingsEuint128 {
     function toU64(euint128 value) internal returns (euint64) {
         return FHE.asEuint64(value);
     }
-    function toU256(euint128 value) internal returns (euint256) {
-        return FHE.asEuint256(value);
-    }
     function decrypt(euint128 value) internal {
         FHE.decrypt(value);
     }
@@ -4893,68 +4362,7 @@ library BindingsEuint128 {
     }
 }
 
-using BindingsEuint256 for euint256 global;
 library BindingsEuint256 {
-
-    /// @notice Performs the eq operation
-    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return the result of the eq
-    function eq(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        return FHE.eq(lhs, rhs);
-    }
-
-    /// @notice Performs the ne operation
-    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
-    /// @param lhs input of type euint256
-    /// @param rhs second input of type euint256
-    /// @return the result of the ne
-    function ne(euint256 lhs, euint256 rhs) internal returns (ebool) {
-        return FHE.ne(lhs, rhs);
-    }
-    function toBool(euint256 value) internal  returns (ebool) {
-        return FHE.asEbool(value);
-    }
-    function toU8(euint256 value) internal returns (euint8) {
-        return FHE.asEuint8(value);
-    }
-    function toU16(euint256 value) internal returns (euint16) {
-        return FHE.asEuint16(value);
-    }
-    function toU32(euint256 value) internal returns (euint32) {
-        return FHE.asEuint32(value);
-    }
-    function toU64(euint256 value) internal returns (euint64) {
-        return FHE.asEuint64(value);
-    }
-    function toU128(euint256 value) internal returns (euint128) {
-        return FHE.asEuint128(value);
-    }
-    function toEaddress(euint256 value) internal returns (eaddress) {
-        return FHE.asEaddress(value);
-    }
-    function decrypt(euint256 value) internal {
-        FHE.decrypt(value);
-    }
-    function allow(euint256 ctHash, address account) internal {
-        FHE.allow(ctHash, account);
-    }
-    function isAllowed(euint256 ctHash, address account) internal returns (bool) {
-        return FHE.isAllowed(ctHash, account);
-    }
-    function allowThis(euint256 ctHash) internal {
-        FHE.allowThis(ctHash);
-    }
-    function allowGlobal(euint256 ctHash) internal {
-        FHE.allowGlobal(ctHash);
-    }
-    function allowSender(euint256 ctHash) internal {
-        FHE.allowSender(ctHash);
-    }
-    function allowTransient(euint256 ctHash, address account) internal {
-        FHE.allowTransient(ctHash, account);
-    }
 }
 
 using BindingsEaddress for eaddress global;
@@ -4994,9 +4402,6 @@ library BindingsEaddress {
     }
     function toU128(eaddress value) internal returns (euint128) {
         return FHE.asEuint128(value);
-    }
-    function toU256(eaddress value) internal returns (euint256) {
-        return FHE.asEuint256(value);
     }
     function decrypt(eaddress value) internal {
         FHE.decrypt(value);
