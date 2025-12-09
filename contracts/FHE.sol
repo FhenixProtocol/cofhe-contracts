@@ -1963,7 +1963,6 @@ library FHE {
         euint128.wrap(Impl.decrypt(euint128.unwrap(input1)));
     }
 
-    }
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
     /// @param input1 the input ciphertext
@@ -2560,9 +2559,6 @@ library FHE {
         return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value)));
     }
 
-
-    }
-
     /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
@@ -3136,9 +3132,8 @@ library FHE {
     function allowTransient(eaddress ctHash, address account) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(eaddress.unwrap(ctHash), account);
     }
-
-
 }
+
 // ********** BINDING DEFS ************* //
 
 using BindingsEbool for ebool global;
@@ -4359,9 +4354,6 @@ library BindingsEuint128 {
     function allowTransient(euint128 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
     }
-}
-
-library BindingsEuint256 {
 }
 
 using BindingsEaddress for eaddress global;
