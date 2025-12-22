@@ -1,7 +1,8 @@
 import * as fs from "fs"
 import * as path from "path"
+import type { HardhatRuntimeEnvironment } from "hardhat/types";
 
-function updateTaskManagerAddressInFile(newAddress, filePath, searchValue, replaceValue) {
+function updateTaskManagerAddressInFile(newAddress: string, filePath: string, searchValue: RegExp, replaceValue: string) {
     let fileContent = fs.readFileSync(filePath, 'utf8');
 
     // Replace the address in the file content
@@ -33,7 +34,7 @@ export function updateTaskManagerAddressInSolidity(newProxyAddress: string) {
     );
 }
 
-export async function updateTaskManagerAddressInJsonArtifact(newAddress, hre) {
+export async function updateTaskManagerAddressInJsonArtifact(newAddress: string, hre: HardhatRuntimeEnvironment) {
   const filePath = path.join(
     __dirname,
     `../ignition/deployments/chain-${await hre.getChainId()}/artifacts/`,

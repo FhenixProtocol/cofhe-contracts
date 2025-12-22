@@ -1,14 +1,13 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { config as dotenvConfig } from "dotenv";
-import { resolve, join } from "path";
-import { BaseContract, Contract, ContractFactory, EtherSymbol } from "ethers";
+import { join, resolve } from "path";
+import { Contract } from "ethers";
 import chalk from "chalk";
 import hre, { ethers, upgrades } from "hardhat";
 import fs from "fs";
 
-import { deployCreateX, isAlreadyDeployed } from "../utils/deployCreateX";
+import { deployCreateX } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
-import { updateTaskManagerAddressInSolidity } from "../utils/updateTaskManagerAddress";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -243,11 +242,9 @@ async function getImplementationAddress(proxy: any) {
   );
 
   // Convert the storage value to address format
-  const currentImplementation = ethers.getAddress(
+  return ethers.getAddress(
     "0x" + implementationAddress.slice(-40),
   );
-
-  return currentImplementation;
 }
 
 /**
@@ -295,15 +292,12 @@ interface WalletList {
 
 function getAggregatorWallets(ethers: any) {
   const aggregatorWallets = JSON.parse(fs.readFileSync(join(__dirname, '../wallets.json'), 'utf8')) as WalletList;
-  const resultProcessorWallets = aggregatorWallets.resultProcessorWallets.map((wallet) => 
+  return aggregatorWallets.resultProcessorWallets.map((wallet) =>
     new ethers.Wallet(wallet.privateKey, ethers.provider)
   );
-  return resultProcessorWallets;
 }
 
 const func: DeployFunction = async function () {
-  const { deploy } = hre.deployments;
-
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
   console.log(chalk.green("Network:", hre.network.config));
@@ -342,12 +336,12 @@ const func: DeployFunction = async function () {
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));
   // Deploy and upgrade ACL contract
-  const {ProxyContract: aclContract, ProxyAddress: aclAddress} = await getProxyContract(aggregatorSigners[0].address, "ACL");
+  const {ProxyContract: aclContract} = await getProxyContract(aggregatorSigners[0].address, "ACL");
   await ACLSetup(TMProxyContract, aggregatorSigners[0], aclContract);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
-  const {ProxyContract: ptStorageContract, ProxyAddress: ptStorageAddress} = await getProxyContract(aggregatorSigners[0].address, "PlaintextsStorage");
+  const {ProxyAddress: ptStorageAddress} = await getProxyContract(aggregatorSigners[0].address, "PlaintextsStorage");
   await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, aggregatorSigners[0]);
 };
 

@@ -1,4 +1,4 @@
-import type { OnChain } from "../../types";
+import type { OnChain, OnChain2 } from "../../types";
 import hre from "hardhat";
 
 export async function deployOnChainFixture(): Promise<{
