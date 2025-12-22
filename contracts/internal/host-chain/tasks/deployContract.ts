@@ -1,5 +1,4 @@
-import { DeployFunction } from "hardhat-deploy/types";
-import { HardhatRuntimeEnvironment, TaskArguments } from "hardhat/types";
+import { TaskArguments } from "hardhat/types";
 import chalk from "chalk";
 import { task } from "hardhat/config";
 task("task:deployCounter").setAction(async function (taskArguments: TaskArguments, hre) {

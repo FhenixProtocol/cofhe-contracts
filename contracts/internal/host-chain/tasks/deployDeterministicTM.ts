@@ -7,9 +7,7 @@ import DeterministicTM from "../ignition/modules/DeterministicTM";
 import { deployCreateX } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
 import { deployDeterministic } from "../utils/deployDeterministic";
-import {
-  updateTaskManagerAddressInJsonArtifact,
-} from "../utils/updateTaskManagerAddress";
+import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
 import chalk from "chalk";
 import ERC1967ProxyModule from "../ignition/modules/ERC1967Proxy";
 import { HardhatRuntimeEnvironment, TaskArguments } from "hardhat/types";
@@ -31,11 +29,9 @@ async function getImplementationAddress(proxy: any, hre: HardhatRuntimeEnvironme
   );
 
   // Convert the storage value to address format
-  const currentImplementation = hre.ethers.getAddress(
+  return hre.ethers.getAddress(
     "0x" + implementationAddress.slice(-40),
   );
-
-  return currentImplementation;
 }
 
 async function getDeterministicDummyContract(admin: string, hre: HardhatRuntimeEnvironment) {
@@ -123,7 +119,7 @@ task("task:deployDeterministicTM", "Deploy deterministic TaskManager").setAction
   // Headline in chalk blue, with length of 60
   console.log(chalk.bold.blue("-----------------------TaskManager--------------------------"));
   const TMFactory = await hre.ethers.getContractFactory("TaskManager");
-  const { proxyContract: TMProxyContract, deployedAddress: TMProxyAddress } = await getDeterministicProxyContract(
+  const { deployedAddress: TMProxyAddress } = await getDeterministicProxyContract(
     aggregatorSigner.address,
     TMFactory,
     hre

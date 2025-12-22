@@ -1,6 +1,8 @@
 import chalk from "chalk";
 import * as fs from "fs"
 import * as path from "path"
+import type { HardhatRuntimeEnvironment } from "hardhat/types";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const proxyTransactionDetails = {
   gasPrice: 100000000000n,
@@ -9,16 +11,12 @@ const proxyTransactionDetails = {
   address: "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed"
 };
 
-export const isAlreadyDeployed = async function (hre, contractExpectedAddress): Promise<boolean> {
+export const isAlreadyDeployed = async function (hre: HardhatRuntimeEnvironment, contractExpectedAddress: string): Promise<boolean> {
   const code = await hre.ethers.provider.getCode(contractExpectedAddress);
-
-  if (code !== "0x") {
-    return true;
-  }
-  return false;
+  return code !== "0x";
 }
 
-export const deployCreateX = async function (hre, signer): Promise<boolean> {
+export const deployCreateX = async function (hre: HardhatRuntimeEnvironment, signer: HardhatEthersSigner): Promise<boolean> {
   const { ethers } = hre;
 
   const filePath = path.resolve(__dirname, "tx-createX.txt");

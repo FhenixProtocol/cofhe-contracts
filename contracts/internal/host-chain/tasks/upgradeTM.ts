@@ -13,11 +13,9 @@ async function getImplementationAddress(ethers: any, proxy: any) {
   );
 
   // Convert the storage value to address format
-  const currentImplementation = ethers.getAddress(
+  return ethers.getAddress(
     "0x" + implementationAddress.slice(-40),
   );
-
-  return currentImplementation;
 }
 
 async function validateUpgrade(upgrades: any, TMProxyContract: any, TMFactory: any) {
@@ -75,7 +73,7 @@ task("task:upgradeTM")
   .addParam("key", "Signer key", "")
   .addParam("onlyvalidate", "Only validate the upgrade", false, types.boolean)
   .setAction(async function (taskArguments: TaskArguments, hre) {
-    const { fhenixjs, ethers, deployments, upgrades } = hre;
+    const { fhenixjs, ethers, upgrades } = hre;
     const key = taskArguments.key;
     let signer : HardhatEthersSigner;
     if (key === "") {
