@@ -212,7 +212,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     // Access-Control contract
     ACL public acl;
 
-    address private verifierSigner;
+    address public verifierSigner;
 
     uint8 private version;
 
