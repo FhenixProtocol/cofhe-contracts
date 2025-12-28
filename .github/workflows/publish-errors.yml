@@ -1,0 +1,38 @@
+name: Publish CoFHE Errors to NPM
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger for testing
+jobs:
+  publish-errors:
+    runs-on: ubuntu-latest
+    name: Extract and Publish Errors
+    permissions:
+      contents: read
+      id-token: write  # Required for NPM provenance
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Extract errors and publish to NPM
+        uses: roeezolantz/solidity-error-identifier-action@master
+        with:
+          mode: 'compile'
+          contract-paths: 'contracts'
+          compiler: 'solc'
+          solidity-version: '0.8.25'
+          output-path: 'cofhe-errors.json'
+          publish-npm: 'true'
+          npm-package-name: '@fhenixprotocol/cofhe-errors'
+          npm-binary-name: 'cofhe-error-lookup'
+          npm-token: ${{ secrets.NPM_TOKEN }}
+          npm-provenance: 'true'
+
+      - name: Upload errors database
+        uses: actions/upload-artifact@v4
+        with:
+          name: cofhe-errors
+          path: cofhe-errors.json
