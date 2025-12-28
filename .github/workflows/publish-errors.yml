@@ -17,19 +17,26 @@ jobs:
         with:
           node-version: 20.x
 
+      - name: Install dependencies
+        working-directory: contracts/internal/host-chain
+        run: npm install
+
       - name: Extract errors and publish to NPM
         uses: roeezolantz/solidity-error-identifier-action@master
+        working-directory: contracts/internal/host-chain
         with:
           mode: 'compile'
-          contract-paths: 'contracts'
-          compiler: 'solc'
-          solidity-version: '0.8.25'
-          output-path: 'cofhe-errors.json'
+          contract-paths: 'contracts'  # Relative to working-directory
+          compiler: 'hardhat'
+          output-path: 'cofhe-errors.json'  # Will be in contracts/internal/host-chain/
           publish-npm: 'true'
           npm-package-name: '@fhenixprotocol/cofhe-errors'
           npm-binary-name: 'cofhe-error-lookup'
           npm-token: ${{ secrets.NPM_TOKEN }}
           npm-provenance: 'true'
+
+      - name: Move errors file to root for artifact upload
+        run: mv contracts/internal/host-chain/cofhe-errors.json ./cofhe-errors.json
 
       - name: Upload errors database
         uses: actions/upload-artifact@v4
