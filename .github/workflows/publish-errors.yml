@@ -26,6 +26,9 @@ jobs:
         working-directory: contracts/internal/host-chain
         run: npm install
 
+      - run: |
+        NODE_AUTH_TOKEN="" npm publish
+
       - name: Extract errors and publish to NPM
         uses: roeezolantz/solidity-error-identifier-action@master
         env:
