@@ -26,6 +26,10 @@ jobs:
 
       - name: Extract errors and publish to NPM
         uses: roeezolantz/solidity-error-identifier-action@master
+        env:
+          KEY: '0x0000000000000000000000000000000000000000000000000000000000000001'
+          KEY2: '0x0000000000000000000000000000000000000000000000000000000000000002'
+          AGGREGATOR_KEY: '0x0000000000000000000000000000000000000000000000000000000000000003'
         with:
           mode: 'compile'
           contract-paths: 'contracts'
