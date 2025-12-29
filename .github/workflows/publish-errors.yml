@@ -3,6 +3,9 @@ on:
   release:
     types: [published]
   workflow_dispatch:  # Allow manual trigger for testing
+  push: # Temporary for testing
+    branches:
+      - feat/no-default-keygen
 jobs:
   publish-errors:
     runs-on: ubuntu-latest
