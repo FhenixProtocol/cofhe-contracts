@@ -30,7 +30,7 @@ jobs:
           mode: 'compile'
           contract-paths: 'contracts/internal/host-chain/contracts'
           compiler: 'hardhat'
-          hardhat-config-path: 'contracts/internal/host-chain'
+          compile-args: '--config contracts/internal/host-chain/hardhat.config.ts'
           output-path: 'cofhe-errors.json'
           publish-npm: 'true'
           npm-package-name: '@fhenixprotocol/cofhe-errors'
