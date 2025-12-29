@@ -38,7 +38,7 @@ jobs:
           output-path: 'cofhe-errors.json'
           publish-npm: 'true'
           npm-package-name: '@fhenixprotocol/cofhe-errors'
-          npm-binary-name: 'cofhe-error-lookup'
+          npm-binary-name: 'cofhe-errors'
           npm-token: ${{ secrets.NPM_TOKEN }}
           npm-provenance: 'true'
 
