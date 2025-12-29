@@ -28,9 +28,9 @@ jobs:
         uses: roeezolantz/solidity-error-identifier-action@master
         with:
           mode: 'compile'
-          contract-paths: 'contracts/internal/host-chain/contracts'
+          contract-paths: 'contracts'
           compiler: 'hardhat'
-          compile-args: '--config contracts/internal/host-chain/hardhat.config.ts'
+          working-directory: 'contracts/internal/host-chain'
           output-path: 'cofhe-errors.json'
           publish-npm: 'true'
           npm-package-name: '@fhenixprotocol/cofhe-errors'
