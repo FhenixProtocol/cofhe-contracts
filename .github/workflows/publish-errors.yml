@@ -5,7 +5,7 @@ on:
   workflow_dispatch:  # Allow manual trigger for testing
   push: # Temporary for testing
     branches:
-      - feat/no-default-keygen
+      - feat/error-identifier-script
 jobs:
   publish-errors:
     runs-on: ubuntu-latest
