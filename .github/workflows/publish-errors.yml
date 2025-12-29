@@ -38,14 +38,14 @@ jobs:
           AGGREGATOR_KEY: '0x0000000000000000000000000000000000000000000000000000000000000003'
         with:
           mode: 'compile'
-          contract-paths: 'contracts'
+          contract_paths: 'contracts'
           compiler: 'hardhat'
-          working-directory: 'contracts/internal/host-chain'
-          output-path: 'cofhe-errors.json'
-          publish-npm: 'true'
-          npm-package-name: '@fhenixprotocol/cofhe-errors'
-          npm-binary-name: 'cofhe-errors'
-          npm-provenance: 'true'
+          working_directory: 'contracts/internal/host-chain'
+          output_path: 'cofhe-errors.json'
+          publish_npm: 'true'
+          npm_package_name: '@fhenixprotocol/cofhe-errors'
+          npm_binary_name: 'cofhe-errors'
+          npm_provenance: 'true'
           # Using NPM Trusted Publishers with OIDC - no token needed
 
       - name: Upload errors file
