@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          # Don't set registry-url when using NPM Trusted Publishers with OIDC
+          # This prevents actions/setup-node from creating .npmrc that requires NODE_AUTH_TOKEN
 
       - name: Install dependencies
         working-directory: contracts/internal/host-chain
@@ -40,6 +42,7 @@ jobs:
           npm-package-name: '@fhenixprotocol/cofhe-errors'
           npm-binary-name: 'cofhe-errors'
           npm-provenance: 'true'
+          # Using NPM Trusted Publishers with OIDC - no token needed
 
       - name: Upload errors file
         run: ls -la cofhe-errors.json  # Verify file exists in root
