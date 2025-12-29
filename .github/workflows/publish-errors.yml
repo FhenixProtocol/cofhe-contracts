@@ -39,7 +39,6 @@ jobs:
           publish-npm: 'true'
           npm-package-name: '@fhenixprotocol/cofhe-errors'
           npm-binary-name: 'cofhe-errors'
-          npm-token: ${{ secrets.NPM_TOKEN }}
           npm-provenance: 'true'
 
       - name: Upload errors file
