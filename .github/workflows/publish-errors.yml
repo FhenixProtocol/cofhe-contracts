@@ -2,7 +2,7 @@ name: Publish CoFHE Errors to NPM
 on:
   release:
     types: [published]
-  workflow_dispatch:  # Allow manual trigger for testing
+  workflow_dispatch: # Allow manual trigger for testing
   push: # Temporary for testing
     branches:
       - feat/error-identifier-script
@@ -12,7 +12,7 @@ jobs:
     name: Extract and Publish Errors
     permissions:
       contents: read
-      id-token: write  # Required for NPM provenance
+      id-token: write # Required for NPM provenance
     steps:
       - uses: actions/checkout@v3
 
@@ -26,30 +26,26 @@ jobs:
         working-directory: contracts/internal/host-chain
         run: npm install
 
-      - name: Clear NODE_AUTH_TOKEN
-        run: |
-          NODE_AUTH_TOKEN=""
-
       - name: Extract errors and publish to NPM
         uses: roeezolantz/solidity-error-identifier-action@master
         env:
-          KEY: '0x0000000000000000000000000000000000000000000000000000000000000001'
-          KEY2: '0x0000000000000000000000000000000000000000000000000000000000000002'
-          AGGREGATOR_KEY: '0x0000000000000000000000000000000000000000000000000000000000000003'
+          KEY: "0x0000000000000000000000000000000000000000000000000000000000000001"
+          KEY2: "0x0000000000000000000000000000000000000000000000000000000000000002"
+          AGGREGATOR_KEY: "0x0000000000000000000000000000000000000000000000000000000000000003"
         with:
-          mode: 'compile'
-          contract_paths: 'contracts'
-          compiler: 'hardhat'
-          working_directory: 'contracts/internal/host-chain'
-          output_path: 'cofhe-errors.json'
-          publish_npm: 'true'
-          npm_package_name: '@fhenixprotocol/cofhe-errors'
-          npm_binary_name: 'cofhe-errors'
-          npm_provenance: 'true'
+          mode: "compile"
+          contract_paths: "contracts"
+          compiler: "hardhat"
+          working_directory: "contracts/internal/host-chain"
+          output_path: "cofhe-errors.json"
+          publish_npm: "true"
+          npm_package_name: "@fhenixprotocol/cofhe-errors"
+          npm_binary_name: "cofhe-errors"
+          npm_provenance: "true"
           # Using NPM Trusted Publishers with OIDC - no token needed
 
       - name: Upload errors file
-        run: ls -la cofhe-errors.json  # Verify file exists in root
+        run: ls -la cofhe-errors.json # Verify file exists in root
 
       - name: Upload errors database
         uses: actions/upload-artifact@v4
