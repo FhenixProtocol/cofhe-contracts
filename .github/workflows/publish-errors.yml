@@ -32,6 +32,11 @@ jobs:
         run: |
           echo "NODE_AUTH_TOKEN=" >> $GITHUB_ENV
 
+      - name: Debug npm
+        run: |
+          npm config get registry
+          npm -v
+
       - name: Extract errors and publish to NPM
         uses: roeezolantz/solidity-error-identifier-action@master
         env:
