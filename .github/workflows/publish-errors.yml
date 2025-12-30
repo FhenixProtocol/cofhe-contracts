@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          registry-url: "https://registry.npmjs.org"
+
           # Don't set registry-url when using NPM Trusted Publishers with OIDC
           # This prevents actions/setup-node from creating .npmrc that requires NODE_AUTH_TOKEN
 
