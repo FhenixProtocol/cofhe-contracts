@@ -53,6 +53,14 @@ jobs:
           npm_provenance: "true"
           # Using NPM Trusted Publishers with OIDC - no token needed
 
+      - name: Debug OIDC + npm
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL=$ACTIONS_ID_TOKEN_REQUEST_URL"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+present}"
+          npm config get registry
+          npm -v
+
       - name: Publish to npm (OIDC)
         run: |
           cd contracts/internal/host-chain
