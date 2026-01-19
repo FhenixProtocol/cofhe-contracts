@@ -190,15 +190,6 @@ library Utils {
         });
     }
 
-    function inputFromEuint64(InEuint64 memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EUINT64_TFHE,
-            signature: input.signature
-        });
-    }
-
     function inputFromEuint128(InEuint128 memory input) internal pure returns (EncryptedInput memory) {
         return EncryptedInput({
             ctHash: input.ctHash,
@@ -215,5 +206,19 @@ library Utils {
             utype: EADDRESS_TFHE,
             signature: input.signature
         });
+    }
+
+    function inputFromBytes(bytes memory data) internal pure returns (EncryptedInput memory) {
+        EncryptedInput memory v;
+        (
+            v.ctHash,
+            v.securityZone,
+            v.utype,
+            v.signature
+        ) = abi.decode(
+            data,
+            (uint256, uint8, uint8, bytes)
+        );
+        return v;
     }
 }
