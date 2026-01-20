@@ -2859,11 +2859,6 @@ library FHE {
         uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT32_TFHE, securityZone);
         return euint32.wrap(ct);
     }
-    /// @notice Converts a bytes32 to an euint64
-    /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
-    function asEuint64(bytes32 value) internal returns (euint64) {
-        return asEuint64(uint256(value), 0);
-    }
     /// @notice Converts a uint256 to an euint64
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     function asEuint64(uint256 value) internal returns (euint64) {
