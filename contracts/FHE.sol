@@ -2489,6 +2489,19 @@ library FHE {
         return ebool.wrap(Impl.verifyInput(Utils.inputFromEbool(value)));
     }
 
+    /// @notice Verifies and converts an InEbool input in bytes format to an euint8 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An ebool containing the verified encrypted value
+    function asEbool(bytes memory value) internal returns (ebool) {
+        EncryptedInput memory input = Utils.inputFromBytes(value);
+        uint8 expectedUtype = Utils.EBOOL_TFHE;
+        if (input.utype != expectedUtype) {
+            revert InvalidEncryptedInput(input.utype, expectedUtype);
+        }
+        return ebool.wrap(Impl.verifyInput(input));
+    }
+
     /// @notice Verifies and converts an InEuint8 input to an euint8 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
@@ -2501,6 +2514,19 @@ library FHE {
 
 
         return euint8.wrap(Impl.verifyInput(Utils.inputFromEuint8(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint8 input in bytes format to an euint8 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint8 containing the verified encrypted value
+    function asEuint8(bytes memory value) internal returns (euint8) {
+        EncryptedInput memory input = Utils.inputFromBytes(value);
+        uint8 expectedUtype = Utils.EUINT8_TFHE;
+        if (input.utype != expectedUtype) {
+            revert InvalidEncryptedInput(input.utype, expectedUtype);
+        }
+        return euint8.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEuint16 input to an euint16 encrypted type
@@ -2517,6 +2543,19 @@ library FHE {
         return euint16.wrap(Impl.verifyInput(Utils.inputFromEuint16(value)));
     }
 
+    /// @notice Verifies and converts an InEuint16 input in bytes format to an euint16 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint16 containing the verified encrypted value
+    function asEuint16(bytes memory value) internal returns (euint16) {
+        EncryptedInput memory input = Utils.inputFromBytes(value);
+        uint8 expectedUtype = Utils.EUINT16_TFHE;
+        if (input.utype != expectedUtype) {
+            revert InvalidEncryptedInput(input.utype, expectedUtype);
+        }
+        return euint16.wrap(Impl.verifyInput(input));
+    }
+
     /// @notice Verifies and converts an InEuint32 input to an euint32 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
@@ -2526,9 +2565,20 @@ library FHE {
         if (value.utype != expectedUtype) {
             revert InvalidEncryptedInput(value.utype, expectedUtype);
         }
-
-
         return euint32.wrap(Impl.verifyInput(Utils.inputFromEuint32(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint32 input in bytes format to an euint32 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint32 containing the verified encrypted value
+    function asEuint32(bytes memory value) internal returns (euint32) {
+        EncryptedInput memory input = Utils.inputFromBytes(value);
+        uint8 expectedUtype = Utils.EUINT32_TFHE;
+        if (input.utype != expectedUtype) {
+            revert InvalidEncryptedInput(input.utype, expectedUtype);
+        }
+        return euint32.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEuint64 input to an euint64 encrypted type
@@ -2540,7 +2590,6 @@ library FHE {
         if (value.utype != expectedUtype) {
             revert InvalidEncryptedInput(value.utype, expectedUtype);
         }
-
         return euint64.wrap(Impl.verifyInput(Utils.inputFromEuint64(value)));
     }
 
@@ -2593,9 +2642,20 @@ library FHE {
         if (value.utype != expectedUtype) {
             revert InvalidEncryptedInput(value.utype, expectedUtype);
         }
-
-
         return eaddress.wrap(Impl.verifyInput(Utils.inputFromEaddress(value)));
+    }
+
+    /// @notice Verifies and converts an InEaddress input in bytes format to an eaddress encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An eaddress containing the verified encrypted value
+    function asEaddress(bytes memory value) internal returns (eaddress) {
+        EncryptedInput memory input = Utils.inputFromBytes(value);
+        uint8 expectedUtype = Utils.EADDRESS_TFHE;
+        if (input.utype != expectedUtype) {
+            revert InvalidEncryptedInput(input.utype, expectedUtype);
+        }
+        return eaddress.wrap(Impl.verifyInput(input));
     }
 
     // ********** TYPE CASTING ************* //
@@ -2798,6 +2858,11 @@ library FHE {
     function asEuint32(uint256 value, int32 securityZone) internal returns (euint32) {
         uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT32_TFHE, securityZone);
         return euint32.wrap(ct);
+    }
+    /// @notice Converts a bytes32 to an euint64
+    /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
+    function asEuint64(bytes32 value) internal returns (euint64) {
+        return asEuint64(uint256(value), 0);
     }
     /// @notice Converts a uint256 to an euint64
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
