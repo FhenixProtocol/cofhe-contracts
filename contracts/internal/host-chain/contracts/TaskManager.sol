@@ -146,6 +146,9 @@ library TMCommon {
 contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2StepUpgradeable {
     bool private initialized;
 
+    /// @notice Trusted forwarder for ERC-2771 meta-transactions
+    address private _trustedForwarder;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -163,6 +166,72 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         verifierSigner = address(1);
         isEnabled = true;
     }
+
+    // =============================================================
+    //                     ERC-2771 META-TRANSACTIONS
+    // =============================================================
+
+    /**
+     * @notice Returns the trusted forwarder address
+     * @return The address of the trusted forwarder
+     */
+    function trustedForwarder() public view virtual returns (address) {
+        return _trustedForwarder;
+    }
+
+    /**
+     * @notice Checks if an address is the trusted forwarder
+     * @param forwarder Address to check
+     * @return True if the address is the trusted forwarder
+     */
+    function isTrustedForwarder(address forwarder) public view virtual returns (bool) {
+        return forwarder == _trustedForwarder;
+    }
+
+    /**
+     * @notice Sets the trusted forwarder address
+     * @param forwarder The new trusted forwarder address
+     */
+    function setTrustedForwarder(address forwarder) external onlyOwner {
+        _trustedForwarder = forwarder;
+    }
+
+    /**
+     * @dev Override _msgSender to support ERC-2771 meta-transactions
+     * @return The message sender - original user for meta-tx, msg.sender for direct calls
+     */
+    function _msgSender() internal view virtual override returns (address) {
+        uint256 calldataLength = msg.data.length;
+        uint256 contextSuffixLength = _contextSuffixLength();
+        if (isTrustedForwarder(msg.sender) && calldataLength >= contextSuffixLength) {
+            return address(bytes20(msg.data[calldataLength - contextSuffixLength:]));
+        }
+        return super._msgSender();
+    }
+
+    /**
+     * @dev Override _msgData to support ERC-2771 meta-transactions
+     * @return The message data without the appended sender for meta-tx
+     */
+    function _msgData() internal view virtual override returns (bytes calldata) {
+        uint256 calldataLength = msg.data.length;
+        uint256 contextSuffixLength = _contextSuffixLength();
+        if (isTrustedForwarder(msg.sender) && calldataLength >= contextSuffixLength) {
+            return msg.data[:calldataLength - contextSuffixLength];
+        }
+        return super._msgData();
+    }
+
+    /**
+     * @dev Returns the length of the context suffix (20 bytes for address)
+     */
+    function _contextSuffixLength() internal view virtual override returns (uint256) {
+        return 20;
+    }
+
+    // =============================================================
+    //                     SECURITY ZONES
+    // =============================================================
 
     function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyOwner {
         securityZoneMin = minSZ;
@@ -272,7 +341,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     }
 
     function checkAllowed(uint256 ctHash) internal view {
-        if (!acl.isAllowed(ctHash, msg.sender)) revert ACLNotAllowed(ctHash, msg.sender);
+        address sender = _msgSender();
+        if (!acl.isAllowed(ctHash, sender)) revert ACLNotAllowed(ctHash, sender);
     }
 
     function isUnaryOperation(FunctionId funcId) internal pure returns (bool) {
@@ -497,7 +567,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
         // seed is directly used as preCtHash for encrypted randoms
         uint256 ctHash = TMCommon.appendMetadata(seed, securityZone, returnType, false);
-        acl.allowTransient(ctHash, msg.sender, address(this));
+        acl.allowTransient(ctHash, _msgSender(), address(this));
         emit TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), 0);
         return ctHash;
     }
@@ -536,7 +606,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         int32 securityZone = getSecurityZone(funcId, encryptedHashes, extraInputs);
         uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, funcId);
 
-        acl.allowTransient(ctHash, msg.sender, address(this));
+        acl.allowTransient(ctHash, _msgSender(), address(this));
         sendEventCreated(ctHash, Utils.functionIdToString(funcId), inputs);
 
         return ctHash;
@@ -583,26 +653,26 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
         uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
 
-        acl.allowTransient(appendedHash, msg.sender, address(this));
+        acl.allowTransient(appendedHash, _msgSender(), address(this));
         return appendedHash;
     }
 
     function allow(uint256 ctHash, address account) external {
-        acl.allow(ctHash, account, msg.sender);
+        acl.allow(ctHash, account, _msgSender());
     }
 
     function allowGlobal(uint256 ctHash) external {
-        acl.allowGlobal(ctHash, msg.sender);
+        acl.allowGlobal(ctHash, _msgSender());
     }
 
     function allowTransient(uint256 ctHash, address account) external {
-        acl.allowTransient(ctHash, account, msg.sender);
+        acl.allowTransient(ctHash, account, _msgSender());
     }
 
     function allowForDecryption(uint256 ctHash) external {
         uint256[] memory hashes = new uint256[](1);
         hashes[0] = ctHash;
-        acl.allowForDecryption(hashes, msg.sender);
+        acl.allowForDecryption(hashes, _msgSender());
     }
 
     function isAllowed(uint256 ctHash, address account) external view returns (bool) {
