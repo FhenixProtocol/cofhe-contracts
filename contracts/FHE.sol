@@ -2630,7 +2630,7 @@ library FHE {
         if (input.utype != expectedUtype) {
             revert InvalidEncryptedInput(input.utype, expectedUtype);
         }
-        return euint64.wrap(Impl.verifyInput(input));
+        return euint128.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type
