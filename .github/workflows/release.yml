@@ -2,8 +2,8 @@ name: Publish Cofhe Contracts Package to npmjs
 on:
   release:
     types: [published]
-  pull_request:  # TEMPORARY: for testing OIDC - remove before merge
-    branches: [master]
+  push:  # TEMPORARY: for testing OIDC - remove before merge
+    branches: [fix/npm-oidc-provenance]
 
 permissions:
   contents: read
