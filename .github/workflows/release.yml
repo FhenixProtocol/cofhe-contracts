@@ -2,8 +2,6 @@ name: Publish Cofhe Contracts Package to npmjs
 on:
   release:
     types: [published]
-  push:  # TEMPORARY: for testing - remove before merge
-    branches: [fix/npm-oidc-provenance]
 
 permissions:
   contents: read
@@ -34,7 +32,7 @@ jobs:
       - name: Determine prerelease tag
         id: prerelease_check
         run: |
-          if [[ "${{ env.VERSION }}" =~ \-(alpha|beta|test)\.[0-9]+$ ]]; then
+          if [[ "${{ env.VERSION }}" =~ \-(alpha|beta)\.[0-9]+$ ]]; then
             echo "PRERELEASE=--tag beta" >> $GITHUB_ENV
           else
             echo "PRERELEASE=" >> $GITHUB_ENV
