@@ -2,6 +2,8 @@ name: Publish Cofhe Contracts Package to npmjs
 on:
   release:
     types: [published]
+  pull_request:  # TEMPORARY: for testing OIDC - remove before merge
+    branches: [master]
 
 permissions:
   contents: read
@@ -36,4 +38,4 @@ jobs:
           else
             echo "PRERELEASE=" >> $GITHUB_ENV
           fi
-      - run: cd contracts && pnpm publish --no-git-checks --provenance ${{ env.PRERELEASE }}
+      - run: cd contracts && pnpm publish --no-git-checks --provenance --dry-run ${{ env.PRERELEASE }}  # TEMPORARY: --dry-run for testing - remove before merge
