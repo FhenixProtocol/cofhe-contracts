@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          registry-url: 'https://registry.npmjs.org/'
+          # Note: NOT setting registry-url so npm can use OIDC natively
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -39,5 +39,3 @@ jobs:
             echo "PRERELEASE=" >> $GITHUB_ENV
           fi
       - run: cd contracts && npm publish --provenance --access public ${{ env.PRERELEASE }}  # TEMPORARY: testing OIDC
-        env:
-          NODE_AUTH_TOKEN: ''  # Explicitly clear to force OIDC
