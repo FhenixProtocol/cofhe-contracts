@@ -38,4 +38,4 @@ jobs:
           else
             echo "PRERELEASE=" >> $GITHUB_ENV
           fi
-      - run: cd contracts && pnpm publish --no-git-checks --provenance --dry-run ${{ env.PRERELEASE }}  # TEMPORARY: --dry-run for testing - remove before merge
+      - run: cd contracts && pnpm publish --no-git-checks --provenance ${{ env.PRERELEASE }}  # TEMPORARY: testing OIDC with test version
