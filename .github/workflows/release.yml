@@ -40,4 +40,4 @@ jobs:
           else
             echo "PRERELEASE=" >> $GITHUB_ENV
           fi
-      - run: cd contracts && npm publish --provenance --access public ${{ env.PRERELEASE }}  # TEMPORARY: testing OIDC
+      - run: cd contracts && npm publish --provenance --access public --tag test  # TEMPORARY: testing OIDC with test tag
