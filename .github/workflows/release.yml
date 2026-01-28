@@ -38,4 +38,6 @@ jobs:
           else
             echo "PRERELEASE=" >> $GITHUB_ENV
           fi
-      - run: cd contracts && npm publish --provenance --access public ${{ env.PRERELEASE }}  # TEMPORARY: testing OIDC with npm instead of pnpm
+      - run: cd contracts && npm publish --provenance --access public ${{ env.PRERELEASE }}  # TEMPORARY: testing OIDC
+        env:
+          NODE_AUTH_TOKEN: ''  # Explicitly clear to force OIDC
