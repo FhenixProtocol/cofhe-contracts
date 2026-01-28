@@ -122,6 +122,16 @@ library Impl {
         return input;
     }
 
+    /// @notice Decrypts an encrypted value for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input The encrypted value to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    /// @return The input value (decryption happens asynchronously)
+    function decrypt(uint256 input, address sender) internal returns (uint256) {
+        ITaskManager(TASK_MANAGER_ADDRESS).createDecryptTask(input, sender);
+        return input;
+    }
+
     function getDecryptResult(uint256 input) internal view returns (uint256) {
         return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResult(input);
     }
@@ -140,6 +150,15 @@ library Impl {
 
     function verifyInput(EncryptedInput memory input) internal returns (uint256) {
         return ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input, msg.sender);
+    }
+
+    /// @notice Verifies an encrypted input for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input The encrypted input to verify
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return The verified ciphertext hash
+    function verifyInput(EncryptedInput memory input, address sender) internal returns (uint256) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input, sender);
     }
 
     /// @notice Generates a random value of a given type with the given seed, for the provided securityZone
@@ -1912,6 +1931,19 @@ library FHE {
 
         ebool.wrap(Impl.decrypt(ebool.unwrap(input1)));
     }
+
+    /// @notice Performs the async decrypt operation on a ciphertext for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input1 the input ciphertext
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(ebool input1, address sender) internal {
+        if (!Common.isInitialized(input1)) {
+            input1 = asEbool(false);
+        }
+
+        ebool.wrap(Impl.decrypt(ebool.unwrap(input1), sender));
+    }
+
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
     /// @param input1 the input ciphertext
@@ -1922,6 +1954,19 @@ library FHE {
 
         euint8.wrap(Impl.decrypt(euint8.unwrap(input1)));
     }
+
+    /// @notice Performs the async decrypt operation on a ciphertext for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input1 the input ciphertext
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint8 input1, address sender) internal {
+        if (!Common.isInitialized(input1)) {
+            input1 = asEuint8(0);
+        }
+
+        euint8.wrap(Impl.decrypt(euint8.unwrap(input1), sender));
+    }
+
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
     /// @param input1 the input ciphertext
@@ -1932,6 +1977,19 @@ library FHE {
 
         euint16.wrap(Impl.decrypt(euint16.unwrap(input1)));
     }
+
+    /// @notice Performs the async decrypt operation on a ciphertext for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input1 the input ciphertext
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint16 input1, address sender) internal {
+        if (!Common.isInitialized(input1)) {
+            input1 = asEuint16(0);
+        }
+
+        euint16.wrap(Impl.decrypt(euint16.unwrap(input1), sender));
+    }
+
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
     /// @param input1 the input ciphertext
@@ -1942,6 +2000,19 @@ library FHE {
 
         euint32.wrap(Impl.decrypt(euint32.unwrap(input1)));
     }
+
+    /// @notice Performs the async decrypt operation on a ciphertext for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input1 the input ciphertext
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint32 input1, address sender) internal {
+        if (!Common.isInitialized(input1)) {
+            input1 = asEuint32(0);
+        }
+
+        euint32.wrap(Impl.decrypt(euint32.unwrap(input1), sender));
+    }
+
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
     /// @param input1 the input ciphertext
@@ -1952,6 +2023,19 @@ library FHE {
 
         euint64.wrap(Impl.decrypt(euint64.unwrap(input1)));
     }
+
+    /// @notice Performs the async decrypt operation on a ciphertext for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input1 the input ciphertext
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint64 input1, address sender) internal {
+        if (!Common.isInitialized(input1)) {
+            input1 = asEuint64(0);
+        }
+
+        euint64.wrap(Impl.decrypt(euint64.unwrap(input1), sender));
+    }
+
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
     /// @param input1 the input ciphertext
@@ -1963,6 +2047,18 @@ library FHE {
         euint128.wrap(Impl.decrypt(euint128.unwrap(input1)));
     }
 
+    /// @notice Performs the async decrypt operation on a ciphertext for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input1 the input ciphertext
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint128 input1, address sender) internal {
+        if (!Common.isInitialized(input1)) {
+            input1 = asEuint128(0);
+        }
+
+        euint128.wrap(Impl.decrypt(euint128.unwrap(input1), sender));
+    }
+
     /// @notice Performs the async decrypt operation on a ciphertext
     /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
     /// @param input1 the input ciphertext
@@ -1972,6 +2068,18 @@ library FHE {
         }
 
         Impl.decrypt(eaddress.unwrap(input1));
+    }
+
+    /// @notice Performs the async decrypt operation on a ciphertext for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param input1 the input ciphertext
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(eaddress input1, address sender) internal {
+        if (!Common.isInitialized(input1)) {
+            input1 = asEaddress(address(0));
+        }
+
+        Impl.decrypt(eaddress.unwrap(input1), sender);
     }
 
     /// @notice Gets the decrypted value from a previously decrypted ebool ciphertext
@@ -2489,6 +2597,20 @@ library FHE {
         return ebool.wrap(Impl.verifyInput(Utils.inputFromEbool(value)));
     }
 
+    /// @notice Verifies and converts an inEbool input to an ebool encrypted type for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return An ebool containing the verified encrypted value
+    function asEbool(InEbool memory value, address sender) internal returns (ebool) {
+        uint8 expectedUtype = Utils.EBOOL_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return ebool.wrap(Impl.verifyInput(Utils.inputFromEbool(value), sender));
+    }
+
     /// @notice Verifies and converts an InEuint8 input to an euint8 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
@@ -2501,6 +2623,20 @@ library FHE {
 
 
         return euint8.wrap(Impl.verifyInput(Utils.inputFromEuint8(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint8 input to an euint8 encrypted type for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return An euint8 containing the verified encrypted value
+    function asEuint8(InEuint8 memory value, address sender) internal returns (euint8) {
+        uint8 expectedUtype = Utils.EUINT8_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return euint8.wrap(Impl.verifyInput(Utils.inputFromEuint8(value), sender));
     }
 
     /// @notice Verifies and converts an InEuint16 input to an euint16 encrypted type
@@ -2517,6 +2653,20 @@ library FHE {
         return euint16.wrap(Impl.verifyInput(Utils.inputFromEuint16(value)));
     }
 
+    /// @notice Verifies and converts an InEuint16 input to an euint16 encrypted type for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return An euint16 containing the verified encrypted value
+    function asEuint16(InEuint16 memory value, address sender) internal returns (euint16) {
+        uint8 expectedUtype = Utils.EUINT16_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return euint16.wrap(Impl.verifyInput(Utils.inputFromEuint16(value), sender));
+    }
+
     /// @notice Verifies and converts an InEuint32 input to an euint32 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
@@ -2529,6 +2679,20 @@ library FHE {
 
 
         return euint32.wrap(Impl.verifyInput(Utils.inputFromEuint32(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint32 input to an euint32 encrypted type for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return An euint32 containing the verified encrypted value
+    function asEuint32(InEuint32 memory value, address sender) internal returns (euint32) {
+        uint8 expectedUtype = Utils.EUINT32_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return euint32.wrap(Impl.verifyInput(Utils.inputFromEuint32(value), sender));
     }
 
     /// @notice Verifies and converts an InEuint64 input to an euint64 encrypted type
@@ -2545,6 +2709,20 @@ library FHE {
         return euint64.wrap(Impl.verifyInput(Utils.inputFromEuint64(value)));
     }
 
+    /// @notice Verifies and converts an InEuint64 input to an euint64 encrypted type for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return An euint64 containing the verified encrypted value
+    function asEuint64(InEuint64 memory value, address sender) internal returns (euint64) {
+        uint8 expectedUtype = Utils.EUINT64_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return euint64.wrap(Impl.verifyInput(Utils.inputFromEuint64(value), sender));
+    }
+
     /// @notice Verifies and converts an InEuint128 input to an euint128 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
@@ -2559,6 +2737,20 @@ library FHE {
         return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value)));
     }
 
+    /// @notice Verifies and converts an InEuint128 input to an euint128 encrypted type for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return An euint128 containing the verified encrypted value
+    function asEuint128(InEuint128 memory value, address sender) internal returns (euint128) {
+        uint8 expectedUtype = Utils.EUINT128_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value), sender));
+    }
+
     /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param value The input value containing hash, type, security zone and signature
@@ -2571,6 +2763,20 @@ library FHE {
 
 
         return eaddress.wrap(Impl.verifyInput(Utils.inputFromEaddress(value)));
+    }
+
+    /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type for a specified sender (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @param sender The address to associate with the verification (typically _msgSender() in meta-tx context)
+    /// @return An eaddress containing the verified encrypted value
+    function asEaddress(InEaddress memory value, address sender) internal returns (eaddress) {
+        uint8 expectedUtype = Utils.EADDRESS_TFHE;
+        if (value.utype != expectedUtype) {
+            revert InvalidEncryptedInput(value.utype, expectedUtype);
+        }
+
+        return eaddress.wrap(Impl.verifyInput(Utils.inputFromEaddress(value), sender));
     }
 
     // ********** TYPE CASTING ************* //
@@ -3035,11 +3241,27 @@ library FHE {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), msg.sender);
     }
 
+    /// @notice Grants permission to a specified sender to operate on the encrypted boolean value (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param ctHash The encrypted boolean value to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(ebool ctHash, address sender) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), sender);
+    }
+
     /// @notice Grants permission to the message sender to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant access to
     function allowSender(euint8 ctHash) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), msg.sender);
+    }
+
+    /// @notice Grants permission to a specified sender to operate on the encrypted 8-bit unsigned integer (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param ctHash The encrypted uint8 value to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint8 ctHash, address sender) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 16-bit unsigned integer
@@ -3049,11 +3271,27 @@ library FHE {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), msg.sender);
     }
 
+    /// @notice Grants permission to a specified sender to operate on the encrypted 16-bit unsigned integer (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param ctHash The encrypted uint16 value to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint16 ctHash, address sender) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), sender);
+    }
+
     /// @notice Grants permission to the message sender to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant access to
     function allowSender(euint32 ctHash) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), msg.sender);
+    }
+
+    /// @notice Grants permission to a specified sender to operate on the encrypted 32-bit unsigned integer (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param ctHash The encrypted uint32 value to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint32 ctHash, address sender) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 64-bit unsigned integer
@@ -3063,6 +3301,14 @@ library FHE {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), msg.sender);
     }
 
+    /// @notice Grants permission to a specified sender to operate on the encrypted 64-bit unsigned integer (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param ctHash The encrypted uint64 value to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint64 ctHash, address sender) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), sender);
+    }
+
     /// @notice Grants permission to the message sender to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant access to
@@ -3070,11 +3316,27 @@ library FHE {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), msg.sender);
     }
 
+    /// @notice Grants permission to a specified sender to operate on the encrypted 128-bit unsigned integer (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param ctHash The encrypted uint128 value to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint128 ctHash, address sender) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), sender);
+    }
+
     /// @notice Grants permission to the message sender to operate on the encrypted address
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted address value to grant access to
     function allowSender(eaddress ctHash) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), msg.sender);
+    }
+
+    /// @notice Grants permission to a specified sender to operate on the encrypted address (meta-transaction support)
+    /// @dev Use this overload when calling from an ERC2771-compatible contract with _msgSender()
+    /// @param ctHash The encrypted address value to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(eaddress ctHash, address sender) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), sender);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted boolean value
@@ -3209,6 +3471,12 @@ library BindingsEbool {
     function decrypt(ebool value) internal {
         FHE.decrypt(value);
     }
+    /// @notice Decrypts an ebool for a specified sender (meta-transaction support)
+    /// @param value the ebool to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(ebool value, address sender) internal {
+        FHE.decrypt(value, sender);
+    }
     function allow(ebool ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -3223,6 +3491,12 @@ library BindingsEbool {
     }
     function allowSender(ebool ctHash) internal {
         FHE.allowSender(ctHash);
+    }
+    /// @notice Grants permission to a specified sender (meta-transaction support)
+    /// @param ctHash the ebool to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(ebool ctHash, address sender) internal {
+        FHE.allowSender(ctHash, sender);
     }
     function allowTransient(ebool ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
@@ -3445,6 +3719,12 @@ library BindingsEuint8 {
     function decrypt(euint8 value) internal {
         FHE.decrypt(value);
     }
+    /// @notice Decrypts a euint8 for a specified sender (meta-transaction support)
+    /// @param value the euint8 to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint8 value, address sender) internal {
+        FHE.decrypt(value, sender);
+    }
     function allow(euint8 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -3459,6 +3739,12 @@ library BindingsEuint8 {
     }
     function allowSender(euint8 ctHash) internal {
         FHE.allowSender(ctHash);
+    }
+    /// @notice Grants permission to a specified sender (meta-transaction support)
+    /// @param ctHash the euint8 to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint8 ctHash, address sender) internal {
+        FHE.allowSender(ctHash, sender);
     }
     function allowTransient(euint8 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
@@ -3681,6 +3967,12 @@ library BindingsEuint16 {
     function decrypt(euint16 value) internal {
         FHE.decrypt(value);
     }
+    /// @notice Decrypts a euint16 for a specified sender (meta-transaction support)
+    /// @param value the euint16 to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint16 value, address sender) internal {
+        FHE.decrypt(value, sender);
+    }
     function allow(euint16 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -3695,6 +3987,12 @@ library BindingsEuint16 {
     }
     function allowSender(euint16 ctHash) internal {
         FHE.allowSender(ctHash);
+    }
+    /// @notice Grants permission to a specified sender (meta-transaction support)
+    /// @param ctHash the euint16 to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint16 ctHash, address sender) internal {
+        FHE.allowSender(ctHash, sender);
     }
     function allowTransient(euint16 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
@@ -3917,6 +4215,12 @@ library BindingsEuint32 {
     function decrypt(euint32 value) internal {
         FHE.decrypt(value);
     }
+    /// @notice Decrypts a euint32 for a specified sender (meta-transaction support)
+    /// @param value the euint32 to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint32 value, address sender) internal {
+        FHE.decrypt(value, sender);
+    }
     function allow(euint32 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -3931,6 +4235,12 @@ library BindingsEuint32 {
     }
     function allowSender(euint32 ctHash) internal {
         FHE.allowSender(ctHash);
+    }
+    /// @notice Grants permission to a specified sender (meta-transaction support)
+    /// @param ctHash the euint32 to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint32 ctHash, address sender) internal {
+        FHE.allowSender(ctHash, sender);
     }
     function allowTransient(euint32 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
@@ -4135,6 +4445,12 @@ library BindingsEuint64 {
     function decrypt(euint64 value) internal {
         FHE.decrypt(value);
     }
+    /// @notice Decrypts a euint64 for a specified sender (meta-transaction support)
+    /// @param value the euint64 to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint64 value, address sender) internal {
+        FHE.decrypt(value, sender);
+    }
     function allow(euint64 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -4149,6 +4465,12 @@ library BindingsEuint64 {
     }
     function allowSender(euint64 ctHash) internal {
         FHE.allowSender(ctHash);
+    }
+    /// @notice Grants permission to a specified sender (meta-transaction support)
+    /// @param ctHash the euint64 to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint64 ctHash, address sender) internal {
+        FHE.allowSender(ctHash, sender);
     }
     function allowTransient(euint64 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
@@ -4336,6 +4658,12 @@ library BindingsEuint128 {
     function decrypt(euint128 value) internal {
         FHE.decrypt(value);
     }
+    /// @notice Decrypts a euint128 for a specified sender (meta-transaction support)
+    /// @param value the euint128 to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(euint128 value, address sender) internal {
+        FHE.decrypt(value, sender);
+    }
     function allow(euint128 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -4350,6 +4678,12 @@ library BindingsEuint128 {
     }
     function allowSender(euint128 ctHash) internal {
         FHE.allowSender(ctHash);
+    }
+    /// @notice Grants permission to a specified sender (meta-transaction support)
+    /// @param ctHash the euint128 to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(euint128 ctHash, address sender) internal {
+        FHE.allowSender(ctHash, sender);
     }
     function allowTransient(euint128 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
@@ -4397,6 +4731,12 @@ library BindingsEaddress {
     function decrypt(eaddress value) internal {
         FHE.decrypt(value);
     }
+    /// @notice Decrypts an eaddress for a specified sender (meta-transaction support)
+    /// @param value the eaddress to decrypt
+    /// @param sender The address to associate with the decryption (typically _msgSender() in meta-tx context)
+    function decrypt(eaddress value, address sender) internal {
+        FHE.decrypt(value, sender);
+    }
     function allow(eaddress ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -4411,6 +4751,12 @@ library BindingsEaddress {
     }
     function allowSender(eaddress ctHash) internal {
         FHE.allowSender(ctHash);
+    }
+    /// @notice Grants permission to a specified sender (meta-transaction support)
+    /// @param ctHash the eaddress to grant access to
+    /// @param sender The address to grant access (typically _msgSender() in meta-tx context)
+    function allowSender(eaddress ctHash, address sender) internal {
+        FHE.allowSender(ctHash, sender);
     }
     function allowTransient(eaddress ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
