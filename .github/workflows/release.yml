@@ -2,6 +2,11 @@ name: Publish Cofhe Contracts Package to npmjs
 on:
   release:
     types: [published]
+
+permissions:
+  contents: read
+  id-token: write  # Required for NPM provenance
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -32,5 +37,3 @@ jobs:
             echo "PRERELEASE=" >> $GITHUB_ENV
           fi
       - run: cd contracts && pnpm publish --no-git-checks ${{ env.PRERELEASE }}
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
