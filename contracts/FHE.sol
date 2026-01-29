@@ -2594,7 +2594,6 @@ library FHE {
     /// @return An euint64 containing the verified encrypted value
     function asEuint128(bytes memory value) internal returns (euint128) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT128_TFHE);
-        Utils.expectUtype(input.utype, Utils.EUINT128_TFHE);
         return euint128.wrap(Impl.verifyInput(input));
     }
 
@@ -2612,8 +2611,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An eaddress containing the verified encrypted value
     function asEaddress(bytes memory value) internal returns (eaddress) {
-        EncryptedInput memory input = Utils.inputFromBytes(value);
-        Utils.expectUtype(input.utype, Utils.EADDRESS_TFHE);
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EADDRESS_TFHE);
         return eaddress.wrap(Impl.verifyInput(input));
     }
 
