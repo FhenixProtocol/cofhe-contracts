@@ -6,6 +6,10 @@
 		"name": "FhenixProtocol",
 		"url": "https://github.com/FhenixProtocol/cofhe-contracts"
 	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/FhenixProtocol/cofhe-contracts"
+	},
 	"files": [
 		"FHE.sol",
 		"ICofhe.sol"
