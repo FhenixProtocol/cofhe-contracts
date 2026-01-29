@@ -183,7 +183,6 @@ library Impl {
 
 library FHE {
 
-    error InvalidEncryptedInput(uint8 got, uint8 expected);
     /// @notice Perform the addition operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted addition
     /// @param lhs input of type euint8
@@ -2495,11 +2494,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An ebool containing the verified encrypted value
     function asEbool(InEbool memory value) internal returns (ebool) {
-        uint8 expectedUtype = Utils.EBOOL_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
+        Utils.expectUtype(value.utype, Utils.EBOOL_TFHE);
         return ebool.wrap(Impl.verifyInput(Utils.inputFromEbool(value)));
     }
 
@@ -2508,11 +2503,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An ebool containing the verified encrypted value
     function asEbool(bytes memory value) internal returns (ebool) {
-        EncryptedInput memory input = Utils.inputFromBytes(value);
-        uint8 expectedUtype = Utils.EBOOL_TFHE;
-        if (input.utype != expectedUtype) {
-            revert InvalidEncryptedInput(input.utype, expectedUtype);
-        }
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EBOOL_TFHE);
         return ebool.wrap(Impl.verifyInput(input));
     }
 
@@ -2521,12 +2512,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint8 containing the verified encrypted value
     function asEuint8(InEuint8 memory value) internal returns (euint8) {
-        uint8 expectedUtype = Utils.EUINT8_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT8_TFHE);
         return euint8.wrap(Impl.verifyInput(Utils.inputFromEuint8(value)));
     }
 
@@ -2535,11 +2521,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint8 containing the verified encrypted value
     function asEuint8(bytes memory value) internal returns (euint8) {
-        EncryptedInput memory input = Utils.inputFromBytes(value);
-        uint8 expectedUtype = Utils.EUINT8_TFHE;
-        if (input.utype != expectedUtype) {
-            revert InvalidEncryptedInput(input.utype, expectedUtype);
-        }
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT8_TFHE);
         return euint8.wrap(Impl.verifyInput(input));
     }
 
@@ -2548,12 +2530,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint16 containing the verified encrypted value
     function asEuint16(InEuint16 memory value) internal returns (euint16) {
-        uint8 expectedUtype = Utils.EUINT16_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT16_TFHE);
         return euint16.wrap(Impl.verifyInput(Utils.inputFromEuint16(value)));
     }
 
@@ -2562,11 +2539,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint16 containing the verified encrypted value
     function asEuint16(bytes memory value) internal returns (euint16) {
-        EncryptedInput memory input = Utils.inputFromBytes(value);
-        uint8 expectedUtype = Utils.EUINT16_TFHE;
-        if (input.utype != expectedUtype) {
-            revert InvalidEncryptedInput(input.utype, expectedUtype);
-        }
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT16_TFHE);
         return euint16.wrap(Impl.verifyInput(input));
     }
 
@@ -2575,10 +2548,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint32 containing the verified encrypted value
     function asEuint32(InEuint32 memory value) internal returns (euint32) {
-        uint8 expectedUtype = Utils.EUINT32_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
+        Utils.expectUtype(value.utype, Utils.EUINT32_TFHE);
         return euint32.wrap(Impl.verifyInput(Utils.inputFromEuint32(value)));
     }
 
@@ -2587,11 +2557,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint32 containing the verified encrypted value
     function asEuint32(bytes memory value) internal returns (euint32) {
-        EncryptedInput memory input = Utils.inputFromBytes(value);
-        uint8 expectedUtype = Utils.EUINT32_TFHE;
-        if (input.utype != expectedUtype) {
-            revert InvalidEncryptedInput(input.utype, expectedUtype);
-        }
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT32_TFHE);
         return euint32.wrap(Impl.verifyInput(input));
     }
 
@@ -2600,10 +2566,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint64 containing the verified encrypted value
     function asEuint64(InEuint64 memory value) internal returns (euint64) {
-        uint8 expectedUtype = Utils.EUINT64_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
+        Utils.expectUtype(value.utype, Utils.EUINT64_TFHE);
         return euint64.wrap(Impl.verifyInput(Utils.inputFromEuint64(value)));
     }
 
@@ -2612,11 +2575,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint64 containing the verified encrypted value
     function asEuint64(bytes memory value) internal returns (euint64) {
-        EncryptedInput memory input = Utils.inputFromBytes(value);
-        uint8 expectedUtype = Utils.EUINT64_TFHE;
-        if (input.utype != expectedUtype) {
-            revert InvalidEncryptedInput(input.utype, expectedUtype);
-        }
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT64_TFHE);
         return euint64.wrap(Impl.verifyInput(input));
     }
 
@@ -2625,12 +2584,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint128 containing the verified encrypted value
     function asEuint128(InEuint128 memory value) internal returns (euint128) {
-        uint8 expectedUtype = Utils.EUINT128_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT128_TFHE);
         return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value)));
     }
 
@@ -2639,11 +2593,8 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint64 containing the verified encrypted value
     function asEuint128(bytes memory value) internal returns (euint128) {
-        EncryptedInput memory input = Utils.inputFromBytes(value);
-        uint8 expectedUtype = Utils.EUINT128_TFHE;
-        if (input.utype != expectedUtype) {
-            revert InvalidEncryptedInput(input.utype, expectedUtype);
-        }
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT128_TFHE);
+        Utils.expectUtype(input.utype, Utils.EUINT128_TFHE);
         return euint128.wrap(Impl.verifyInput(input));
     }
 
@@ -2652,10 +2603,7 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An eaddress containing the verified encrypted value
     function asEaddress(InEaddress memory value) internal returns (eaddress) {
-        uint8 expectedUtype = Utils.EADDRESS_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
+        Utils.expectUtype(value.utype, Utils.EADDRESS_TFHE);
         return eaddress.wrap(Impl.verifyInput(Utils.inputFromEaddress(value)));
     }
 
@@ -2665,10 +2613,7 @@ library FHE {
     /// @return An eaddress containing the verified encrypted value
     function asEaddress(bytes memory value) internal returns (eaddress) {
         EncryptedInput memory input = Utils.inputFromBytes(value);
-        uint8 expectedUtype = Utils.EADDRESS_TFHE;
-        if (input.utype != expectedUtype) {
-            revert InvalidEncryptedInput(input.utype, expectedUtype);
-        }
+        Utils.expectUtype(input.utype, Utils.EADDRESS_TFHE);
         return eaddress.wrap(Impl.verifyInput(input));
     }
 

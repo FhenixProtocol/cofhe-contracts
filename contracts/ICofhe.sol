@@ -110,6 +110,8 @@ interface ITaskManager {
 }
 
 library Utils {
+    error InvalidEncryptedInput(uint8 got, uint8 expected);
+
     // Values used to communicate types to the runtime.
     // Must match values defined in warp-drive protobufs for everything to
     uint8 internal constant EUINT8_TFHE = 2;
@@ -217,7 +219,7 @@ library Utils {
         });
     }
 
-    function inputFromBytes(bytes memory data) internal pure returns (EncryptedInput memory) {
+    function inputFromBytes(bytes memory data, uint8 expected) internal pure returns (EncryptedInput memory) {
         EncryptedInput memory v;
         (
             v.ctHash,
@@ -228,6 +230,14 @@ library Utils {
             data,
             (uint256, uint8, uint8, bytes)
         );
+
+        expectUtype(v.utype, expected);
         return v;
+    }
+
+    function expectUtype(uint8 actual, uint8 expected) internal pure {
+        if (actual != expected) {
+            revert InvalidEncryptedInput(actual, expected);
+        }
     }
 }
