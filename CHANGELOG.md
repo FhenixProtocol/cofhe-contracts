@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.13
+## v0.1.0
 
 ### Breaking Changes
 - All ciphertext handles are now represented as `bytes32` instead of `uint256`. This doesn't affect contracts that operate on ciphertexts via `FHE.op` functions, since those functions return the wrapped types. It does affect contracts that for some reason do `euintx.unwrap`. The `FHE.op` functions still receive `euintx` inputs, but their underlying types have changed.
