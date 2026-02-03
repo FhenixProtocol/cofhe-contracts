@@ -161,6 +161,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         __UUPSUpgradeable_init();
         initialized = true;
         verifierSigner = address(1);
+        decryptResultSigner = address(1);
         isEnabled = true;
     }
 
@@ -193,6 +194,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
     event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
     event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
+    event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
 
     struct Task {
         address creator;
@@ -224,6 +226,10 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     // Whether the task manager is enabled
     // If disabled, all operations will revert
     bool public isEnabled;
+
+    // Signer address for decrypt result verification (threshold network's signing key)
+    // When set to address(0), signature verification is skipped (debug mode)
+    address public decryptResultSigner;
 
 
     modifier onlyAggregator() {
@@ -549,6 +555,104 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
     }
 
+    /// @notice Publish a signed decrypt result to the chain
+    /// @dev Anyone with a valid signature from the decrypt network can call this
+    /// @param ctHash The ciphertext hash
+    /// @param result The decrypted plaintext value
+    /// @param decryptionId Unique identifier for this decryption request
+    /// @param signature The ECDSA signature from the decrypt network
+    function publishDecryptResult(
+        uint256 ctHash,
+        uint256 result,
+        uint256 decryptionId,
+        bytes calldata signature
+    ) external {
+        if (decryptResultSigner != address(0)) {
+            _verifyDecryptResultSignature(ctHash, result, decryptionId, signature);
+        }
+
+        plaintextsStorage.storeResult(ctHash, result);
+        emit DecryptionResult(ctHash, result, msg.sender);
+    }
+
+    /// @notice Publish multiple decrypt results in one transaction
+    /// @dev Amortizes base tx cost across multiple operations
+    function publishDecryptResultBatch(
+        uint256[] calldata ctHashes,
+        uint256[] calldata results,
+        uint256[] calldata decryptionIds,
+        bytes[] calldata signatures
+    ) external {
+        uint256 length = ctHashes.length;
+        require(results.length == length && decryptionIds.length == length &&
+                signatures.length == length, "Length mismatch");
+
+        for (uint256 i = 0; i < length; i++) {
+            if (decryptResultSigner != address(0)) {
+                _verifyDecryptResultSignature(ctHashes[i], results[i], decryptionIds[i], signatures[i]);
+            }
+            plaintextsStorage.storeResult(ctHashes[i], results[i]);
+            emit DecryptionResult(ctHashes[i], results[i], msg.sender);
+        }
+    }
+
+    /// @notice Verify a decrypt result signature without publishing
+    /// @dev Returns true if signature is valid, reverts otherwise
+    /// @return True if signature is valid
+    function verifyDecryptResult(
+        uint256 ctHash,
+        uint256 result,
+        uint256 decryptionId,
+        bytes calldata signature
+    ) external view returns (bool) {
+        if (decryptResultSigner == address(0)) {
+            return true;
+        }
+
+        _verifyDecryptResultSignature(ctHash, result, decryptionId, signature);
+        return true;
+    }
+
+    /// @dev Verify signature with assembly-optimized hash computation
+    function _verifyDecryptResultSignature(
+        uint256 ctHash,
+        uint256 result,
+        uint256 decryptionId,
+        bytes calldata signature
+    ) private view {
+        bytes32 messageHash = _computeDecryptResultHash(ctHash, result, decryptionId);
+        address recovered = ECDSA.recover(messageHash, signature);
+
+        if (recovered == address(0)) {
+            revert InvalidSignature();
+        }
+        if (recovered != decryptResultSigner) {
+            revert InvalidSigner(recovered, decryptResultSigner);
+        }
+    }
+
+    /// @dev Compute message hash using assembly for gas efficiency
+    /// @notice Format: result (32) || enc_type (4) || chain_id (8) || ct_hash (32) || decryption_id (32) = 108 bytes
+    function _computeDecryptResultHash(
+        uint256 ctHash,
+        uint256 result,
+        uint256 decryptionId
+    ) private view returns (bytes32 messageHash) {
+        uint8 encryptionType = TMCommon.getUintTypeFromHash(ctHash);
+        uint64 chainId = uint64(block.chainid);
+
+        // Assembly for gas-efficient message construction
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, result)                                    // bytes 0-31: result
+            mstore(add(ptr, 0x20), shl(224, encryptionType))       // bytes 32-35: enc_type (i32, left-aligned in 32 bytes then shifted)
+            mstore(add(ptr, 0x24), shl(192, chainId))              // bytes 36-43: chain_id (u64, left-aligned then shifted)
+            mstore(add(ptr, 0x2c), ctHash)                         // bytes 44-75: ctHash
+            mstore(add(ptr, 0x4c), decryptionId)                   // bytes 76-107: decryptionId
+            messageHash := keccak256(ptr, 0x6c)                    // hash 108 bytes
+        }
+    }
+
     function handleError(uint256 ctHash, string memory operation, string memory errorMessage) external onlyAggregator {
         emit ProtocolNotification(ctHash, operation, errorMessage);
     }
@@ -630,6 +734,14 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
     function setVerifierSigner(address signer) external onlyOwner {
         verifierSigner = signer;
+    }
+
+    /// @notice Set the authorized signer for decrypt results
+    /// @param signer The new signer address (address(0) disables verification)
+    function setDecryptResultSigner(address signer) external onlyOwner {
+        address oldSigner = decryptResultSigner;
+        decryptResultSigner = signer;
+        emit DecryptResultSignerChanged(oldSigner, signer);
     }
 
     function setSecurityZoneMax(int32 securityZone) external onlyOwner {
