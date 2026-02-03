@@ -4,6 +4,8 @@
   "description": "Internal contracts for the CoFHE",
   "scripts": {
     "test": "hardhat test",
+    "test:decrypt-result": "hardhat test test/decryptResult/DecryptResult.ts",
+    "test:onchain": "hardhat test test/onChain/OnChain.ts",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json ./deployments/localfhenix ./ignition/deployments ./.openzeppelin/*",
     "compile": "hardhat compile",
     "task:deploy": "hardhat deploy",
