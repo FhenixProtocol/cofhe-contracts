@@ -122,7 +122,7 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
       process.env.VERIFIER_ADDRESS,
     );
     await tx.wait();
-    console.log(chalk.green("Successfully set verifier signer address"));
+    console.log(chalk.green(`Successfully set verifier signer address: ${process.env.VERIFIER_ADDRESS}`));
   } catch (e) {
     console.error(chalk.red(`Failed setVerifierSigner transaction: ${e}`));
     return e;
@@ -150,7 +150,7 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
       process.env.DECRYPT_RESULT_SIGNER,
     );
     await tx.wait();
-    console.log(chalk.green("Successfully set decrypt result signer address"));
+    console.log(chalk.green(`Successfully set decrypt result signer address: ${process.env.DECRYPT_RESULT_SIGNER}`));
   } catch (e) {
     console.error(chalk.red(`Failed setDecryptResultSigner transaction: ${e}`));
     return e;
@@ -329,7 +329,7 @@ function getAggregatorWallets(ethers: any) {
 const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
-  console.log(chalk.green("Network:", hre.network.config));
+  console.log(chalk.green("Network:", JSON.stringify(hre.network.config)));
   console.log("\n");
 
   // Note: we need to use an unused account for deployment via ignition, or it will complain
