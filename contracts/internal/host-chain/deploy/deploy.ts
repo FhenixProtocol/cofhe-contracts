@@ -329,7 +329,7 @@ function getAggregatorWallets(ethers: any) {
 const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
-  console.log(chalk.green("Network:", JSON.stringify(hre.network.config)));
+  console.log(chalk.green("Network:", JSON.stringify(hre.network.config, (_, v) => typeof v === 'bigint' ? v.toString() : v)));
   console.log("\n");
 
   // Note: we need to use an unused account for deployment via ignition, or it will complain
