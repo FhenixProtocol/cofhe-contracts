@@ -142,6 +142,10 @@ library Impl {
         return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResult(ctHash, result, signature);
     }
 
+    function verifyDecryptResultSafe(uint256 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultSafe(ctHash, result, signature);
+    }
+
     function not(uint8 returnType, uint256 input) internal returns (uint256) {
         return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0));
     }

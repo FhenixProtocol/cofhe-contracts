@@ -482,6 +482,168 @@ export function shouldBehaveLikeDecryptResult(): void {
     });
   });
 
+  describe("setVerifierSigner", function () {
+    it("should emit VerifierSignerChanged event", async function () {
+      const taskManager = this.taskManager as Contract;
+      const owner = this.owner;
+
+      const originalSigner = await taskManager.verifierSigner();
+      const newSigner = ethers.Wallet.createRandom().address;
+
+      await expect(taskManager.connect(owner).setVerifierSigner(newSigner))
+        .to.emit(taskManager, "VerifierSignerChanged")
+        .withArgs(originalSigner, newSigner);
+
+      // Restore original signer
+      await taskManager.connect(owner).setVerifierSigner(originalSigner);
+    });
+
+    it("should only be callable by owner", async function () {
+      const taskManager = this.taskManager as Contract;
+      const otherAccount = this.otherAccount;
+
+      const newSigner = ethers.Wallet.createRandom().address;
+
+      await expect(
+        taskManager.connect(otherAccount).setVerifierSigner(newSigner)
+      ).to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
+    });
+  });
+
+  describe("verifyDecryptResultSafe", function () {
+    it("should return true for valid signature", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+      const baseHash = keccak256(toUtf8Bytes("verify-safe-valid"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(777);
+
+      const signature = await signDecryptResult(
+        testSigner,
+        result,
+        EUINT64_TFHE,
+        chainId,
+        ctHash
+      );
+
+      const isValid = await taskManager.verifyDecryptResultSafe(
+        ctHash,
+        result,
+        "0x" + signature
+      );
+      expect(isValid).to.be.true;
+    });
+
+    it("should return false for invalid signature (not revert)", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+      const baseHash = keccak256(toUtf8Bytes("verify-safe-invalid"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(999);
+
+      // Sign with correct signer but wrong result (simulates tampered data)
+      const signature = await signDecryptResult(
+        testSigner,
+        BigInt(123), // Different result than what we'll verify
+        EUINT64_TFHE,
+        chainId,
+        ctHash
+      );
+
+      // Should return false, NOT revert
+      const isValid = await taskManager.verifyDecryptResultSafe(
+        ctHash,
+        result,
+        "0x" + signature
+      );
+      expect(isValid).to.be.false;
+    });
+
+    it("should return false for wrong signer (not revert)", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+      const baseHash = keccak256(toUtf8Bytes("verify-safe-wrong-signer"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(555);
+
+      // Sign with a different key
+      const wrongSigner = new ethers.Wallet(
+        "0xabcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        ethers.provider
+      );
+
+      const signature = await signDecryptResult(
+        wrongSigner,
+        result,
+        EUINT64_TFHE,
+        chainId,
+        ctHash
+      );
+
+      // Should return false, NOT revert
+      const isValid = await taskManager.verifyDecryptResultSafe(
+        ctHash,
+        result,
+        "0x" + signature
+      );
+      expect(isValid).to.be.false;
+    });
+
+    it("should return true in debug mode (signer = address(0))", async function () {
+      const taskManager = this.taskManager as Contract;
+      const owner = this.owner;
+      const testSigner = this.testSigner as Wallet;
+
+      // Set signer to address(0) to enable debug mode
+      await taskManager.connect(owner).setDecryptResultSigner(ethers.ZeroAddress);
+
+      const baseHash = keccak256(toUtf8Bytes("verify-safe-debug"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(12345);
+
+      // Should return true with any signature in debug mode
+      const isValid = await taskManager.verifyDecryptResultSafe(
+        ctHash,
+        result,
+        "0x" + "00".repeat(65)
+      );
+      expect(isValid).to.be.true;
+
+      // Restore signer
+      await taskManager.connect(owner).setDecryptResultSigner(testSigner.address);
+    });
+
+    it("should not modify state (view function)", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+      const baseHash = keccak256(toUtf8Bytes("verify-safe-no-state"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(888);
+
+      const signature = await signDecryptResult(
+        testSigner,
+        result,
+        EUINT64_TFHE,
+        chainId,
+        ctHash
+      );
+
+      // Call verifySafe
+      await taskManager.verifyDecryptResultSafe(ctHash, result, "0x" + signature);
+
+      // Result should NOT be stored
+      const [, exists] = await taskManager.getDecryptResultSafe(ctHash);
+      expect(exists).to.be.false;
+    });
+  });
+
   describe("Cross-chain replay protection", function () {
     it("signature for one chain should not work on another", async function () {
       const taskManager = this.taskManager as Contract;
