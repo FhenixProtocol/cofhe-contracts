@@ -48,6 +48,13 @@ library TMCommon {
       The format: keccak256(operands_list, op)[0:29] || is_trivial (1 bit) & ct_type (7 bit) || securityZone
     */
 
+    // Constants for decrypt result hash computation (message format: result || enc_type || chain_id || ct_hash)
+    uint256 internal constant SHIFT_ENC_TYPE = 224;      // Shift for 4-byte enc_type (256 - 32 = 224)
+    uint256 internal constant SHIFT_CHAIN_ID = 192;      // Shift for 8-byte chain_id (256 - 64 = 192)
+    uint256 internal constant OFFSET_ENC_TYPE = 0x20;    // Byte offset for enc_type in message
+    uint256 internal constant OFFSET_CHAIN_ID = 0x24;    // Byte offset for chain_id in message
+    uint256 internal constant OFFSET_CT_HASH = 0x2c;     // Byte offset for ctHash in message
+    uint256 internal constant MESSAGE_LENGTH = 0x4c;     // Total message length: 76 bytes
 
     function uint256ToBytes32(uint256 value) internal pure returns (bytes memory) {
         bytes memory result = new bytes(32);
@@ -195,6 +202,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
     event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
     event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
+    event VerifierSignerChanged(address indexed oldSigner, address indexed newSigner);
 
     struct Task {
         address creator;
@@ -565,10 +573,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         uint256 result,
         bytes calldata signature
     ) external {
-        if (decryptResultSigner != address(0)) {
-            _verifyDecryptResultSignature(ctHash, result, signature);
-        }
-
+        _verifyDecryptResult(ctHash, result, signature, true);
         plaintextsStorage.storeResult(ctHash, result);
         emit DecryptionResult(ctHash, result, msg.sender);
     }
@@ -584,9 +589,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         require(results.length == length && signatures.length == length, "Length mismatch");
 
         for (uint256 i = 0; i < length; i++) {
-            if (decryptResultSigner != address(0)) {
-                _verifyDecryptResultSignature(ctHashes[i], results[i], signatures[i]);
-            }
+            _verifyDecryptResult(ctHashes[i], results[i], signatures[i], true);
             plaintextsStorage.storeResult(ctHashes[i], results[i]);
             emit DecryptionResult(ctHashes[i], results[i], msg.sender);
         }
@@ -600,29 +603,45 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         uint256 result,
         bytes calldata signature
     ) external view returns (bool) {
+        return _verifyDecryptResult(ctHash, result, signature, true);
+    }
+
+    /// @notice Verify a decrypt result signature without publishing (non-reverting)
+    /// @dev Returns false if signature is invalid instead of reverting
+    /// @return True if signature is valid, false otherwise
+    function verifyDecryptResultSafe(
+        uint256 ctHash,
+        uint256 result,
+        bytes calldata signature
+    ) external view returns (bool) {
+        return _verifyDecryptResult(ctHash, result, signature, false);
+    }
+
+    /// @dev Verify decrypt result signature
+    /// @dev Skips verification if decryptResultSigner is address(0) (debug mode)
+    /// @param shouldRevert If true, reverts on invalid signature; if false, returns false
+    function _verifyDecryptResult(
+        uint256 ctHash,
+        uint256 result,
+        bytes calldata signature,
+        bool shouldRevert
+    ) private view returns (bool) {
         if (decryptResultSigner == address(0)) {
             return true;
         }
 
-        _verifyDecryptResultSignature(ctHash, result, signature);
-        return true;
-    }
-
-    /// @dev Verify signature with assembly-optimized hash computation
-    function _verifyDecryptResultSignature(
-        uint256 ctHash,
-        uint256 result,
-        bytes calldata signature
-    ) private view {
         bytes32 messageHash = _computeDecryptResultHash(ctHash, result);
         address recovered = ECDSA.recover(messageHash, signature);
 
         if (recovered == address(0)) {
-            revert InvalidSignature();
+            if (shouldRevert) revert InvalidSignature();
+            return false;
         }
         if (recovered != decryptResultSigner) {
-            revert InvalidSigner(recovered, decryptResultSigner);
+            if (shouldRevert) revert InvalidSigner(recovered, decryptResultSigner);
+            return false;
         }
+        return true;
     }
 
     /// @dev Compute message hash using assembly for gas efficiency
@@ -634,14 +653,22 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         uint8 encryptionType = TMCommon.getUintTypeFromHash(ctHash);
         uint64 chainId = uint64(block.chainid);
 
+        // Load constants for assembly
+        uint256 shiftEncType = TMCommon.SHIFT_ENC_TYPE;
+        uint256 shiftChainId = TMCommon.SHIFT_CHAIN_ID;
+        uint256 offsetEncType = TMCommon.OFFSET_ENC_TYPE;
+        uint256 offsetChainId = TMCommon.OFFSET_CHAIN_ID;
+        uint256 offsetCtHash = TMCommon.OFFSET_CT_HASH;
+        uint256 msgLength = TMCommon.MESSAGE_LENGTH;
+
         // Assembly for gas-efficient message construction
         assembly {
             let ptr := mload(0x40)
-            mstore(ptr, result)                                    // bytes 0-31: result
-            mstore(add(ptr, 0x20), shl(224, encryptionType))       // bytes 32-35: enc_type (i32, left-aligned in 32 bytes then shifted)
-            mstore(add(ptr, 0x24), shl(192, chainId))              // bytes 36-43: chain_id (u64, left-aligned then shifted)
-            mstore(add(ptr, 0x2c), ctHash)                         // bytes 44-75: ctHash
-            messageHash := keccak256(ptr, 0x4c)                    // hash 76 bytes
+            mstore(ptr, result)                                            // bytes 0-31: result
+            mstore(add(ptr, offsetEncType), shl(shiftEncType, encryptionType))  // bytes 32-35: enc_type
+            mstore(add(ptr, offsetChainId), shl(shiftChainId, chainId))         // bytes 36-43: chain_id
+            mstore(add(ptr, offsetCtHash), ctHash)                              // bytes 44-75: ctHash
+            messageHash := keccak256(ptr, msgLength)                            // hash 76 bytes
         }
     }
 
@@ -725,7 +752,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     }
 
     function setVerifierSigner(address signer) external onlyOwner {
+        address oldSigner = verifierSigner;
         verifierSigner = signer;
+        emit VerifierSignerChanged(oldSigner, signer);
     }
 
     /// @notice Set the authorized signer for decrypt results

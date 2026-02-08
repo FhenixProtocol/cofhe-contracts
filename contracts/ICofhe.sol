@@ -111,6 +111,11 @@ interface ITaskManager {
     function publishDecryptResult(uint256 ctHash, uint256 result, bytes calldata signature) external;
     function publishDecryptResultBatch(uint256[] calldata ctHashes, uint256[] calldata results, bytes[] calldata signatures) external;
     function verifyDecryptResult(uint256 ctHash, uint256 result, bytes calldata signature) external view returns (bool);
+    function verifyDecryptResultSafe(
+        uint256 ctHash,
+        uint256 result,
+        bytes calldata signature
+    ) external view returns (bool);
 }
 
 library Utils {
