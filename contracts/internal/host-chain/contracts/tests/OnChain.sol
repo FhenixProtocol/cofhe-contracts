@@ -153,7 +153,7 @@ contract OnChain {
     }
 
     function cantEncryptWithFakeSecurityZone() public returns (euint32) {
-        return FHE.asEuint32(16, 100);
+        return FHE.asEuint32(16, 200); // 200 is outside valid range (-128 to 127)
     }
 
     function cantCastWithFakeType() public returns (uint256) {
