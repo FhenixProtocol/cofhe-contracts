@@ -559,16 +559,14 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     /// @dev Anyone with a valid signature from the decrypt network can call this
     /// @param ctHash The ciphertext hash
     /// @param result The decrypted plaintext value
-    /// @param decryptionId Unique identifier for this decryption request
     /// @param signature The ECDSA signature from the decrypt network
     function publishDecryptResult(
         uint256 ctHash,
         uint256 result,
-        uint256 decryptionId,
         bytes calldata signature
     ) external {
         if (decryptResultSigner != address(0)) {
-            _verifyDecryptResultSignature(ctHash, result, decryptionId, signature);
+            _verifyDecryptResultSignature(ctHash, result, signature);
         }
 
         plaintextsStorage.storeResult(ctHash, result);
@@ -580,16 +578,14 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     function publishDecryptResultBatch(
         uint256[] calldata ctHashes,
         uint256[] calldata results,
-        uint256[] calldata decryptionIds,
         bytes[] calldata signatures
     ) external {
         uint256 length = ctHashes.length;
-        require(results.length == length && decryptionIds.length == length &&
-                signatures.length == length, "Length mismatch");
+        require(results.length == length && signatures.length == length, "Length mismatch");
 
         for (uint256 i = 0; i < length; i++) {
             if (decryptResultSigner != address(0)) {
-                _verifyDecryptResultSignature(ctHashes[i], results[i], decryptionIds[i], signatures[i]);
+                _verifyDecryptResultSignature(ctHashes[i], results[i], signatures[i]);
             }
             plaintextsStorage.storeResult(ctHashes[i], results[i]);
             emit DecryptionResult(ctHashes[i], results[i], msg.sender);
@@ -602,14 +598,13 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     function verifyDecryptResult(
         uint256 ctHash,
         uint256 result,
-        uint256 decryptionId,
         bytes calldata signature
     ) external view returns (bool) {
         if (decryptResultSigner == address(0)) {
             return true;
         }
 
-        _verifyDecryptResultSignature(ctHash, result, decryptionId, signature);
+        _verifyDecryptResultSignature(ctHash, result, signature);
         return true;
     }
 
@@ -617,10 +612,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     function _verifyDecryptResultSignature(
         uint256 ctHash,
         uint256 result,
-        uint256 decryptionId,
         bytes calldata signature
     ) private view {
-        bytes32 messageHash = _computeDecryptResultHash(ctHash, result, decryptionId);
+        bytes32 messageHash = _computeDecryptResultHash(ctHash, result);
         address recovered = ECDSA.recover(messageHash, signature);
 
         if (recovered == address(0)) {
@@ -632,11 +626,10 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     }
 
     /// @dev Compute message hash using assembly for gas efficiency
-    /// @notice Format: result (32) || enc_type (4) || chain_id (8) || ct_hash (32) || decryption_id (32) = 108 bytes
+    /// @notice Format: result (32) || enc_type (4) || chain_id (8) || ct_hash (32) = 76 bytes
     function _computeDecryptResultHash(
         uint256 ctHash,
-        uint256 result,
-        uint256 decryptionId
+        uint256 result
     ) private view returns (bytes32 messageHash) {
         uint8 encryptionType = TMCommon.getUintTypeFromHash(ctHash);
         uint64 chainId = uint64(block.chainid);
@@ -648,8 +641,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
             mstore(add(ptr, 0x20), shl(224, encryptionType))       // bytes 32-35: enc_type (i32, left-aligned in 32 bytes then shifted)
             mstore(add(ptr, 0x24), shl(192, chainId))              // bytes 36-43: chain_id (u64, left-aligned then shifted)
             mstore(add(ptr, 0x2c), ctHash)                         // bytes 44-75: ctHash
-            mstore(add(ptr, 0x4c), decryptionId)                   // bytes 76-107: decryptionId
-            messageHash := keccak256(ptr, 0x6c)                    // hash 108 bytes
+            messageHash := keccak256(ptr, 0x4c)                    // hash 76 bytes
         }
     }
 
