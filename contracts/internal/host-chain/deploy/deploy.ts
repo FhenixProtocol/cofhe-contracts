@@ -127,6 +127,34 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
     console.error(chalk.red(`Failed setVerifierSigner transaction: ${e}`));
     return e;
   }
+
+  // Set the decrypt result signer (dispatcher's signing key)
+  try {
+    const connectedImplementation = TMProxyContract.connect(aggregatorSigners[0]);
+    if (process.env.DECRYPT_RESULT_SIGNER === "0x0000000000000000000000000000000000000000") {
+      const networkName = hre?.network?.name;
+      const networkConfig = hre?.network?.config as any;
+      const networkUrl = networkConfig?.url;
+      if (
+        networkUrl &&
+        !networkUrl.includes("localhost") &&
+        !networkUrl.includes("127.0.0.1") &&
+        !networkName?.startsWith("localfhenix")
+      ) {
+        console.error(chalk.red("refusing to set DECRYPT_RESULT_SIGNER to 0 on a non-local network!"));
+        return;
+      }
+    }
+
+    const tx = await connectedImplementation.setDecryptResultSigner(
+      process.env.DECRYPT_RESULT_SIGNER,
+    );
+    await tx.wait();
+    console.log(chalk.green("Successfully set decrypt result signer address"));
+  } catch (e) {
+    console.error(chalk.red(`Failed setDecryptResultSigner transaction: ${e}`));
+    return e;
+  }
   console.log("\n");
 }
 
