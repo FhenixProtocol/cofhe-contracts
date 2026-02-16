@@ -235,6 +235,15 @@ library Utils {
         return v;
     }
 
+    function inputFromHashAndProof(bytes32 hash, bytes memory signature, uint8 utype) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: uint256(hash),
+            securityZone: 0,
+            utype: utype,
+            signature: signature
+        });
+    }
+
     function expectUtype(uint8 actual, uint8 expected) internal pure {
         if (actual != expected) {
             revert InvalidEncryptedInput(actual, expected);
