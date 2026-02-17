@@ -5,11 +5,11 @@
 [license]: https://opensource.org/licenses/MIT
 [license-badge]: https://img.shields.io/badge/License-MIT-blue.svg
 
-Solidity contracts for working with FHE smart contract on CoFHE.
+Solidity contracts for working with FHE smart contracts on CoFHE.
 
-Need help getting started? Check out the [fhenix documentation](https://docs.fhenix.io)!
+Need help getting started? Check out the [Fhenix documentation](https://cofhe-docs.fhenix.zone)!
 
-These contracts are still under heavy constructions and will be changing frequently. Consider binding your contracts to a specific version, and keep an eye on the [changelog](https://github.com/FhenixProtocol/cofhe-contracts/CHANGELOG.md)
+These contracts are still under heavy construction and will be changing frequently. Consider binding your contracts to a specific version
 
 ## Install
 
@@ -30,19 +30,17 @@ import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 ```solidity
 pragma solidity ^0.8.20;
 
-import {FHE, euint8, inEuint8} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {FHE, euint8, InEuint8} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract Example {
     
     euint8 _output;
 
-    function setOutput(inEuint8 calldata _encryptedNumber) public  {
+    function setOutput(InEuint8 calldata _encryptedNumber) public {
         _output = FHE.asEuint8(_encryptedNumber);
+        FHE.allowThis(_output);
     }
 
-    function getOutputEncrypted(bytes32 publicKey) public view returns (bytes memory) {
-        return _output.seal(publicKey);
-    }
 }
 ```
 
