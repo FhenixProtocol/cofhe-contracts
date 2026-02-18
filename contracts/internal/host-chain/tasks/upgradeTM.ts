@@ -51,6 +51,7 @@ async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFac
     console.log(chalk.green("Old implementation address:", oldImplementationAddress));
 
     const newIplDeployment = await TMFactory.deploy();
+    await newIplDeployment.waitForDeployment();
     const newIplAddress = await newIplDeployment.getAddress();
     console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
     const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, "0x");
