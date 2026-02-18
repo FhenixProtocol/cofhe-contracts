@@ -110,6 +110,8 @@ interface ITaskManager {
 }
 
 library Utils {
+    error InvalidEncryptedInput(uint8 got, uint8 expected);
+
     // Values used to communicate types to the runtime.
     // Must match values defined in warp-drive protobufs for everything to
     uint8 internal constant EUINT8_TFHE = 2;
@@ -215,5 +217,36 @@ library Utils {
             utype: EADDRESS_TFHE,
             signature: input.signature
         });
+    }
+
+    function inputFromBytes(bytes memory data, uint8 expected) internal pure returns (EncryptedInput memory) {
+        EncryptedInput memory v;
+        (
+            v.ctHash,
+            v.securityZone,
+            v.utype,
+            v.signature
+        ) = abi.decode(
+            data,
+            (uint256, uint8, uint8, bytes)
+        );
+
+        expectUtype(v.utype, expected);
+        return v;
+    }
+
+    function inputFromHashAndProof(bytes32 hash, bytes memory signature, uint8 utype) internal pure returns (EncryptedInput memory) {
+        return EncryptedInput({
+            ctHash: uint256(hash),
+            securityZone: 0,
+            utype: utype,
+            signature: signature
+        });
+    }
+
+    function expectUtype(uint8 actual, uint8 expected) internal pure {
+        if (actual != expected) {
+            revert InvalidEncryptedInput(actual, expected);
+        }
     }
 }

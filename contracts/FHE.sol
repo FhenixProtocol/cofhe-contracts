@@ -6,13 +6,13 @@ pragma solidity >=0.8.19 <0.9.0;
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {FunctionId, ITaskManager, Utils, EncryptedInput, InEbool, InEuint8, InEuint16, InEuint32, InEuint64, InEuint128, InEaddress} from "./ICofhe.sol";
 
-type ebool is uint256;
-type euint8 is uint256;
-type euint16 is uint256;
-type euint32 is uint256;
-type euint64 is uint256;
-type euint128 is uint256;
-type eaddress is uint256;
+type ebool is bytes32;
+type euint8 is bytes32;
+type euint16 is bytes32;
+type euint32 is bytes32;
+type euint64 is bytes32;
+type euint128 is bytes32;
+type eaddress is bytes32;
 
 // ================================
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
@@ -36,7 +36,7 @@ library Common {
         return uint256(uint32(value));
     }
 
-    function isInitialized(uint256 hash) internal pure returns (bool) {
+    function isInitialized(bytes32 hash) internal pure returns (bool) {
         return hash != 0;
     }
 
@@ -75,20 +75,34 @@ library Common {
         return isInitialized(eaddress.unwrap(v));
     }
 
-    function createUint256Inputs(uint256 input1) internal pure returns (uint256[] memory) {
+    function createUint256Inputs(bytes32 input1) internal pure returns (uint256[] memory) {
         uint256[] memory inputs = new uint256[](1);
-        inputs[0] = input1;
+        inputs[0] = uint256(input1);
         return inputs;
     }
 
-    function createUint256Inputs(uint256 input1, uint256 input2) internal pure returns (uint256[] memory) {
+    function createUint256ExtraInputs(uint256 input1) internal pure returns (uint256[] memory) {
+        uint256[] memory inputs = new uint256[](1);
+        inputs[0] = uint256(input1);
+        return inputs;
+    }
+
+    function createUint256Inputs(bytes32 input1, bytes32 input2) internal pure returns (uint256[] memory) {
         uint256[] memory inputs = new uint256[](2);
-        inputs[0] = input1;
-        inputs[1] = input2;
+        inputs[0] = uint256(input1);
+        inputs[1] = uint256(input2);
         return inputs;
     }
 
-    function createUint256Inputs(uint256 input1, uint256 input2, uint256 input3) internal pure returns (uint256[] memory) {
+    function createUint256Inputs(bytes32 input1, bytes32 input2, bytes32 input3) internal pure returns (uint256[] memory) {
+        uint256[] memory inputs = new uint256[](3);
+        inputs[0] = uint256(input1);
+        inputs[1] = uint256(input2);
+        inputs[2] = uint256(input3);
+        return inputs;
+    }
+
+    function createUint256ExtraInputs(uint256 input1, uint256 input2, uint256 input3) internal pure returns (uint256[] memory) {
         uint256[] memory inputs = new uint256[](3);
         inputs[0] = input1;
         inputs[1] = input2;
@@ -98,48 +112,48 @@ library Common {
 }
 
 library Impl {
-    function trivialEncrypt(uint256 value, uint8 toType, int32 securityZone) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(toType, FunctionId.trivialEncrypt, new uint256[](0), Common.createUint256Inputs(value, toType, Common.convertInt32ToUint256(securityZone)));
+    function trivialEncrypt(uint256 value, uint8 toType, int32 securityZone) internal returns (bytes32) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(toType, FunctionId.trivialEncrypt, new uint256[](0), Common.createUint256ExtraInputs(value, toType, Common.convertInt32ToUint256(securityZone))));
     }
 
-    function cast(uint256 key, uint8 toType) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(toType, FunctionId.cast, Common.createUint256Inputs(key), Common.createUint256Inputs(toType));
+    function cast(bytes32 key, uint8 toType) internal returns (bytes32) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(toType, FunctionId.cast, Common.createUint256Inputs(key), Common.createUint256ExtraInputs(toType)));
     }
 
-    function select(uint8 returnType, ebool control, uint256 ifTrue, uint256 ifFalse) internal returns (uint256 result) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType,
+    function select(uint8 returnType, ebool control, bytes32 ifTrue, bytes32 ifFalse) internal returns (bytes32 result) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType,
             FunctionId.select,
             Common.createUint256Inputs(ebool.unwrap(control), ifTrue, ifFalse),
-            new uint256[](0));
+            new uint256[](0)));
     }
 
-    function mathOp(uint8 returnType, uint256 lhs, uint256 rhs, FunctionId functionId) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, functionId, Common.createUint256Inputs(lhs, rhs), new uint256[](0));
+    function mathOp(uint8 returnType, bytes32 lhs, bytes32 rhs, FunctionId functionId) internal returns (bytes32) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, functionId, Common.createUint256Inputs(lhs, rhs), new uint256[](0)));
     }
 
-    function decrypt(uint256 input) internal returns (uint256) {
-        ITaskManager(TASK_MANAGER_ADDRESS).createDecryptTask(input, msg.sender);
-        return input;
+    function decrypt(bytes32 input) internal returns (bytes32) {
+        ITaskManager(TASK_MANAGER_ADDRESS).createDecryptTask(uint256(input), msg.sender);
+        return bytes32(input);
     }
 
-    function getDecryptResult(uint256 input) internal view returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResult(input);
+    function getDecryptResult(bytes32 input) internal view returns (uint256) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResult(uint256(input));
     }
 
-    function getDecryptResultSafe(uint256 input) internal view returns (uint256 result, bool decrypted) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResultSafe(input);
+    function getDecryptResultSafe(bytes32 input) internal view returns (uint256 result, bool decrypted) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResultSafe(uint256(input));
     }
 
-    function not(uint8 returnType, uint256 input) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0));
+    function not(uint8 returnType, bytes32 input) internal returns (bytes32) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0)));
     }
 
-    function square(uint8 returnType, uint256 input) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0));
+    function square(uint8 returnType, bytes32 input) internal returns (bytes32) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0)));
     }
 
-    function verifyInput(EncryptedInput memory input) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input, msg.sender);
+    function verifyInput(EncryptedInput memory input) internal returns (bytes32) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input, msg.sender));
     }
 
     /// @notice Generates a random value of a given type with the given seed, for the provided securityZone
@@ -147,29 +161,28 @@ library Impl {
     /// @param uintType the type of the random value to generate
     /// @param seed the seed to use to create a random value from
     /// @param securityZone the security zone to use for the random value
-    function random(uint8 uintType, uint256 seed, int32 securityZone) internal returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).createRandomTask(uintType, seed, securityZone);
+    function random(uint8 uintType, uint256 seed, int32 securityZone) internal returns (bytes32) {
+        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createRandomTask(uintType, seed, securityZone));
     }
 
     /// @notice Generates a random value of a given type with the given seed
     /// @dev Calls the desired function
     /// @param uintType the type of the random value to generate
     /// @param seed the seed to use to create a random value from
-    function random(uint8 uintType, uint256 seed) internal returns (uint256) {
+    function random(uint8 uintType, uint256 seed) internal returns (bytes32) {
         return random(uintType, seed, 0);
     }
 
     /// @notice Generates a random value of a given type
     /// @dev Calls the desired function
     /// @param uintType the type of the random value to generate
-    function random(uint8 uintType) internal returns (uint256) {
+    function random(uint8 uintType) internal returns (bytes32) {
         return random(uintType, 0, 0);
     }
 }
 
 library FHE {
 
-    error InvalidEncryptedInput(uint8 got, uint8 expected);
     /// @notice Perform the addition operation on two parameters of type euint8
     /// @dev Verifies that inputs are initialized, performs encrypted addition
     /// @param lhs input of type euint8
@@ -2035,7 +2048,7 @@ library FHE {
     /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The raw ciphertext to get the decrypted value from
     /// @return The decrypted uint256 value
-    function getDecryptResult(uint256 input1) internal view returns (uint256) {
+    function getDecryptResult(bytes32 input1) internal view returns (uint256) {
         return Impl.getDecryptResult(input1);
     }
 
@@ -2115,7 +2128,7 @@ library FHE {
     /// @param input1 The raw ciphertext to get the decrypted value from
     /// @return result The decrypted uint256 value
     /// @return decrypted Flag indicating if the value was successfully decrypted
-    function getDecryptResultSafe(uint256 input1) internal view returns (uint256 result, bool decrypted) {
+    function getDecryptResultSafe(bytes32 input1) internal view returns (uint256 result, bool decrypted) {
         (uint256 _result, bool _decrypted) = Impl.getDecryptResultSafe(input1);
         return (_result, _decrypted);
     }
@@ -2481,12 +2494,27 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An ebool containing the verified encrypted value
     function asEbool(InEbool memory value) internal returns (ebool) {
-        uint8 expectedUtype = Utils.EBOOL_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
+        Utils.expectUtype(value.utype, Utils.EBOOL_TFHE);
         return ebool.wrap(Impl.verifyInput(Utils.inputFromEbool(value)));
+    }
+
+    /// @notice Verifies and converts an InEbool input in bytes format to an ebool encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An ebool containing the verified encrypted value
+    function asEbool(bytes memory value) internal returns (ebool) {
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EBOOL_TFHE);
+        return ebool.wrap(Impl.verifyInput(input));
+    }
+
+    /// @notice Verifies and converts an InEbool input in hash+proof format to an ebool encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param hash The hash of the encrypted input
+    /// @param proof The proof containing the signature
+    /// @return An ebool containing the verified encrypted value
+    function asEbool(bytes32 hash, bytes memory proof) internal returns (ebool) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EBOOL_TFHE);
+        return ebool.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEuint8 input to an euint8 encrypted type
@@ -2494,13 +2522,27 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint8 containing the verified encrypted value
     function asEuint8(InEuint8 memory value) internal returns (euint8) {
-        uint8 expectedUtype = Utils.EUINT8_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT8_TFHE);
         return euint8.wrap(Impl.verifyInput(Utils.inputFromEuint8(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint8 input in bytes format to an euint8 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint8 containing the verified encrypted value
+    function asEuint8(bytes memory value) internal returns (euint8) {
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT8_TFHE);
+        return euint8.wrap(Impl.verifyInput(input));
+    }
+
+    /// @notice Verifies and converts an InEuint8 input in hash+proof format to an euint8 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param hash The hash of the encrypted input
+    /// @param proof The proof containing the signature
+    /// @return An euint8 containing the verified encrypted value
+    function asEuint8(bytes32 hash, bytes memory proof) internal returns (euint8) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT8_TFHE);
+        return euint8.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEuint16 input to an euint16 encrypted type
@@ -2508,13 +2550,27 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint16 containing the verified encrypted value
     function asEuint16(InEuint16 memory value) internal returns (euint16) {
-        uint8 expectedUtype = Utils.EUINT16_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT16_TFHE);
         return euint16.wrap(Impl.verifyInput(Utils.inputFromEuint16(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint16 input in bytes format to an euint16 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint16 containing the verified encrypted value
+    function asEuint16(bytes memory value) internal returns (euint16) {
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT16_TFHE);
+        return euint16.wrap(Impl.verifyInput(input));
+    }
+
+    /// @notice Verifies and converts an InEuint16 input in hash+proof format to an euint16 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param hash The hash of the encrypted input
+    /// @param proof The proof containing the signature
+    /// @return An euint16 containing the verified encrypted value
+    function asEuint16(bytes32 hash, bytes memory proof) internal returns (euint16) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT16_TFHE);
+        return euint16.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEuint32 input to an euint32 encrypted type
@@ -2522,13 +2578,27 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint32 containing the verified encrypted value
     function asEuint32(InEuint32 memory value) internal returns (euint32) {
-        uint8 expectedUtype = Utils.EUINT32_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT32_TFHE);
         return euint32.wrap(Impl.verifyInput(Utils.inputFromEuint32(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint32 input in bytes format to an euint32 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint32 containing the verified encrypted value
+    function asEuint32(bytes memory value) internal returns (euint32) {
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT32_TFHE);
+        return euint32.wrap(Impl.verifyInput(input));
+    }
+
+    /// @notice Verifies and converts an InEuint32 input in hash+proof format to an euint32 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param hash The hash of the encrypted input
+    /// @param proof The proof containing the signature
+    /// @return An euint32 containing the verified encrypted value
+    function asEuint32(bytes32 hash, bytes memory proof) internal returns (euint32) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT32_TFHE);
+        return euint32.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEuint64 input to an euint64 encrypted type
@@ -2536,13 +2606,27 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint64 containing the verified encrypted value
     function asEuint64(InEuint64 memory value) internal returns (euint64) {
-        uint8 expectedUtype = Utils.EUINT64_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT64_TFHE);
         return euint64.wrap(Impl.verifyInput(Utils.inputFromEuint64(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint64 input in bytes format to an euint64 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint64 containing the verified encrypted value
+    function asEuint64(bytes memory value) internal returns (euint64) {
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT64_TFHE);
+        return euint64.wrap(Impl.verifyInput(input));
+    }
+
+    /// @notice Verifies and converts an InEuint64 input in hash+proof format to an euint64 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param hash The hash of the encrypted input
+    /// @param proof The proof containing the signature
+    /// @return An euint64 containing the verified encrypted value
+    function asEuint64(bytes32 hash, bytes memory proof) internal returns (euint64) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT64_TFHE);
+        return euint64.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEuint128 input to an euint128 encrypted type
@@ -2550,13 +2634,27 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An euint128 containing the verified encrypted value
     function asEuint128(InEuint128 memory value) internal returns (euint128) {
-        uint8 expectedUtype = Utils.EUINT128_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EUINT128_TFHE);
         return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value)));
+    }
+
+    /// @notice Verifies and converts an InEuint128 input in bytes format to an euint128 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An euint128 containing the verified encrypted value
+    function asEuint128(bytes memory value) internal returns (euint128) {
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT128_TFHE);
+        return euint128.wrap(Impl.verifyInput(input));
+    }
+
+    /// @notice Verifies and converts an InEuint128 input in hash+proof format to an euint128 encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param hash The hash of the encrypted input
+    /// @param proof The proof containing the signature
+    /// @return An euint128 containing the verified encrypted value
+    function asEuint128(bytes32 hash, bytes memory proof) internal returns (euint128) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT128_TFHE);
+        return euint128.wrap(Impl.verifyInput(input));
     }
 
     /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type
@@ -2564,13 +2662,27 @@ library FHE {
     /// @param value The input value containing hash, type, security zone and signature
     /// @return An eaddress containing the verified encrypted value
     function asEaddress(InEaddress memory value) internal returns (eaddress) {
-        uint8 expectedUtype = Utils.EADDRESS_TFHE;
-        if (value.utype != expectedUtype) {
-            revert InvalidEncryptedInput(value.utype, expectedUtype);
-        }
-
-
+        Utils.expectUtype(value.utype, Utils.EADDRESS_TFHE);
         return eaddress.wrap(Impl.verifyInput(Utils.inputFromEaddress(value)));
+    }
+
+    /// @notice Verifies and converts an InEaddress input in bytes format to an eaddress encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param value The input value containing hash, type, security zone and signature
+    /// @return An eaddress containing the verified encrypted value
+    function asEaddress(bytes memory value) internal returns (eaddress) {
+        EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EADDRESS_TFHE);
+        return eaddress.wrap(Impl.verifyInput(input));
+    }
+
+    /// @notice Verifies and converts an InEaddress input in hash+proof format to an eaddress encrypted type
+    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
+    /// @param hash The hash of the encrypted input
+    /// @param proof The proof containing the signature
+    /// @return An eaddress containing the verified encrypted value
+    function asEaddress(bytes32 hash, bytes memory proof) internal returns (eaddress) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EADDRESS_TFHE);
+        return eaddress.wrap(Impl.verifyInput(input));
     }
 
     // ********** TYPE CASTING ************* //
@@ -2738,7 +2850,7 @@ library FHE {
         if (value) {
             sVal = 1;
         }
-        uint256 ct = Impl.trivialEncrypt(sVal, Utils.EBOOL_TFHE, securityZone);
+        bytes32 ct = Impl.trivialEncrypt(sVal, Utils.EBOOL_TFHE, securityZone);
         return ebool.wrap(ct);
     }
     /// @notice Converts a uint256 to an euint8
@@ -2749,7 +2861,7 @@ library FHE {
     /// @notice Converts a uint256 to an euint8, specifying security zone
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     function asEuint8(uint256 value, int32 securityZone) internal returns (euint8) {
-        uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT8_TFHE, securityZone);
+        bytes32 ct = Impl.trivialEncrypt(value, Utils.EUINT8_TFHE, securityZone);
         return euint8.wrap(ct);
     }
     /// @notice Converts a uint256 to an euint16
@@ -2760,7 +2872,7 @@ library FHE {
     /// @notice Converts a uint256 to an euint16, specifying security zone
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     function asEuint16(uint256 value, int32 securityZone) internal returns (euint16) {
-        uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT16_TFHE, securityZone);
+        bytes32 ct = Impl.trivialEncrypt(value, Utils.EUINT16_TFHE, securityZone);
         return euint16.wrap(ct);
     }
     /// @notice Converts a uint256 to an euint32
@@ -2771,7 +2883,7 @@ library FHE {
     /// @notice Converts a uint256 to an euint32, specifying security zone
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     function asEuint32(uint256 value, int32 securityZone) internal returns (euint32) {
-        uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT32_TFHE, securityZone);
+        bytes32 ct = Impl.trivialEncrypt(value, Utils.EUINT32_TFHE, securityZone);
         return euint32.wrap(ct);
     }
     /// @notice Converts a uint256 to an euint64
@@ -2782,7 +2894,7 @@ library FHE {
     /// @notice Converts a uint256 to an euint64, specifying security zone
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     function asEuint64(uint256 value, int32 securityZone) internal returns (euint64) {
-        uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT64_TFHE, securityZone);
+        bytes32 ct = Impl.trivialEncrypt(value, Utils.EUINT64_TFHE, securityZone);
         return euint64.wrap(ct);
     }
     /// @notice Converts a uint256 to an euint128
@@ -2793,7 +2905,7 @@ library FHE {
     /// @notice Converts a uint256 to an euint128, specifying security zone
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     function asEuint128(uint256 value, int32 securityZone) internal returns (euint128) {
-        uint256 ct = Impl.trivialEncrypt(value, Utils.EUINT128_TFHE, securityZone);
+        bytes32 ct = Impl.trivialEncrypt(value, Utils.EUINT128_TFHE, securityZone);
         return euint128.wrap(ct);
     }
     /// @notice Converts a address to an eaddress
@@ -2806,7 +2918,7 @@ library FHE {
     /// @dev Privacy: The input value is public, therefore the resulting ciphertext should be considered public until involved in an fhe operation
     /// Allows for a better user experience when working with eaddresses
     function asEaddress(address value, int32 securityZone) internal returns (eaddress) {
-        uint256 ct = Impl.trivialEncrypt(uint256(uint160(value)), Utils.EADDRESS_TFHE, securityZone);
+        bytes32 ct = Impl.trivialEncrypt(uint256(uint160(value)), Utils.EADDRESS_TFHE, securityZone);
         return eaddress.wrap(ct);
     }
 
@@ -2815,7 +2927,7 @@ library FHE {
     /// @param ctHash The encrypted boolean value to grant access to
     /// @param account The address being granted permission
     function allow(ebool ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(ebool.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 8-bit unsigned integer
@@ -2823,7 +2935,7 @@ library FHE {
     /// @param ctHash The encrypted uint8 value to grant access to
     /// @param account The address being granted permission
     function allow(euint8 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint8.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 16-bit unsigned integer
@@ -2831,7 +2943,7 @@ library FHE {
     /// @param ctHash The encrypted uint16 value to grant access to
     /// @param account The address being granted permission
     function allow(euint16 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint16.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 32-bit unsigned integer
@@ -2839,7 +2951,7 @@ library FHE {
     /// @param ctHash The encrypted uint32 value to grant access to
     /// @param account The address being granted permission
     function allow(euint32 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint32.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 64-bit unsigned integer
@@ -2847,7 +2959,7 @@ library FHE {
     /// @param ctHash The encrypted uint64 value to grant access to
     /// @param account The address being granted permission
     function allow(euint64 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint64.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 128-bit unsigned integer
@@ -2855,7 +2967,7 @@ library FHE {
     /// @param ctHash The encrypted uint128 value to grant access to
     /// @param account The address being granted permission
     function allow(euint128 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint128.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted address
@@ -2863,56 +2975,56 @@ library FHE {
     /// @param ctHash The encrypted address value to grant access to
     /// @param account The address being granted permission
     function allow(eaddress ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(eaddress.unwrap(ctHash)), account);
     }
 
     /// @notice Grants global permission to operate on the encrypted boolean value
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant global access to
     function allowGlobal(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(ebool.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(ebool.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant global access to
     function allowGlobal(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint8.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint8.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant global access to
     function allowGlobal(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint16.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint16.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant global access to
     function allowGlobal(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint32.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint32.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant global access to
     function allowGlobal(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint64.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint64.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant global access to
     function allowGlobal(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint128.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint128.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted address
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted address value to grant global access to
     function allowGlobal(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(eaddress.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(eaddress.unwrap(ctHash)));
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted boolean value
@@ -2921,7 +3033,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(ebool ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(ebool.unwrap(ctHash), account);
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(ebool.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 8-bit unsigned integer
@@ -2930,7 +3042,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint8 ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint8.unwrap(ctHash), account);
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint8.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 16-bit unsigned integer
@@ -2939,7 +3051,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint16 ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint16.unwrap(ctHash), account);
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint16.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 32-bit unsigned integer
@@ -2948,7 +3060,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint32 ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint32.unwrap(ctHash), account);
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint32.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 64-bit unsigned integer
@@ -2957,7 +3069,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint64 ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint64.unwrap(ctHash), account);
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint64.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 128-bit unsigned integer
@@ -2966,7 +3078,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint128 ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(euint128.unwrap(ctHash), account);
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint128.unwrap(ctHash)), account);
     }
 
 
@@ -2976,105 +3088,105 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(eaddress ctHash, address account) internal returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(eaddress.unwrap(ctHash), account);
+        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(eaddress.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted boolean value
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant access to
     function allowThis(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), address(this));
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(ebool.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant access to
     function allowThis(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), address(this));
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint8.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant access to
     function allowThis(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), address(this));
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint16.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant access to
     function allowThis(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), address(this));
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint32.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant access to
     function allowThis(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), address(this));
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint64.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant access to
     function allowThis(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), address(this));
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint128.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted address
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted address value to grant access to
     function allowThis(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), address(this));
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(eaddress.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted boolean value
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant access to
     function allowSender(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(ebool.unwrap(ctHash), msg.sender);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(ebool.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant access to
     function allowSender(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint8.unwrap(ctHash), msg.sender);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint8.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant access to
     function allowSender(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint16.unwrap(ctHash), msg.sender);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint16.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant access to
     function allowSender(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint32.unwrap(ctHash), msg.sender);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint32.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant access to
     function allowSender(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint64.unwrap(ctHash), msg.sender);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint64.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant access to
     function allowSender(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(euint128.unwrap(ctHash), msg.sender);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint128.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted address
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted address value to grant access to
     function allowSender(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(eaddress.unwrap(ctHash), msg.sender);
+        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(eaddress.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted boolean value
@@ -3082,7 +3194,7 @@ library FHE {
     /// @param ctHash The encrypted boolean value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(ebool ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(ebool.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(ebool.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 8-bit unsigned integer
@@ -3090,7 +3202,7 @@ library FHE {
     /// @param ctHash The encrypted uint8 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint8 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint8.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint8.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 16-bit unsigned integer
@@ -3098,7 +3210,7 @@ library FHE {
     /// @param ctHash The encrypted uint16 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint16 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint16.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint16.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 32-bit unsigned integer
@@ -3106,7 +3218,7 @@ library FHE {
     /// @param ctHash The encrypted uint32 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint32 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint32.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint32.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 64-bit unsigned integer
@@ -3114,7 +3226,7 @@ library FHE {
     /// @param ctHash The encrypted uint64 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint64 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint64.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint64.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 128-bit unsigned integer
@@ -3122,7 +3234,7 @@ library FHE {
     /// @param ctHash The encrypted uint128 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint128 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(euint128.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint128.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted address
@@ -3130,7 +3242,7 @@ library FHE {
     /// @param ctHash The encrypted address value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(eaddress ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(eaddress.unwrap(ctHash), account);
+        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(eaddress.unwrap(ctHash)), account);
     }
 }
 
