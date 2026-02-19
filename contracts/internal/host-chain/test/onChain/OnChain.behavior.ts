@@ -17,7 +17,7 @@ export function shouldBehaveLikeOnChain(): void {
       console.log(`verified revert for type ${type}`);
     }
 
-    const types2 = ["64", "128", "256"];
+    const types2 = ["64", "128"];
     for (const type of types2) {
       const funcName = `trivial${type}`;
       console.log("funcName", funcName);

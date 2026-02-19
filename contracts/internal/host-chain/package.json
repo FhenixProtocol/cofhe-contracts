@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "description": "Internal contracts for the CoFHE",
   "scripts": {
-    "test": "hardhat test",
+    "test": "hardhat test --network hardhat",
+    "test:decrypt-result": "hardhat test test/decryptResult/DecryptResult.ts --network hardhat",
+    "test:localfhenix": "hardhat test",
+    "test:decrypt-result:localfhenix": "hardhat test test/decryptResult/DecryptResult.ts",
+    "test:onchain": "hardhat test test/onChain/OnChain.ts",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json ./deployments/localfhenix ./ignition/deployments ./.openzeppelin/*",
     "compile": "hardhat compile",
     "task:deploy": "hardhat deploy",

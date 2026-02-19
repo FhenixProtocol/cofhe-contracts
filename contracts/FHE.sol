@@ -130,6 +130,22 @@ library Impl {
         return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResultSafe(input);
     }
 
+    function publishDecryptResult(uint256 ctHash, uint256 result, bytes memory signature) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResult(ctHash, result, signature);
+    }
+
+    function publishDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResultBatch(ctHashes, results, signatures);
+    }
+
+    function verifyDecryptResult(uint256 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResult(ctHash, result, signature);
+    }
+
+    function verifyDecryptResultSafe(uint256 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultSafe(ctHash, result, signature);
+    }
+
     function not(uint8 returnType, uint256 input) internal returns (uint256) {
         return ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0));
     }
@@ -3131,6 +3147,104 @@ library FHE {
     /// @param account The address being granted temporary permission
     function allowTransient(eaddress ctHash, address account) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(eaddress.unwrap(ctHash), account);
+    }
+
+    // ********** PUBLISH DECRYPT RESULT ************* //
+
+    /// @notice Publish a signed decrypt result to the chain
+    /// @dev Anyone with a valid signature from the decrypt network can call this
+    /// @param ctHash The ciphertext hash
+    /// @param result The decrypted plaintext value
+    /// @param signature The ECDSA signature from the decrypt network
+    function publishDecryptResult(uint256 ctHash, uint256 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(ctHash, result, signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an ebool
+    function publishDecryptResult(ebool input, bool result, bytes memory signature) internal {
+        Impl.publishDecryptResult(ebool.unwrap(input), result ? 1 : 0, signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint8
+    function publishDecryptResult(euint8 input, uint8 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint8.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint16
+    function publishDecryptResult(euint16 input, uint16 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint16.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint32
+    function publishDecryptResult(euint32 input, uint32 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint32.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint64
+    function publishDecryptResult(euint64 input, uint64 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint64.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint128
+    function publishDecryptResult(euint128 input, uint128 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint128.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an eaddress
+    function publishDecryptResult(eaddress input, address result, bytes memory signature) internal {
+        Impl.publishDecryptResult(eaddress.unwrap(input), uint256(uint160(result)), signature);
+    }
+
+    /// @notice Publish multiple decrypt results in one transaction
+    /// @dev Amortizes base tx cost across multiple operations
+    function publishDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
+        Impl.publishDecryptResultBatch(ctHashes, results, signatures);
+    }
+
+    // ********** VERIFY DECRYPT RESULT ************* //
+
+    /// @notice Verify a decrypt result signature without publishing
+    /// @param ctHash The ciphertext hash
+    /// @param result The decrypted plaintext value
+    /// @param signature The ECDSA signature from the decrypt network
+    /// @return True if signature is valid
+    function verifyDecryptResult(uint256 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(ctHash, result, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an ebool
+    function verifyDecryptResult(ebool input, bool result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(ebool.unwrap(input), result ? 1 : 0, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint8
+    function verifyDecryptResult(euint8 input, uint8 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint8.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint16
+    function verifyDecryptResult(euint16 input, uint16 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint16.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint32
+    function verifyDecryptResult(euint32 input, uint32 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint32.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint64
+    function verifyDecryptResult(euint64 input, uint64 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint64.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint128
+    function verifyDecryptResult(euint128 input, uint128 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint128.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an eaddress
+    function verifyDecryptResult(eaddress input, address result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(eaddress.unwrap(input), uint256(uint160(result)), signature);
     }
 }
 
