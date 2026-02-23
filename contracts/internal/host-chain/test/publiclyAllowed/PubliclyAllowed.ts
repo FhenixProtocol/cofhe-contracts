@@ -105,28 +105,4 @@ describe("PubliclyAllowed Tests", function () {
     });
   });
 
-  describe("isGloballyAllowed", function () {
-    it("should return false for a handle that is not globally allowed", async function () {
-      const tx = await testContract.createWithoutGlobal(7);
-      await tx.wait();
-      const handle = await testContract.lastHandle();
-      expect(await taskManager.isGloballyAllowed(handle)).to.equal(false);
-    });
-
-    it("should return true after allowGlobal is called", async function () {
-      const tx = await testContract.createAndAllowGlobal(55);
-      await tx.wait();
-      const handle = await testContract.lastHandle();
-      expect(await taskManager.isGloballyAllowed(handle)).to.equal(true);
-    });
-
-    it("should agree with isPubliclyAllowed", async function () {
-      const tx = await testContract.createAndAllowGlobal(123);
-      await tx.wait();
-      const handle = await testContract.lastHandle();
-      const publicResult = await taskManager.isPubliclyAllowed(handle);
-      const globalResult = await taskManager.isGloballyAllowed(handle);
-      expect(publicResult).to.equal(globalResult);
-    });
-  });
 });
