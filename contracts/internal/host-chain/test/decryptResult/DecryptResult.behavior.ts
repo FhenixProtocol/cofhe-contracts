@@ -210,12 +210,31 @@ export function shouldBehaveLikeDecryptResult(): void {
       ).to.be.revertedWithCustomError(taskManager, "InvalidSigner");
     });
 
+    it("should revert when contract is disabled", async function () {
+      const taskManager = this.taskManager as Contract;
+      const owner = this.owner;
+
+      // Disable the contract
+      await taskManager.connect(owner).disable();
+
+      const baseHash = keccak256(toUtf8Bytes("test-cthash-disabled"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(42);
+
+      await expect(
+        taskManager.publishDecryptResult(ctHash, result, "0x" + "00".repeat(65))
+      ).to.be.revertedWithCustomError(taskManager, "CofheIsUnavailable");
+
+      // Re-enable for other tests
+      await taskManager.connect(owner).enable();
+    });
+
     it("should work with different encryption types", async function () {
       const taskManager = this.taskManager as Contract;
       const testSigner = this.testSigner as Wallet;
 
       const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
-      const encryptionTypes = [EBOOL_TFHE, EUINT8_TFHE, EUINT16_TFHE, EUINT32_TFHE, EUINT64_TFHE, EUINT128_TFHE];
+      const encryptionTypes = [EBOOL_TFHE, EUINT8_TFHE, EUINT16_TFHE, EUINT32_TFHE, EUINT64_TFHE, EUINT128_TFHE, EADDRESS_TFHE];
 
       for (const encType of encryptionTypes) {
         const baseHash = keccak256(toUtf8Bytes(`test-cthash-type-${encType}`));
@@ -326,6 +345,14 @@ export function shouldBehaveLikeDecryptResult(): void {
       expect(exists1).to.be.false;
     });
 
+    it("should succeed with empty arrays", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      // Empty batch should succeed (no-op)
+      const tx = await taskManager.publishDecryptResultBatch([], [], []);
+      await tx.wait();
+    });
+
     it("should revert on length mismatch", async function () {
       const taskManager = this.taskManager as Contract;
 
@@ -335,7 +362,7 @@ export function shouldBehaveLikeDecryptResult(): void {
           [BigInt(10)], // Length mismatch
           ["0x" + "00".repeat(65)]
         )
-      ).to.be.revertedWith("Length mismatch");
+      ).to.be.revertedWithCustomError(taskManager, "LengthMismatch");
     });
   });
 
@@ -641,6 +668,38 @@ export function shouldBehaveLikeDecryptResult(): void {
       // Result should NOT be stored
       const [, exists] = await taskManager.getDecryptResultSafe(ctHash);
       expect(exists).to.be.false;
+    });
+
+    it("should return false for malformed signature (not revert)", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      const baseHash = keccak256(toUtf8Bytes("verify-safe-malformed"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(42);
+
+      // Pass garbage bytes (wrong length) — should return false, not revert
+      const isValid = await taskManager.verifyDecryptResultSafe(
+        ctHash,
+        result,
+        "0xdead"
+      );
+      expect(isValid).to.be.false;
+    });
+
+    it("should return false for empty signature (not revert)", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      const baseHash = keccak256(toUtf8Bytes("verify-safe-empty"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(42);
+
+      // Pass empty bytes — should return false, not revert
+      const isValid = await taskManager.verifyDecryptResultSafe(
+        ctHash,
+        result,
+        "0x"
+      );
+      expect(isValid).to.be.false;
     });
   });
 
