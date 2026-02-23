@@ -572,7 +572,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         uint256 ctHash,
         uint256 result,
         bytes calldata signature
-    ) external {
+    ) external onlyIfEnabled {
         _verifyDecryptResult(ctHash, result, signature, true);
         plaintextsStorage.storeResult(ctHash, result);
         emit DecryptionResult(ctHash, result, msg.sender);
@@ -584,7 +584,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         uint256[] calldata ctHashes,
         uint256[] calldata results,
         bytes[] calldata signatures
-    ) external {
+    ) external onlyIfEnabled {
         uint256 length = ctHashes.length;
         require(results.length == length && signatures.length == length, "Length mismatch");
 
