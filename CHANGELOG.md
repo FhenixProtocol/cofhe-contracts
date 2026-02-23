@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `publishDecryptResult()` and `publishDecryptResultBatch()` on TaskManager for publishing signed decrypt results on-chain
+- `verifyDecryptResult()` (reverts on invalid) and `verifyDecryptResultSafe()` (returns false) for signature verification without publishing
+- `decryptResultSigner` state variable and `setDecryptResultSigner()` admin function
+- Typed overloads in `FHE.sol` for all encrypted types (`ebool`, `euint8`, ..., `eaddress`)
+- `onlyIfEnabled` modifier on publish functions
+- `LengthMismatch` custom error replacing require string in batch publish
+
 ## v0.1.0
 
 ### Breaking Changes
