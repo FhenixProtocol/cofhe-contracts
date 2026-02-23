@@ -737,6 +737,14 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return acl.isAllowed(ctHash, account);
     }
 
+    function isPubliclyAllowed(uint256 ctHash) external view returns (bool) {
+        return acl.globalAllowed(ctHash);
+    }
+
+    function isGloballyAllowed(uint256 ctHash) external view returns (bool) {
+        return acl.globalAllowed(ctHash);
+    }
+
     function extractSigner(EncryptedInput memory input, address sender) private view returns (address) {
         bytes memory combined = abi.encodePacked(
             input.ctHash,
