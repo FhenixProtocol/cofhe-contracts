@@ -25,6 +25,7 @@ error InvalidSecurityZone(int32 zone, int32 min, int32 max);
 error InvalidSignature();
 error InvalidSigner(address signer, address expectedSigner);
 error UnsupportedType(uint256 t);
+error LengthMismatch();
 
 // Access control errors
 error InvalidAddress();
@@ -586,7 +587,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         bytes[] calldata signatures
     ) external onlyIfEnabled {
         uint256 length = ctHashes.length;
-        require(results.length == length && signatures.length == length, "Length mismatch");
+        if (results.length != length || signatures.length != length) revert LengthMismatch();
 
         for (uint256 i = 0; i < length; i++) {
             _verifyDecryptResult(ctHashes[i], results[i], signatures[i], true);
