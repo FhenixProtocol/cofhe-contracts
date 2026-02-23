@@ -4,6 +4,12 @@
 
 ### Added
 - `isPubliclyAllowed(uint256 ctHash)` and `isGloballyAllowed(uint256 ctHash)` view functions on `ITaskManager` / `TaskManager` to query whether a ciphertext handle has been globally allowed (via `allowGlobal` / `allowPublic`). Both are aliases that delegate to `acl.globalAllowed()`.
+- `publishDecryptResult()` and `publishDecryptResultBatch()` on TaskManager for publishing signed decrypt results on-chain
+- `verifyDecryptResult()` (reverts on invalid) and `verifyDecryptResultSafe()` (returns false) for signature verification without publishing
+- `decryptResultSigner` state variable and `setDecryptResultSigner()` admin function
+- Typed overloads in `FHE.sol` for all encrypted types (`ebool`, `euint8`, ..., `eaddress`)
+- `onlyIfEnabled` modifier on publish functions
+- `LengthMismatch` custom error replacing require string in batch publish
 
 ## v0.1.0
 
