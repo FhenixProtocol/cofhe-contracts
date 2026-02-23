@@ -663,6 +663,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         uint256 msgLength = TMCommon.MESSAGE_LENGTH;
 
         // Assembly for gas-efficient message construction
+        // Overlapping 32-byte mstores are safe here: each subsequent mstore overwrites
+        // only the tail bytes of the previous one, and the final mstore (ctHash) lands
+        // exactly at the end of the 76-byte message, so all fields end up correctly placed.
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, result)                                            // bytes 0-31: result
@@ -670,6 +673,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
             mstore(add(ptr, offsetChainId), shl(shiftChainId, chainId))         // bytes 36-43: chain_id
             mstore(add(ptr, offsetCtHash), ctHash)                              // bytes 44-75: ctHash
             messageHash := keccak256(ptr, msgLength)                            // hash 76 bytes
+            mstore(0x40, add(ptr, msgLength))                                   // advance free memory pointer
         }
     }
 
