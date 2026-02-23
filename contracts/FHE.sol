@@ -3160,6 +3160,55 @@ library FHE {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(eaddress.unwrap(ctHash)), account);
     }
 
+    /// @notice Checks if an encrypted boolean value is publicly (globally) allowed
+    /// @param ctHash The encrypted boolean value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(ebool ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(ebool.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 8-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint8 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint8 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint8.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 16-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint16 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint16 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint16.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 32-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint32 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint32 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint32.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 64-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint64 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint64 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint64.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 128-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint128 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint128 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint128.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted address is publicly (globally) allowed
+    /// @param ctHash The encrypted address value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(eaddress ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(eaddress.unwrap(ctHash)));
+    }
+
     /// @notice Grants permission to the current contract to operate on the encrypted boolean value
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant access to
@@ -3544,6 +3593,9 @@ library BindingsEbool {
     function isAllowed(ebool ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(ebool ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(ebool ctHash) internal {
         FHE.allowThis(ctHash);
     }
@@ -3782,6 +3834,9 @@ library BindingsEuint8 {
     }
     function isAllowed(euint8 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
+    }
+    function isPubliclyAllowed(euint8 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
     }
     function allowThis(euint8 ctHash) internal {
         FHE.allowThis(ctHash);
@@ -4022,6 +4077,9 @@ library BindingsEuint16 {
     function isAllowed(euint16 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint16 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint16 ctHash) internal {
         FHE.allowThis(ctHash);
     }
@@ -4261,6 +4319,9 @@ library BindingsEuint32 {
     function isAllowed(euint32 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint32 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint32 ctHash) internal {
         FHE.allowThis(ctHash);
     }
@@ -4482,6 +4543,9 @@ library BindingsEuint64 {
     function isAllowed(euint64 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint64 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint64 ctHash) internal {
         FHE.allowThis(ctHash);
     }
@@ -4686,6 +4750,9 @@ library BindingsEuint128 {
     function isAllowed(euint128 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint128 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint128 ctHash) internal {
         FHE.allowThis(ctHash);
     }
@@ -4749,6 +4816,9 @@ library BindingsEaddress {
     }
     function isAllowed(eaddress ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
+    }
+    function isPubliclyAllowed(eaddress ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
     }
     function allowThis(eaddress ctHash) internal {
         FHE.allowThis(ctHash);
