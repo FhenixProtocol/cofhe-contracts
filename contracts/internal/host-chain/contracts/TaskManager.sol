@@ -631,9 +631,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
 
         bytes32 messageHash = _computeDecryptResultHash(ctHash, result);
-        address recovered = ECDSA.recover(messageHash, signature);
+        (address recovered, ECDSA.RecoverError err, ) = ECDSA.tryRecover(messageHash, signature);
 
-        if (recovered == address(0)) {
+        if (err != ECDSA.RecoverError.NoError || recovered == address(0)) {
             if (shouldRevert) revert InvalidSignature();
             return false;
         }
