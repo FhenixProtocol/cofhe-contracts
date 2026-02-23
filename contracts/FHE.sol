@@ -3366,6 +3366,52 @@ library FHE {
     function verifyDecryptResult(eaddress input, address result, bytes memory signature) internal view returns (bool) {
         return Impl.verifyDecryptResult(eaddress.unwrap(input), uint256(uint160(result)), signature);
     }
+
+    // ********** VERIFY DECRYPT RESULT SAFE ************* //
+
+    /// @notice Verify a decrypt result signature without publishing (non-reverting)
+    /// @param ctHash The ciphertext hash
+    /// @param result The decrypted plaintext value
+    /// @param signature The ECDSA signature from the decrypt network
+    /// @return True if signature is valid, false otherwise
+    function verifyDecryptResultSafe(uint256 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(bytes32(ctHash), result, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an ebool (non-reverting)
+    function verifyDecryptResultSafe(ebool input, bool result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(ebool.unwrap(input), result ? 1 : 0, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint8 (non-reverting)
+    function verifyDecryptResultSafe(euint8 input, uint8 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint8.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint16 (non-reverting)
+    function verifyDecryptResultSafe(euint16 input, uint16 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint16.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint32 (non-reverting)
+    function verifyDecryptResultSafe(euint32 input, uint32 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint32.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint64 (non-reverting)
+    function verifyDecryptResultSafe(euint64 input, uint64 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint64.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint128 (non-reverting)
+    function verifyDecryptResultSafe(euint128 input, uint128 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint128.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an eaddress (non-reverting)
+    function verifyDecryptResultSafe(eaddress input, address result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(eaddress.unwrap(input), uint256(uint160(result)), signature);
+    }
 }
 
 // ********** BINDING DEFS ************* //
