@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `isPubliclyAllowed(uint256 ctHash)` and `isGloballyAllowed(uint256 ctHash)` view functions on `ITaskManager` / `TaskManager` to query whether a ciphertext handle has been globally allowed (via `allowGlobal` / `allowPublic`). Both are aliases that delegate to `acl.globalAllowed()`.
+
 ## v0.1.0
 
 ### Breaking Changes
