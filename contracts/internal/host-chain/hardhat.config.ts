@@ -21,10 +21,13 @@ const TESTNET_CHAIN_ID = 8008135;
 const TESTNET_RPC_URL = "https://api.helium.fhenix.zone";
 
 const SEPOLIA_CHAIN_ID = 11155111;
-const SEPOLIA_RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com"
+const SEPOLIA_RPC_URL = "https://muddy-compatible-film.ethereum-sepolia.quiknode.pro/56d6bb630309af9e0856297b656e92fbf77adcc9/"
 
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
-const ARBITRUM_SEPOLIA_RPC_URL = "https://arbitrum-sepolia.drpc.org"
+const ARBITRUM_SEPOLIA_RPC_URL = "https://little-convincing-fog.arbitrum-sepolia.quiknode.pro/e925be62bdfa8faab560daa332c0c95e26189870/"
+
+const BASE_SEPOLIA_CHAIN_ID = 84532;
+const BASE_SEPOLIA_RPC_URL = "https://cool-wandering-asphalt.base-sepolia.quiknode.pro/9a6b3aaaf2d42fb02114024c0e5dda55cd3a1957/"
 
 const testnetConfig = {
     chainId: TESTNET_CHAIN_ID,
@@ -41,6 +44,12 @@ const arbitrumSepoliaConfig = {
     chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
     url: ARBITRUM_SEPOLIA_RPC_URL,
     accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+}
+
+const baseSepoliaConfig = {
+  chainId: BASE_SEPOLIA_CHAIN_ID,
+  url: BASE_SEPOLIA_RPC_URL,
+  accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 // Making sure we use different account in localfhenix -
@@ -112,6 +121,7 @@ const config: HardhatUserConfig = {
     testnet: testnetConfig,
     sepolia: sepoliaConfig as HttpNetworkUserConfig,
     arbitrumSepolia: arbitrumSepoliaConfig as HttpNetworkUserConfig,
+    baseSepolia: baseSepoliaConfig as HttpNetworkUserConfig,
     localfhenix: localfhenixconfig,
     localfhenixk8s: localfhenixk8sconfig,
   },
