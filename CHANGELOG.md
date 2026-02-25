@@ -4,19 +4,7 @@
 
 - Placeholder for future updates
 
-## v0.2.0 - 2025-02-25
-
-### Added
-- `isPubliclyAllowed(uint256 ctHash)` view function on `TaskManager` to query whether a ciphertext handle has been publicly allowed (via `allowGlobal` / `allowPublic`). Delegates to `acl.globalAllowed()`.
-- `FHE.isPubliclyAllowed()` typed overloads for all encrypted types (`ebool`, `euint8`, ..., `eaddress`) so contracts can query public-allow status directly via the FHE library.
-- `publishDecryptResult()` and `publishDecryptResultBatch()` on TaskManager for publishing signed decrypt results on-chain
-- `verifyDecryptResult()` (reverts on invalid) and `verifyDecryptResultSafe()` (returns false) for signature verification without publishing
-- `decryptResultSigner` state variable and `setDecryptResultSigner()` admin function
-- Typed overloads in `FHE.sol` for all encrypted types (`ebool`, `euint8`, ..., `eaddress`)
-- `onlyIfEnabled` modifier on publish functions
-- `LengthMismatch` custom error replacing require string in batch publish
-
-## v0.1.0
+## v0.1.0 - 2025-02-25
 
 ### Breaking Changes
 - All ciphertext handles are now represented as `bytes32` instead of `uint256`. This doesn't affect contracts that operate on ciphertexts via `FHE.op` functions, since those functions return the wrapped types. It does affect contracts that for some reason do `euintx.unwrap`. The `FHE.op` functions still receive `euintx` inputs, but their underlying types have changed.
@@ -38,3 +26,11 @@
       signature
   );
   ```
+- `isPubliclyAllowed(uint256 ctHash)` view function on `TaskManager` to query whether a ciphertext handle has been publicly allowed (via `allowGlobal` / `allowPublic`). Delegates to `acl.globalAllowed()`.
+- `FHE.isPubliclyAllowed()` typed overloads for all encrypted types (`ebool`, `euint8`, ..., `eaddress`) so contracts can query public-allow status directly via the FHE library.
+- `publishDecryptResult()` and `publishDecryptResultBatch()` on TaskManager for publishing signed decrypt results on-chain
+- `verifyDecryptResult()` (reverts on invalid) and `verifyDecryptResultSafe()` (returns false) for signature verification without publishing
+- `decryptResultSigner` state variable and `setDecryptResultSigner()` admin function
+- Typed overloads in `FHE.sol` for all encrypted types (`ebool`, `euint8`, ..., `eaddress`)
+- `onlyIfEnabled` modifier on publish functions
+- `LengthMismatch` custom error replacing require string in batch publish
