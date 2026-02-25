@@ -3051,49 +3051,49 @@ library FHE {
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant public access to
     function allowPublic(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(ebool.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(ebool.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant public access to
     function allowPublic(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint8.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint8.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant public access to
     function allowPublic(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint16.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint16.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant public access to
     function allowPublic(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint32.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint32.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant public access to
     function allowPublic(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint64.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint64.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant public access to
     function allowPublic(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint128.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint128.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted address
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted address value to grant public access to
     function allowPublic(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(eaddress.unwrap(ctHash));
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(eaddress.unwrap(ctHash)));
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted boolean value
