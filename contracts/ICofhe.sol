@@ -103,10 +103,20 @@ interface ITaskManager {
 
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
+    function isPubliclyAllowed(uint256 ctHash) external view returns (bool);
     function allowGlobal(uint256 ctHash) external;
     function allowTransient(uint256 ctHash, address account) external;
     function getDecryptResultSafe(uint256 ctHash) external view returns (uint256, bool);
     function getDecryptResult(uint256 ctHash) external view returns (uint256);
+
+    function publishDecryptResult(uint256 ctHash, uint256 result, bytes calldata signature) external;
+    function publishDecryptResultBatch(uint256[] calldata ctHashes, uint256[] calldata results, bytes[] calldata signatures) external;
+    function verifyDecryptResult(uint256 ctHash, uint256 result, bytes calldata signature) external view returns (bool);
+    function verifyDecryptResultSafe(
+        uint256 ctHash,
+        uint256 result,
+        bytes calldata signature
+    ) external view returns (bool);
 }
 
 library Utils {

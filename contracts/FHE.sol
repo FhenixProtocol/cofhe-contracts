@@ -144,6 +144,26 @@ library Impl {
         return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResultSafe(uint256(input));
     }
 
+    function publishDecryptResult(bytes32 ctHash, uint256 result, bytes memory signature) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResult(uint256(ctHash), result, signature);
+    }
+
+    function publishDecryptResultBatch(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashesUint = new uint256[](ctHashes.length);
+        for (uint256 i = 0; i < ctHashes.length; i++) {
+            ctHashesUint[i] = uint256(ctHashes[i]);
+        }
+        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResultBatch(ctHashesUint, results, signatures);
+    }
+
+    function verifyDecryptResult(bytes32 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResult(uint256(ctHash), result, signature);
+    }
+
+    function verifyDecryptResultSafe(bytes32 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultSafe(uint256(ctHash), result, signature);
+    }
+
     function not(uint8 returnType, bytes32 input) internal returns (bytes32) {
         return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0)));
     }
@@ -3027,6 +3047,55 @@ library FHE {
         ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(eaddress.unwrap(ctHash)));
     }
 
+    /// @notice Grants public permission to operate on the encrypted boolean value
+    /// @dev Allows all accounts to access the ciphertext
+    /// @param ctHash The encrypted boolean value to grant public access to
+    function allowPublic(ebool ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(ebool.unwrap(ctHash));
+    }
+
+    /// @notice Grants public permission to operate on the encrypted 8-bit unsigned integer
+    /// @dev Allows all accounts to access the ciphertext
+    /// @param ctHash The encrypted uint8 value to grant public access to
+    function allowPublic(euint8 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint8.unwrap(ctHash));
+    }
+
+    /// @notice Grants public permission to operate on the encrypted 16-bit unsigned integer
+    /// @dev Allows all accounts to access the ciphertext
+    /// @param ctHash The encrypted uint16 value to grant public access to
+    function allowPublic(euint16 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint16.unwrap(ctHash));
+    }
+
+    /// @notice Grants public permission to operate on the encrypted 32-bit unsigned integer
+    /// @dev Allows all accounts to access the ciphertext
+    /// @param ctHash The encrypted uint32 value to grant public access to
+    function allowPublic(euint32 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint32.unwrap(ctHash));
+    }
+
+    /// @notice Grants public permission to operate on the encrypted 64-bit unsigned integer
+    /// @dev Allows all accounts to access the ciphertext
+    /// @param ctHash The encrypted uint64 value to grant public access to
+    function allowPublic(euint64 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint64.unwrap(ctHash));
+    }
+
+    /// @notice Grants public permission to operate on the encrypted 128-bit unsigned integer
+    /// @dev Allows all accounts to access the ciphertext
+    /// @param ctHash The encrypted uint128 value to grant public access to
+    function allowPublic(euint128 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(euint128.unwrap(ctHash));
+    }
+
+    /// @notice Grants public permission to operate on the encrypted address
+    /// @dev Allows all accounts to access the ciphertext
+    /// @param ctHash The encrypted address value to grant public access to
+    function allowPublic(eaddress ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(eaddress.unwrap(ctHash));
+    }
+
     /// @notice Checks if an account has permission to operate on the encrypted boolean value
     /// @dev Returns whether the specified account can access the ciphertext
     /// @param ctHash The encrypted boolean value to check access for
@@ -3089,6 +3158,55 @@ library FHE {
     /// @return True if the account has permission, false otherwise
     function isAllowed(eaddress ctHash, address account) internal returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(eaddress.unwrap(ctHash)), account);
+    }
+
+    /// @notice Checks if an encrypted boolean value is publicly (globally) allowed
+    /// @param ctHash The encrypted boolean value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(ebool ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(ebool.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 8-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint8 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint8 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint8.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 16-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint16 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint16 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint16.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 32-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint32 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint32 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint32.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 64-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint64 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint64 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint64.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted 128-bit unsigned integer is publicly (globally) allowed
+    /// @param ctHash The encrypted uint128 value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(euint128 ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint128.unwrap(ctHash)));
+    }
+
+    /// @notice Checks if an encrypted address is publicly (globally) allowed
+    /// @param ctHash The encrypted address value to check
+    /// @return True if the ciphertext is publicly allowed, false otherwise
+    function isPubliclyAllowed(eaddress ctHash) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(eaddress.unwrap(ctHash)));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted boolean value
@@ -3244,6 +3362,154 @@ library FHE {
     function allowTransient(eaddress ctHash, address account) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(eaddress.unwrap(ctHash)), account);
     }
+
+    // ********** PUBLISH DECRYPT RESULT ************* //
+
+    /// @notice Publish a signed decrypt result to the chain
+    /// @dev Anyone with a valid signature from the decrypt network can call this
+    /// @param ctHash The ciphertext hash
+    /// @param result The decrypted plaintext value
+    /// @param signature The ECDSA signature from the decrypt network
+    function publishDecryptResult(uint256 ctHash, uint256 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(bytes32(ctHash), result, signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an ebool
+    function publishDecryptResult(ebool input, bool result, bytes memory signature) internal {
+        Impl.publishDecryptResult(ebool.unwrap(input), result ? 1 : 0, signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint8
+    function publishDecryptResult(euint8 input, uint8 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint8.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint16
+    function publishDecryptResult(euint16 input, uint16 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint16.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint32
+    function publishDecryptResult(euint32 input, uint32 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint32.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint64
+    function publishDecryptResult(euint64 input, uint64 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint64.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an euint128
+    function publishDecryptResult(euint128 input, uint128 result, bytes memory signature) internal {
+        Impl.publishDecryptResult(euint128.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Publish a signed decrypt result for an eaddress
+    function publishDecryptResult(eaddress input, address result, bytes memory signature) internal {
+        Impl.publishDecryptResult(eaddress.unwrap(input), uint256(uint160(result)), signature);
+    }
+
+    /// @notice Publish multiple decrypt results in one transaction
+    /// @dev Amortizes base tx cost across multiple operations
+    function publishDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
+        bytes32[] memory ctHashesBytes32 = new bytes32[](ctHashes.length);
+        for (uint256 i = 0; i < ctHashes.length; i++) {
+            ctHashesBytes32[i] = bytes32(ctHashes[i]);
+        }
+        Impl.publishDecryptResultBatch(ctHashesBytes32, results, signatures);
+    }
+
+    // ********** VERIFY DECRYPT RESULT ************* //
+
+    /// @notice Verify a decrypt result signature without publishing
+    /// @param ctHash The ciphertext hash
+    /// @param result The decrypted plaintext value
+    /// @param signature The ECDSA signature from the decrypt network
+    /// @return True if signature is valid
+    function verifyDecryptResult(uint256 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(bytes32(ctHash), result, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an ebool
+    function verifyDecryptResult(ebool input, bool result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(ebool.unwrap(input), result ? 1 : 0, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint8
+    function verifyDecryptResult(euint8 input, uint8 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint8.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint16
+    function verifyDecryptResult(euint16 input, uint16 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint16.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint32
+    function verifyDecryptResult(euint32 input, uint32 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint32.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint64
+    function verifyDecryptResult(euint64 input, uint64 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint64.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint128
+    function verifyDecryptResult(euint128 input, uint128 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(euint128.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an eaddress
+    function verifyDecryptResult(eaddress input, address result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResult(eaddress.unwrap(input), uint256(uint160(result)), signature);
+    }
+
+    // ********** VERIFY DECRYPT RESULT SAFE ************* //
+
+    /// @notice Verify a decrypt result signature without publishing (non-reverting)
+    /// @param ctHash The ciphertext hash
+    /// @param result The decrypted plaintext value
+    /// @param signature The ECDSA signature from the decrypt network
+    /// @return True if signature is valid, false otherwise
+    function verifyDecryptResultSafe(uint256 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(bytes32(ctHash), result, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an ebool (non-reverting)
+    function verifyDecryptResultSafe(ebool input, bool result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(ebool.unwrap(input), result ? 1 : 0, signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint8 (non-reverting)
+    function verifyDecryptResultSafe(euint8 input, uint8 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint8.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint16 (non-reverting)
+    function verifyDecryptResultSafe(euint16 input, uint16 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint16.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint32 (non-reverting)
+    function verifyDecryptResultSafe(euint32 input, uint32 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint32.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint64 (non-reverting)
+    function verifyDecryptResultSafe(euint64 input, uint64 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint64.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an euint128 (non-reverting)
+    function verifyDecryptResultSafe(euint128 input, uint128 result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(euint128.unwrap(input), uint256(result), signature);
+    }
+
+    /// @notice Verify a decrypt result signature for an eaddress (non-reverting)
+    function verifyDecryptResultSafe(eaddress input, address result, bytes memory signature) internal view returns (bool) {
+        return Impl.verifyDecryptResultSafe(eaddress.unwrap(input), uint256(uint160(result)), signature);
+    }
 }
 
 // ********** BINDING DEFS ************* //
@@ -3327,11 +3593,17 @@ library BindingsEbool {
     function isAllowed(ebool ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(ebool ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(ebool ctHash) internal {
         FHE.allowThis(ctHash);
     }
     function allowGlobal(ebool ctHash) internal {
         FHE.allowGlobal(ctHash);
+    }
+    function allowPublic(ebool ctHash) internal {
+        FHE.allowPublic(ctHash);
     }
     function allowSender(ebool ctHash) internal {
         FHE.allowSender(ctHash);
@@ -3563,11 +3835,17 @@ library BindingsEuint8 {
     function isAllowed(euint8 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint8 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint8 ctHash) internal {
         FHE.allowThis(ctHash);
     }
     function allowGlobal(euint8 ctHash) internal {
         FHE.allowGlobal(ctHash);
+    }
+    function allowPublic(euint8 ctHash) internal {
+        FHE.allowPublic(ctHash);
     }
     function allowSender(euint8 ctHash) internal {
         FHE.allowSender(ctHash);
@@ -3799,11 +4077,17 @@ library BindingsEuint16 {
     function isAllowed(euint16 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint16 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint16 ctHash) internal {
         FHE.allowThis(ctHash);
     }
     function allowGlobal(euint16 ctHash) internal {
         FHE.allowGlobal(ctHash);
+    }
+    function allowPublic(euint16 ctHash) internal {
+        FHE.allowPublic(ctHash);
     }
     function allowSender(euint16 ctHash) internal {
         FHE.allowSender(ctHash);
@@ -4035,11 +4319,17 @@ library BindingsEuint32 {
     function isAllowed(euint32 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint32 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint32 ctHash) internal {
         FHE.allowThis(ctHash);
     }
     function allowGlobal(euint32 ctHash) internal {
         FHE.allowGlobal(ctHash);
+    }
+    function allowPublic(euint32 ctHash) internal {
+        FHE.allowPublic(ctHash);
     }
     function allowSender(euint32 ctHash) internal {
         FHE.allowSender(ctHash);
@@ -4253,11 +4543,17 @@ library BindingsEuint64 {
     function isAllowed(euint64 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint64 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint64 ctHash) internal {
         FHE.allowThis(ctHash);
     }
     function allowGlobal(euint64 ctHash) internal {
         FHE.allowGlobal(ctHash);
+    }
+    function allowPublic(euint64 ctHash) internal {
+        FHE.allowPublic(ctHash);
     }
     function allowSender(euint64 ctHash) internal {
         FHE.allowSender(ctHash);
@@ -4454,11 +4750,17 @@ library BindingsEuint128 {
     function isAllowed(euint128 ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(euint128 ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(euint128 ctHash) internal {
         FHE.allowThis(ctHash);
     }
     function allowGlobal(euint128 ctHash) internal {
         FHE.allowGlobal(ctHash);
+    }
+    function allowPublic(euint128 ctHash) internal {
+        FHE.allowPublic(ctHash);
     }
     function allowSender(euint128 ctHash) internal {
         FHE.allowSender(ctHash);
@@ -4515,11 +4817,17 @@ library BindingsEaddress {
     function isAllowed(eaddress ctHash, address account) internal returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
+    function isPubliclyAllowed(eaddress ctHash) internal view returns (bool) {
+        return FHE.isPubliclyAllowed(ctHash);
+    }
     function allowThis(eaddress ctHash) internal {
         FHE.allowThis(ctHash);
     }
     function allowGlobal(eaddress ctHash) internal {
         FHE.allowGlobal(ctHash);
+    }
+    function allowPublic(eaddress ctHash) internal {
+        FHE.allowPublic(ctHash);
     }
     function allowSender(eaddress ctHash) internal {
         FHE.allowSender(ctHash);

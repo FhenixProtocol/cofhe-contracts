@@ -122,9 +122,37 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
       process.env.VERIFIER_ADDRESS,
     );
     await tx.wait();
-    console.log(chalk.green("Successfully set verifier signer address"));
+    console.log(chalk.green(`Successfully set verifier signer address: ${process.env.VERIFIER_ADDRESS}`));
   } catch (e) {
     console.error(chalk.red(`Failed setVerifierSigner transaction: ${e}`));
+    return e;
+  }
+
+  // Set the decrypt result signer (dispatcher's signing key)
+  try {
+    const connectedImplementation = TMProxyContract.connect(aggregatorSigners[0]);
+    if (process.env.DECRYPT_RESULT_SIGNER === "0x0000000000000000000000000000000000000000") {
+      const networkName = hre?.network?.name;
+      const networkConfig = hre?.network?.config as any;
+      const networkUrl = networkConfig?.url;
+      if (
+        networkUrl &&
+        !networkUrl.includes("localhost") &&
+        !networkUrl.includes("127.0.0.1") &&
+        !networkName?.startsWith("localfhenix")
+      ) {
+        console.error(chalk.red("refusing to set DECRYPT_RESULT_SIGNER to 0 on a non-local network!"));
+        return;
+      }
+    }
+
+    const tx = await connectedImplementation.setDecryptResultSigner(
+      process.env.DECRYPT_RESULT_SIGNER,
+    );
+    await tx.wait();
+    console.log(chalk.green(`Successfully set decrypt result signer address: ${process.env.DECRYPT_RESULT_SIGNER}`));
+  } catch (e) {
+    console.error(chalk.red(`Failed setDecryptResultSigner transaction: ${e}`));
     return e;
   }
   console.log("\n");
@@ -301,7 +329,7 @@ function getAggregatorWallets(ethers: any) {
 const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
-  console.log(chalk.green("Network:", hre.network.config));
+  console.log(chalk.green("Network:", JSON.stringify(hre.network.config, (_, v) => typeof v === 'bigint' ? v.toString() : v)));
   console.log("\n");
 
   // Note: we need to use an unused account for deployment via ignition, or it will complain
