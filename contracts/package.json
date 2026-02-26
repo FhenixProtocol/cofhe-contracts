@@ -14,6 +14,9 @@
 		"FHE.sol",
 		"ICofhe.sol"
 	],
+	"scripts": {
+		"postinstall": "node -e \"console.log('\\x1b[31m%s\\x1b[0m', 'Breaking changes detected in v0.1.0: encrypted type handles changed from uint256 to bytes32. You must regenerate ABIs and contract bindings. Migration guide: https://github.com/FhenixProtocol/cofhe-contracts/blob/master/CHANGELOG.md')\""
+	},
 	"keywords": [
 		"blockchain",
 		"ethereum",
