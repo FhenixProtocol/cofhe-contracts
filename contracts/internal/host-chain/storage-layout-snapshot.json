@@ -1,0 +1,358 @@
+{
+  "version": 1,
+  "contracts": {
+    "TaskManager": {
+      "storage": [
+        {
+          "label": "initialized",
+          "slot": "0",
+          "offset": 0,
+          "type": "t_bool"
+        },
+        {
+          "label": "securityZoneMax",
+          "slot": "0",
+          "offset": 1,
+          "type": "t_int32"
+        },
+        {
+          "label": "securityZoneMin",
+          "slot": "0",
+          "offset": 5,
+          "type": "t_int32"
+        },
+        {
+          "label": "randomCounter",
+          "slot": "1",
+          "offset": 0,
+          "type": "t_uint256"
+        },
+        {
+          "label": "unusedAggregator",
+          "slot": "2",
+          "offset": 0,
+          "type": "t_address"
+        },
+        {
+          "label": "acl",
+          "slot": "3",
+          "offset": 0,
+          "type": "t_contract(ACL)"
+        },
+        {
+          "label": "verifierSigner",
+          "slot": "4",
+          "offset": 0,
+          "type": "t_address"
+        },
+        {
+          "label": "version",
+          "slot": "4",
+          "offset": 20,
+          "type": "t_uint8"
+        },
+        {
+          "label": "plaintextsStorage",
+          "slot": "5",
+          "offset": 0,
+          "type": "t_contract(PlaintextsStorage)"
+        },
+        {
+          "label": "aggregators",
+          "slot": "6",
+          "offset": 0,
+          "type": "t_mapping(t_address,t_bool)"
+        },
+        {
+          "label": "isEnabled",
+          "slot": "7",
+          "offset": 0,
+          "type": "t_bool"
+        },
+        {
+          "label": "decryptResultSigner",
+          "slot": "7",
+          "offset": 1,
+          "type": "t_address"
+        }
+      ],
+      "types": {
+        "t_address": {
+          "label": "address",
+          "numberOfBytes": "20"
+        },
+        "t_bool": {
+          "label": "bool",
+          "numberOfBytes": "1"
+        },
+        "t_contract(ACL)": {
+          "label": "contract ACL",
+          "numberOfBytes": "20"
+        },
+        "t_contract(PlaintextsStorage)": {
+          "label": "contract PlaintextsStorage",
+          "numberOfBytes": "20"
+        },
+        "t_int32": {
+          "label": "int32",
+          "numberOfBytes": "4"
+        },
+        "t_mapping(t_address,t_bool)": {
+          "label": "mapping(address => bool)",
+          "numberOfBytes": "32"
+        },
+        "t_uint256": {
+          "label": "uint256",
+          "numberOfBytes": "32"
+        },
+        "t_uint8": {
+          "label": "uint8",
+          "numberOfBytes": "1"
+        },
+        "t_uint64": {
+          "label": "uint64",
+          "numberOfBytes": "0"
+        }
+      },
+      "namespaces": {
+        "erc7201:openzeppelin.storage.Ownable2Step": [
+          {
+            "label": "_pendingOwner",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_address"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable": [
+          {
+            "label": "_owner",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_address"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Initializable": [
+          {
+            "label": "_initialized",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_uint64"
+          },
+          {
+            "label": "_initializing",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_bool"
+          }
+        ]
+      }
+    },
+    "ACL": {
+      "storage": [],
+      "types": {
+        "t_mapping(t_uint256,t_bool)": {
+          "label": "mapping(uint256 => bool)",
+          "numberOfBytes": "0"
+        },
+        "t_uint256": {
+          "label": "uint256",
+          "numberOfBytes": "0"
+        },
+        "t_bool": {
+          "label": "bool",
+          "numberOfBytes": "0"
+        },
+        "t_mapping(t_uint256,t_mapping(t_address,t_bool))": {
+          "label": "mapping(uint256 => mapping(address => bool))",
+          "numberOfBytes": "0"
+        },
+        "t_mapping(t_address,t_bool)": {
+          "label": "mapping(address => bool)",
+          "numberOfBytes": "0"
+        },
+        "t_address": {
+          "label": "address",
+          "numberOfBytes": "0"
+        },
+        "t_mapping(t_address,t_mapping(t_address,t_mapping(t_address,t_bool)))": {
+          "label": "mapping(address => mapping(address => mapping(address => bool)))",
+          "numberOfBytes": "0"
+        },
+        "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+          "label": "mapping(address => mapping(address => bool))",
+          "numberOfBytes": "0"
+        },
+        "t_bytes32": {
+          "label": "bytes32",
+          "numberOfBytes": "0"
+        },
+        "t_string_storage": {
+          "label": "string",
+          "numberOfBytes": "0"
+        },
+        "t_uint64": {
+          "label": "uint64",
+          "numberOfBytes": "0"
+        }
+      },
+      "namespaces": {
+        "erc7201:cofhe.storage.ACL": [
+          {
+            "label": "globalHandles",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_mapping(t_uint256,t_bool)"
+          },
+          {
+            "label": "persistedAllowedPairs",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_bool))"
+          },
+          {
+            "label": "allowedForDecryption",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_mapping(t_uint256,t_bool)"
+          },
+          {
+            "label": "delegates",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_mapping(t_address,t_mapping(t_address,t_mapping(t_address,t_bool)))"
+          }
+        ],
+        "erc7201:openzeppelin.storage.EIP712": [
+          {
+            "label": "_hashedName",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_bytes32"
+          },
+          {
+            "label": "_hashedVersion",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_bytes32"
+          },
+          {
+            "label": "_name",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_string_storage"
+          },
+          {
+            "label": "_version",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_string_storage"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable2Step": [
+          {
+            "label": "_pendingOwner",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_address"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable": [
+          {
+            "label": "_owner",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_address"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Initializable": [
+          {
+            "label": "_initialized",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_uint64"
+          },
+          {
+            "label": "_initializing",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_bool"
+          }
+        ]
+      }
+    },
+    "PlaintextsStorage": {
+      "storage": [
+        {
+          "label": "plaintextResults",
+          "slot": "0",
+          "offset": 0,
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)_storage)"
+        }
+      ],
+      "types": {
+        "t_bool": {
+          "label": "bool",
+          "numberOfBytes": "1"
+        },
+        "t_mapping(t_uint256,t_struct(PlaintextResult)_storage)": {
+          "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
+          "numberOfBytes": "32"
+        },
+        "t_struct(PlaintextResult)_storage": {
+          "label": "struct PlaintextsStorage.PlaintextResult",
+          "numberOfBytes": "64",
+          "members": [
+            {
+              "label": "existenceIndicator",
+              "type": "t_bool",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "label": "result",
+              "type": "t_uint256",
+              "offset": 0,
+              "slot": "1"
+            }
+          ]
+        },
+        "t_uint256": {
+          "label": "uint256",
+          "numberOfBytes": "32"
+        },
+        "t_address": {
+          "label": "address",
+          "numberOfBytes": "0"
+        },
+        "t_uint64": {
+          "label": "uint64",
+          "numberOfBytes": "0"
+        }
+      },
+      "namespaces": {
+        "erc7201:openzeppelin.storage.Ownable": [
+          {
+            "label": "_owner",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_address"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Initializable": [
+          {
+            "label": "_initialized",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_uint64"
+          },
+          {
+            "label": "_initializing",
+            "slot": "0",
+            "offset": 0,
+            "type": "t_bool"
+          }
+        ]
+      }
+    }
+  }
+}
