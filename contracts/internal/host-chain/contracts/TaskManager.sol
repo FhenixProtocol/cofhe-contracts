@@ -153,6 +153,7 @@ library TMCommon {
 
 contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2StepUpgradeable {
     bool private initialized;
+    uint256 private __test_ci_variable;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
