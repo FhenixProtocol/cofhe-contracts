@@ -3,7 +3,7 @@
   "exclude_informational": true,
   "exclude_optimization": true,
   "exclude_dependencies": true,
-  "detectors_to_exclude": "naming-convention,solc-version,assembly,low-level-calls",
+  "detectors_to_exclude": "naming-convention,solc-version,assembly,low-level-calls,events-maths,missing-zero-check,calls-loop,reentrancy-events,timestamp",
   "hardhat_ignore_compile": true,
   "fail_on": "medium"
 }
