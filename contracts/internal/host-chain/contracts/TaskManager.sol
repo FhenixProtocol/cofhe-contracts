@@ -240,7 +240,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     // When set to address(0), signature verification is skipped (debug mode)
     address public decryptResultSigner;
 
-
     modifier onlyAggregator() {
         if (!aggregators[msg.sender]) {
             revert OnlyAggregatorAllowed(msg.sender);
