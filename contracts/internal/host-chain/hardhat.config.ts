@@ -129,6 +129,11 @@ const config: HardhatUserConfig = {
     outDir: "types",
     target: "ethers-v6",
   },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS === "true",
+    outputFile: process.env.GAS_REPORT_FILE || undefined,
+    noColors: !!process.env.GAS_REPORT_FILE,
+  },
 };
 
 export default config;
