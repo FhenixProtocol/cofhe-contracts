@@ -29,6 +29,11 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
     }
   },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
+  },
   typechain: {
     outDir: "types",
     target: "ethers-v6",

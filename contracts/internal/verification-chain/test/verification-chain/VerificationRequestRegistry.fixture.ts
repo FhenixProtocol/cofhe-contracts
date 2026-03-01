@@ -1,11 +1,12 @@
 import hre from "hardhat";
 const { ethers } = hre;
 import { BaseContract } from "ethers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 export interface VerificationRequestRegistryFixture {
   contract: BaseContract;
-  owner: any;
-  otherAccount: any;
+  owner: HardhatEthersSigner;
+  otherAccount: HardhatEthersSigner;
 }
 
 export async function deployVerificationRequestRegistryFixture(): Promise<VerificationRequestRegistryFixture> {

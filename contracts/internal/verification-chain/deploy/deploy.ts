@@ -1,21 +1,25 @@
 import { DeployFunction } from "hardhat-deploy/types";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import chalk from "chalk";
-import hre, { ethers } from "hardhat";
 
-const func: DeployFunction = async function () {
+const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const { deployments, getNamedAccounts } = hre;
+  const { deploy } = deployments;
+
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
   console.log("\n");
 
-  const [signer] = await ethers.getSigners();
-  console.log(chalk.green("Deployer address:", signer.address));
+  const { deployer } = await getNamedAccounts();
+  console.log(chalk.green("Deployer address:", deployer));
 
-  const VerificationRequestRegistry = await ethers.getContractFactory("VerificationRequestRegistry");
-  const contract = await VerificationRequestRegistry.deploy();
-  await contract.waitForDeployment();
+  const result = await deploy("VerificationRequestRegistry", {
+    from: deployer,
+    args: [],
+    log: true,
+  });
 
-  const address = await contract.getAddress();
-  console.log(chalk.green("VerificationRequestRegistry deployed to:", address));
+  console.log(chalk.green("VerificationRequestRegistry deployed to:", result.address));
 };
 
 export default func;

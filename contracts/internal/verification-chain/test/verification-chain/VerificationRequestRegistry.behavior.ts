@@ -52,7 +52,7 @@ export function shouldBehaveLikeVerificationRequestRegistry(): void {
           .withArgs(duplicateHash);
       });
 
-      it("should revert when duplicate is within the same submission's array", async function () {
+      it("should revert when duplicate is across submissions", async function () {
         const contract = this.verificationRegistry as Contract;
         const hash = randomBytes32();
         const otherHash = randomBytes32();
@@ -63,6 +63,28 @@ export function shouldBehaveLikeVerificationRequestRegistry(): void {
           contract.submitRequest("QmSecond", [otherHash, hash], 0, 1n)
         ).to.be.revertedWithCustomError(contract, "VerificationRequestRegistry__DuplicateCTHash")
           .withArgs(hash);
+      });
+
+      it("should revert when duplicate is within the same submission's array", async function () {
+        const contract = this.verificationRegistry as Contract;
+        const hash = randomBytes32();
+
+        await expect(
+          contract.submitRequest("QmDup", [hash, hash], 0, 1n)
+        ).to.be.revertedWithCustomError(contract, "VerificationRequestRegistry__DuplicateCTHash")
+          .withArgs(hash);
+      });
+    });
+
+    describe("when ctHashes exceeds max length", function () {
+      it("should revert with VerificationRequestRegistry__TooManyCTHashes", async function () {
+        const contract = this.verificationRegistry as Contract;
+        const tooMany = Array.from({ length: 101 }, () => randomBytes32());
+
+        await expect(
+          contract.submitRequest("QmTooMany", tooMany, 0, 1n)
+        ).to.be.revertedWithCustomError(contract, "VerificationRequestRegistry__TooManyCTHashes")
+          .withArgs(101, 100);
       });
     });
 
@@ -236,6 +258,45 @@ export function shouldBehaveLikeVerificationRequestRegistry(): void {
         await expect(
           contract.getRequestByCTHash(randomBytes32())
         ).to.be.revertedWithCustomError(contract, "VerificationRequestRegistry__CTHashNotFound");
+      });
+    });
+  });
+
+  describe("getRequestById", function () {
+    describe("when id is valid", function () {
+      it("should return the stored request", async function () {
+        const contract = this.verificationRegistry as Contract;
+        const ipfsCid = "QmGetById";
+        const ctHashes = [randomBytes32()];
+
+        await contract.submitRequest(ipfsCid, ctHashes, 0, 1n);
+
+        const req = await contract.getRequestById(0);
+        expect(req.ipfsCid).to.equal(ipfsCid);
+        expect(req.ctHashes).to.deep.equal(ctHashes);
+      });
+
+      it("should return correct request when multiple exist", async function () {
+        const contract = this.verificationRegistry as Contract;
+
+        await contract.submitRequest("QmFirst", [randomBytes32()], 1, 1n);
+        await contract.submitRequest("QmSecond", [randomBytes32()], 2, 2n);
+
+        const req0 = await contract.getRequestById(0);
+        expect(req0.ipfsCid).to.equal("QmFirst");
+
+        const req1 = await contract.getRequestById(1);
+        expect(req1.ipfsCid).to.equal("QmSecond");
+      });
+    });
+
+    describe("when id is out of bounds", function () {
+      it("should revert with VerificationRequestRegistry__RequestNotFound", async function () {
+        const contract = this.verificationRegistry as Contract;
+        await expect(
+          contract.getRequestById(0)
+        ).to.be.revertedWithCustomError(contract, "VerificationRequestRegistry__RequestNotFound")
+          .withArgs(0);
       });
     });
   });
