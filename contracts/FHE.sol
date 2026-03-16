@@ -131,11 +131,6 @@ library Impl {
         return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, functionId, Common.createUint256Inputs(lhs, rhs), new uint256[](0)));
     }
 
-    function decrypt(bytes32 input) internal returns (bytes32) {
-        ITaskManager(TASK_MANAGER_ADDRESS).createDecryptTask(uint256(input), msg.sender);
-        return bytes32(input);
-    }
-
     function getDecryptResult(bytes32 input) internal view returns (uint256) {
         return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResult(uint256(input));
     }
@@ -1934,79 +1929,6 @@ library FHE {
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.ror));
     }
 
-
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(ebool input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEbool(false);
-        }
-
-        ebool.wrap(Impl.decrypt(ebool.unwrap(input1)));
-    }
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(euint8 input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint8(0);
-        }
-
-        euint8.wrap(Impl.decrypt(euint8.unwrap(input1)));
-    }
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(euint16 input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint16(0);
-        }
-
-        euint16.wrap(Impl.decrypt(euint16.unwrap(input1)));
-    }
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(euint32 input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint32(0);
-        }
-
-        euint32.wrap(Impl.decrypt(euint32.unwrap(input1)));
-    }
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(euint64 input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint64(0);
-        }
-
-        euint64.wrap(Impl.decrypt(euint64.unwrap(input1)));
-    }
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(euint128 input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEuint128(0);
-        }
-
-        euint128.wrap(Impl.decrypt(euint128.unwrap(input1)));
-    }
-
-    /// @notice Performs the async decrypt operation on a ciphertext
-    /// @dev The decrypted output should be asynchronously handled by the IAsyncFHEReceiver implementation
-    /// @param input1 the input ciphertext
-    function decrypt(eaddress input1) internal {
-        if (!Common.isInitialized(input1)) {
-            input1 = asEaddress(address(0));
-        }
-
-        Impl.decrypt(eaddress.unwrap(input1));
-    }
-
     /// @notice Gets the decrypted value from a previously decrypted ebool ciphertext
     /// @dev This function will revert if the ciphertext is not yet decrypted. Use getDecryptResultSafe for a non-reverting version.
     /// @param input1 The ebool ciphertext to get the decrypted value from
@@ -3584,9 +3506,6 @@ library BindingsEbool {
     function toU128(ebool value) internal returns (euint128) {
         return FHE.asEuint128(value);
     }
-    function decrypt(ebool value) internal {
-        FHE.decrypt(value);
-    }
     function allow(ebool ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -3825,9 +3744,6 @@ library BindingsEuint8 {
     }
     function toU128(euint8 value) internal returns (euint128) {
         return FHE.asEuint128(value);
-    }
-    function decrypt(euint8 value) internal {
-        FHE.decrypt(value);
     }
     function allow(euint8 ctHash, address account) internal {
         FHE.allow(ctHash, account);
@@ -4068,9 +3984,6 @@ library BindingsEuint16 {
     function toU128(euint16 value) internal returns (euint128) {
         return FHE.asEuint128(value);
     }
-    function decrypt(euint16 value) internal {
-        FHE.decrypt(value);
-    }
     function allow(euint16 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -4310,9 +4223,6 @@ library BindingsEuint32 {
     function toU128(euint32 value) internal returns (euint128) {
         return FHE.asEuint128(value);
     }
-    function decrypt(euint32 value) internal {
-        FHE.decrypt(value);
-    }
     function allow(euint32 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -4534,9 +4444,6 @@ library BindingsEuint64 {
     function toU128(euint64 value) internal returns (euint128) {
         return FHE.asEuint128(value);
     }
-    function decrypt(euint64 value) internal {
-        FHE.decrypt(value);
-    }
     function allow(euint64 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -4741,9 +4648,6 @@ library BindingsEuint128 {
     function toU64(euint128 value) internal returns (euint64) {
         return FHE.asEuint64(value);
     }
-    function decrypt(euint128 value) internal {
-        FHE.decrypt(value);
-    }
     function allow(euint128 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
@@ -4807,9 +4711,6 @@ library BindingsEaddress {
     }
     function toU128(eaddress value) internal returns (euint128) {
         return FHE.asEuint128(value);
-    }
-    function decrypt(eaddress value) internal {
-        FHE.decrypt(value);
     }
     function allow(eaddress ctHash, address account) internal {
         FHE.allow(ctHash, account);
