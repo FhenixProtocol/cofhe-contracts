@@ -101,7 +101,7 @@ library TMCommon {
         uint256[] memory inputs,
         FunctionId functionId
     ) internal pure returns (uint256) {
-        bytes memory combined;
+        bytes memory combined = "";
         bool isTriviallyEncrypted = (functionId == FunctionId.trivialEncrypt);
         for (uint8 i = 0; i < inputs.length; i++) {
             combined = bytes.concat(combined, uint256ToBytes32(inputs[i]));
@@ -239,7 +239,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     // Signer address for decrypt result verification (threshold network's signing key)
     // When set to address(0), signature verification is skipped (debug mode)
     address public decryptResultSigner;
-
 
     modifier onlyAggregator() {
         if (!aggregators[msg.sender]) {
@@ -632,6 +631,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
 
         bytes32 messageHash = _computeDecryptResultHash(ctHash, result);
+        // slither-disable-next-line unused-return
         (address recovered, ECDSA.RecoverError err, ) = ECDSA.tryRecover(messageHash, signature);
 
         if (err != ECDSA.RecoverError.NoError || recovered == address(0)) {
@@ -681,6 +681,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         emit ProtocolNotification(ctHash, operation, errorMessage);
     }
 
+    // slither-disable-next-line unused-return
     function getDecryptResultSafe(uint256 ctHash) external view returns (uint256, bool) {
         return plaintextsStorage.getResult(ctHash);
     }

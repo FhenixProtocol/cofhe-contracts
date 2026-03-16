@@ -1,0 +1,373 @@
+{
+  "version": 1,
+  "contracts": {
+    "TaskManager": {
+      "solcVersion": "0.8.25",
+      "storage": [
+        {
+          "label": "initialized",
+          "offset": 0,
+          "slot": "0",
+          "type": "t_bool",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:155"
+        },
+        {
+          "label": "securityZoneMax",
+          "offset": 1,
+          "slot": "0",
+          "type": "t_int32",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:215"
+        },
+        {
+          "label": "securityZoneMin",
+          "offset": 5,
+          "slot": "0",
+          "type": "t_int32",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:216"
+        },
+        {
+          "label": "randomCounter",
+          "offset": 0,
+          "slot": "1",
+          "type": "t_uint256",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:219"
+        },
+        {
+          "label": "unusedAggregator",
+          "offset": 0,
+          "slot": "2",
+          "type": "t_address",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:221"
+        },
+        {
+          "label": "acl",
+          "offset": 0,
+          "slot": "3",
+          "type": "t_contract(ACL)25384",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:224"
+        },
+        {
+          "label": "verifierSigner",
+          "offset": 0,
+          "slot": "4",
+          "type": "t_address",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:226"
+        },
+        {
+          "label": "version",
+          "offset": 20,
+          "slot": "4",
+          "type": "t_uint8",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:228"
+        },
+        {
+          "label": "plaintextsStorage",
+          "offset": 0,
+          "slot": "5",
+          "type": "t_contract(PlaintextsStorage)25814",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:231"
+        },
+        {
+          "label": "aggregators",
+          "offset": 0,
+          "slot": "6",
+          "type": "t_mapping(t_address,t_bool)",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:233"
+        },
+        {
+          "label": "isEnabled",
+          "offset": 0,
+          "slot": "7",
+          "type": "t_bool",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:237"
+        },
+        {
+          "label": "decryptResultSigner",
+          "offset": 1,
+          "slot": "7",
+          "type": "t_address",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:241"
+        }
+      ],
+      "types": {
+        "t_address": {
+          "label": "address",
+          "numberOfBytes": "20"
+        },
+        "t_bool": {
+          "label": "bool",
+          "numberOfBytes": "1"
+        },
+        "t_contract(ACL)25384": {
+          "label": "contract ACL",
+          "numberOfBytes": "20"
+        },
+        "t_contract(PlaintextsStorage)25814": {
+          "label": "contract PlaintextsStorage",
+          "numberOfBytes": "20"
+        },
+        "t_int32": {
+          "label": "int32",
+          "numberOfBytes": "4"
+        },
+        "t_mapping(t_address,t_bool)": {
+          "label": "mapping(address => bool)",
+          "numberOfBytes": "32"
+        },
+        "t_uint256": {
+          "label": "uint256",
+          "numberOfBytes": "32"
+        },
+        "t_uint8": {
+          "label": "uint8",
+          "numberOfBytes": "1"
+        },
+        "t_uint64": {
+          "label": "uint64"
+        }
+      },
+      "namespaces": {
+        "erc7201:openzeppelin.storage.Ownable2Step": [
+          {
+            "contract": "Ownable2StepUpgradeable",
+            "label": "_pendingOwner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable": [
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Initializable": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint64",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+          }
+        ]
+      }
+    },
+    "ACL": {
+      "solcVersion": "0.8.25",
+      "storage": [],
+      "types": {
+        "t_mapping(t_uint256,t_bool)": {
+          "label": "mapping(uint256 => bool)"
+        },
+        "t_uint256": {
+          "label": "uint256"
+        },
+        "t_bool": {
+          "label": "bool"
+        },
+        "t_mapping(t_uint256,t_mapping(t_address,t_bool))": {
+          "label": "mapping(uint256 => mapping(address => bool))"
+        },
+        "t_mapping(t_address,t_bool)": {
+          "label": "mapping(address => bool)"
+        },
+        "t_address": {
+          "label": "address"
+        },
+        "t_mapping(t_address,t_mapping(t_address,t_mapping(t_address,t_bool)))": {
+          "label": "mapping(address => mapping(address => mapping(address => bool)))"
+        },
+        "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+          "label": "mapping(address => mapping(address => bool))"
+        },
+        "t_bytes32": {
+          "label": "bytes32"
+        },
+        "t_string_storage": {
+          "label": "string"
+        },
+        "t_uint64": {
+          "label": "uint64"
+        }
+      },
+      "namespaces": {
+        "erc7201:cofhe.storage.ACL": [
+          {
+            "contract": "ACL",
+            "label": "globalHandles",
+            "type": "t_mapping(t_uint256,t_bool)",
+            "src": "contracts/ACL.sol:44"
+          },
+          {
+            "contract": "ACL",
+            "label": "persistedAllowedPairs",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_bool))",
+            "src": "contracts/ACL.sol:45"
+          },
+          {
+            "contract": "ACL",
+            "label": "allowedForDecryption",
+            "type": "t_mapping(t_uint256,t_bool)",
+            "src": "contracts/ACL.sol:46"
+          },
+          {
+            "contract": "ACL",
+            "label": "delegates",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_mapping(t_address,t_bool)))",
+            "src": "contracts/ACL.sol:47"
+          }
+        ],
+        "erc7201:openzeppelin.storage.EIP712": [
+          {
+            "contract": "EIP712Upgradeable",
+            "label": "_hashedName",
+            "type": "t_bytes32",
+            "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:39"
+          },
+          {
+            "contract": "EIP712Upgradeable",
+            "label": "_hashedVersion",
+            "type": "t_bytes32",
+            "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:41"
+          },
+          {
+            "contract": "EIP712Upgradeable",
+            "label": "_name",
+            "type": "t_string_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:43"
+          },
+          {
+            "contract": "EIP712Upgradeable",
+            "label": "_version",
+            "type": "t_string_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:44"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable2Step": [
+          {
+            "contract": "Ownable2StepUpgradeable",
+            "label": "_pendingOwner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable": [
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Initializable": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint64",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+          }
+        ]
+      }
+    },
+    "PlaintextsStorage": {
+      "solcVersion": "0.8.25",
+      "storage": [
+        {
+          "label": "plaintextResults",
+          "offset": 0,
+          "slot": "0",
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)25715_storage)",
+          "contract": "PlaintextsStorage",
+          "src": "contracts/PlaintextsStorage.sol:13"
+        }
+      ],
+      "types": {
+        "t_bool": {
+          "label": "bool",
+          "numberOfBytes": "1"
+        },
+        "t_mapping(t_uint256,t_struct(PlaintextResult)25715_storage)": {
+          "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
+          "numberOfBytes": "32"
+        },
+        "t_struct(PlaintextResult)25715_storage": {
+          "label": "struct PlaintextsStorage.PlaintextResult",
+          "members": [
+            {
+              "label": "existenceIndicator",
+              "type": "t_bool",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "label": "result",
+              "type": "t_uint256",
+              "offset": 0,
+              "slot": "1"
+            }
+          ],
+          "numberOfBytes": "64"
+        },
+        "t_uint256": {
+          "label": "uint256",
+          "numberOfBytes": "32"
+        },
+        "t_address": {
+          "label": "address"
+        },
+        "t_uint64": {
+          "label": "uint64"
+        }
+      },
+      "namespaces": {
+        "erc7201:openzeppelin.storage.Ownable": [
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Initializable": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint64",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "no-empty-blocks": "off",
+    "no-inline-assembly": "off",
+    "one-contract-per-file": "off",
+    "func-name-mixedcase": "off",
+    "const-name-snakecase": "off",
+    "compiler-version": ["error", ">=0.8.19"],
+    "func-visibility": ["warn", { "ignoreConstructors": true }],
+    "no-unused-import": "warn"
+  }
+}
