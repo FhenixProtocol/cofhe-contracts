@@ -366,6 +366,209 @@ export function shouldBehaveLikeDecryptResult(): void {
     });
   });
 
+  describe("verifyDecryptResultBatch", function () {
+    it("should return true for all valid signatures", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+      const count = 3;
+      const ctHashes: bigint[] = [];
+      const results: bigint[] = [];
+      const signatures: string[] = [];
+
+      for (let i = 0; i < count; i++) {
+        const baseHash = keccak256(toUtf8Bytes(`verify-batch-valid-${i}`));
+        const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+        const result = BigInt(i * 100 + 1);
+
+        const signature = await signDecryptResult(
+          testSigner,
+          result,
+          EUINT64_TFHE,
+          chainId,
+          ctHash
+        );
+
+        ctHashes.push(ctHash);
+        results.push(result);
+        signatures.push("0x" + signature);
+      }
+
+      const isValid = await taskManager.verifyDecryptResultBatch(
+        ctHashes,
+        results,
+        signatures
+      );
+      expect(isValid).to.be.true;
+    });
+
+    it("should not modify state (view function)", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+      const baseHash = keccak256(toUtf8Bytes("verify-batch-no-state"));
+      const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+      const result = BigInt(888);
+
+      const signature = await signDecryptResult(
+        testSigner,
+        result,
+        EUINT64_TFHE,
+        chainId,
+        ctHash
+      );
+
+      await taskManager.verifyDecryptResultBatch(
+        [ctHash],
+        [result],
+        ["0x" + signature]
+      );
+
+      const [, exists] = await taskManager.getDecryptResultSafe(ctHash);
+      expect(exists).to.be.false;
+    });
+
+    it("should revert if any signature is invalid", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+
+      const baseHash1 = keccak256(toUtf8Bytes("verify-batch-fail-1"));
+      const ctHash1 = buildCtHash(baseHash1, EUINT64_TFHE);
+      const result1 = BigInt(111);
+      const sig1 = await signDecryptResult(testSigner, result1, EUINT64_TFHE, chainId, ctHash1);
+
+      const baseHash2 = keccak256(toUtf8Bytes("verify-batch-fail-2"));
+      const ctHash2 = buildCtHash(baseHash2, EUINT64_TFHE);
+      const result2 = BigInt(222);
+
+      await expect(
+        taskManager.verifyDecryptResultBatch(
+          [ctHash1, ctHash2],
+          [result1, result2],
+          ["0x" + sig1, "0x" + "00".repeat(65)]
+        )
+      ).to.be.reverted;
+    });
+
+    it("should succeed with empty arrays", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      const isValid = await taskManager.verifyDecryptResultBatch([], [], []);
+      expect(isValid).to.be.true;
+    });
+
+    it("should revert on length mismatch", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      await expect(
+        taskManager.verifyDecryptResultBatch(
+          [BigInt(1), BigInt(2)],
+          [BigInt(10)],
+          ["0x" + "00".repeat(65)]
+        )
+      ).to.be.revertedWithCustomError(taskManager, "LengthMismatch");
+    });
+  });
+
+  describe("verifyDecryptResultBatchSafe", function () {
+    it("should return array of true for all valid signatures", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+      const count = 3;
+      const ctHashes: bigint[] = [];
+      const results: bigint[] = [];
+      const signatures: string[] = [];
+
+      for (let i = 0; i < count; i++) {
+        const baseHash = keccak256(toUtf8Bytes(`verify-batch-safe-valid-${i}`));
+        const ctHash = buildCtHash(baseHash, EUINT64_TFHE);
+        const result = BigInt(i * 100 + 1);
+
+        const signature = await signDecryptResult(
+          testSigner,
+          result,
+          EUINT64_TFHE,
+          chainId,
+          ctHash
+        );
+
+        ctHashes.push(ctHash);
+        results.push(result);
+        signatures.push("0x" + signature);
+      }
+
+      const validResults = await taskManager.verifyDecryptResultBatchSafe(
+        ctHashes,
+        results,
+        signatures
+      );
+      expect(validResults).to.have.length(count);
+      for (let i = 0; i < count; i++) {
+        expect(validResults[i]).to.be.true;
+      }
+    });
+
+    it("should return per-item results with mixed valid/invalid signatures", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+
+      const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
+
+      // First: valid
+      const baseHash1 = keccak256(toUtf8Bytes("verify-batch-safe-mixed-1"));
+      const ctHash1 = buildCtHash(baseHash1, EUINT64_TFHE);
+      const result1 = BigInt(111);
+      const sig1 = await signDecryptResult(testSigner, result1, EUINT64_TFHE, chainId, ctHash1);
+
+      // Second: invalid (wrong result)
+      const baseHash2 = keccak256(toUtf8Bytes("verify-batch-safe-mixed-2"));
+      const ctHash2 = buildCtHash(baseHash2, EUINT64_TFHE);
+      const result2 = BigInt(222);
+      const sig2 = await signDecryptResult(testSigner, BigInt(999), EUINT64_TFHE, chainId, ctHash2);
+
+      // Third: valid
+      const baseHash3 = keccak256(toUtf8Bytes("verify-batch-safe-mixed-3"));
+      const ctHash3 = buildCtHash(baseHash3, EUINT64_TFHE);
+      const result3 = BigInt(333);
+      const sig3 = await signDecryptResult(testSigner, result3, EUINT64_TFHE, chainId, ctHash3);
+
+      const validResults = await taskManager.verifyDecryptResultBatchSafe(
+        [ctHash1, ctHash2, ctHash3],
+        [result1, result2, result3],
+        ["0x" + sig1, "0x" + sig2, "0x" + sig3]
+      );
+
+      expect(validResults[0]).to.be.true;
+      expect(validResults[1]).to.be.false;
+      expect(validResults[2]).to.be.true;
+    });
+
+    it("should return empty array for empty input", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      const validResults = await taskManager.verifyDecryptResultBatchSafe([], [], []);
+      expect(validResults).to.have.length(0);
+    });
+
+    it("should revert on length mismatch", async function () {
+      const taskManager = this.taskManager as Contract;
+
+      await expect(
+        taskManager.verifyDecryptResultBatchSafe(
+          [BigInt(1), BigInt(2)],
+          [BigInt(10)],
+          ["0x" + "00".repeat(65)]
+        )
+      ).to.be.revertedWithCustomError(taskManager, "LengthMismatch");
+    });
+  });
+
   describe("verifyDecryptResult", function () {
     it("should return true for valid signature", async function () {
       const taskManager = this.taskManager as Contract;

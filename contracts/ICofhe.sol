@@ -117,6 +117,8 @@ interface ITaskManager {
         uint256 result,
         bytes calldata signature
     ) external view returns (bool);
+    function verifyDecryptResultBatch(uint256[] calldata ctHashes, uint256[] calldata results, bytes[] calldata signatures) external view returns (bool);
+    function verifyDecryptResultBatchSafe(uint256[] calldata ctHashes, uint256[] calldata results, bytes[] calldata signatures) external view returns (bool[] memory);
 }
 
 library Utils {
