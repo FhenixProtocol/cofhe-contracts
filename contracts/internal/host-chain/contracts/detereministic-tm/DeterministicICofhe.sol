@@ -108,6 +108,7 @@ interface ITaskManager {
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
     function allowTransient(uint256 ctHash, address account) external;
+    function allowGlobal(uint256 ctHash) external;
     function getDecryptResultSafe(uint256 ctHash) external view returns (uint256, bool);
     function getDecryptResult(uint256 ctHash) external view returns (uint256);
 }
