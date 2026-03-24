@@ -79,13 +79,18 @@ Estimated Arbitrum One cost: ~$0.002/commitment at 0.03 gwei effective gas price
 ## Testing
 
 ```bash
+cd contracts/internal/registry-chain
+
+# Install dependencies
+pnpm install
+
 # Run tests
-pnpm test:commitment-registry
+pnpm test
 
 # Run with gas report
-pnpm test:commitment-registry:gas
+pnpm test:gas
 
-# Estimate gas on Arbitrum Sepolia
+# Estimate gas on Arbitrum Sepolia (needs KEY in .env)
 npx hardhat run scripts/estimateGasArbitrum.ts --network arbitrumSepolia
 ```
 
