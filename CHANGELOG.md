@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Added
-- **CommitmentRegistry** — UUPS-upgradeable contract for on-chain FHE computation commitments (`handle → ctHash`) grouped by state version. Threshold Network uses these to verify ciphertext integrity before decrypting. Includes version lifecycle state machine, write-once enforcement, batch posting, and Arbitrum gas estimation script.
+- **CommitmentRegistry** — UUPS-upgradeable contract for on-chain FHE computation commitments (`handle → commitHash`) grouped by state version. Threshold Network uses these to verify ciphertext integrity before decrypting. Includes version lifecycle state machine, write-once enforcement, batch posting, array-based enumeration with paginated cursor, and Arbitrum gas estimation script.
 
 ## v0.1.1 - 2025-03-16
 
