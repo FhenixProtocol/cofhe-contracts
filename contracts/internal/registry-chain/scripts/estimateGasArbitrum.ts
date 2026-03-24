@@ -53,10 +53,10 @@ async function main() {
 
   for (const size of batchSizes) {
     const handles = Array.from({ length: size }, () => randomBytes32());
-    const ctHashes = Array.from({ length: size }, () => randomBytes32());
+    const commitHashes = Array.from({ length: size }, () => randomBytes32());
 
     // Encode the calldata
-    const calldata = proxy.interface.encodeFunctionData("postCommitments", [version, handles, ctHashes]);
+    const calldata = proxy.interface.encodeFunctionData("postCommitments", [version, handles, commitHashes]);
 
     try {
       // Get gas components from Arbitrum's NodeInterface
@@ -86,8 +86,8 @@ async function main() {
   // Also do a real tx for batch of 10 to get actual receipt gas
   console.log("\n--- Actual Transaction (batch of 10) ---\n");
   const handles10 = Array.from({ length: 10 }, () => randomBytes32());
-  const ctHashes10 = Array.from({ length: 10 }, () => randomBytes32());
-  const realTx = await proxy.postCommitments(version, handles10, ctHashes10);
+  const commitHashes10 = Array.from({ length: 10 }, () => randomBytes32());
+  const realTx = await proxy.postCommitments(version, handles10, commitHashes10);
   const receipt = await realTx.wait();
   const gasUsed = receipt!.gasUsed;
   const effectiveGasPrice = receipt!.gasPrice;
