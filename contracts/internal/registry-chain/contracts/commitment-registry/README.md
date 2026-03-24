@@ -14,12 +14,15 @@ After CoFHE computes an FHE operation, it posts a commitment (`handle → hash(c
 ## Data Model
 
 ```
-mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash))
+mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash))  // O(1) lookup
+mapping(bytes32 version => bytes32[])  // enumerable handle list per version
 ```
 
 - **version**: Opaque `bytes32` from the FHE engine — `keccak256(publicKey[securityZone], library_id, library_version, params)`. Scoped per security zone.
-- **handle**: The ciphertext identifier (same as `commitHash` in TaskManager).
+- **handle**: The ciphertext identifier.
 - **commitHash**: `keccak256` of the actual computed ciphertext bytes.
+
+Each commitment is stored in both the mapping (for lookup) and the array (for enumeration/migration).
 
 ## Version Lifecycle
 
