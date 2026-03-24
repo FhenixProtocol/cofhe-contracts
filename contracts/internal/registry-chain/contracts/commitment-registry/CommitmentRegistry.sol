@@ -35,8 +35,8 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
     /// @custom:storage-location erc7201:cofhe.storage.CommitmentRegistry
     struct CommitmentRegistryStorage {
         mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash)) commitments;
+        mapping(bytes32 version => bytes32[]) handlesByVersion;
         mapping(bytes32 version => VersionStatus) versionStatus;
-        mapping(bytes32 version => uint256) commitmentCount;
         address poster;
     }
 
@@ -95,10 +95,9 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
             if (commitHash == bytes32(0)) revert ZeroCommitHash(handle);
             if (versionMap[handle] != bytes32(0)) revert CommitmentAlreadyExists(version, handle);
             versionMap[handle] = commitHash;
+            $.handlesByVersion[version].push(handle);
             unchecked { ++i; }
         }
-
-        $.commitmentCount[version] += len;
         emit CommitmentsPosted(version, len);
     }
 
@@ -141,7 +140,27 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
     }
 
     function getSize(bytes32 version) external view returns (uint256) {
-        return _getStorage().commitmentCount[version];
+        return _getStorage().handlesByVersion[version].length;
+    }
+
+    function getHandleByIndex(bytes32 version, uint256 index) external view returns (bytes32) {
+        return _getStorage().handlesByVersion[version][index];
+    }
+
+    function getHandles(bytes32 version, uint256 offset, uint256 limit) external view returns (bytes32[] memory) {
+        CommitmentRegistryStorage storage $ = _getStorage();
+        bytes32[] storage allHandles = $.handlesByVersion[version];
+        uint256 total = allHandles.length;
+        if (offset >= total) return new bytes32[](0);
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        uint256 len = end - offset;
+        bytes32[] memory result = new bytes32[](len);
+        for (uint256 i = 0; i < len; ) {
+            result[i] = allHandles[offset + i];
+            unchecked { ++i; }
+        }
+        return result;
     }
 
     function getPoster() external view returns (address) {
