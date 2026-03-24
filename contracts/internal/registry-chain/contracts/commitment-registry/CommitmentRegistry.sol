@@ -20,21 +20,21 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
     /// @notice Returned when a zero address is provided where a non-zero address is required.
     error InvalidAddress();
 
-    /// @notice Returned when the handles and ctHashes arrays have different lengths.
+    /// @notice Returned when the handles and commitHashes arrays have different lengths.
     error LengthMismatch();
 
     /// @notice Returned when an empty batch is submitted.
     error EmptyBatch();
 
-    /// @notice Returned when a zero ctHash is provided for a handle.
-    error ZeroCtHash(bytes32 handle);
+    /// @notice Returned when a zero commitHash is provided for a handle.
+    error ZeroCommitHash(bytes32 handle);
 
     /// @notice Returned when an invalid version status transition is attempted.
     error InvalidVersionTransition(bytes32 version, VersionStatus current, VersionStatus target);
 
     /// @custom:storage-location erc7201:cofhe.storage.CommitmentRegistry
     struct CommitmentRegistryStorage {
-        mapping(bytes32 version => mapping(bytes32 handle => bytes32 ctHash)) commitments;
+        mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash)) commitments;
         mapping(bytes32 version => VersionStatus) versionStatus;
         mapping(bytes32 version => uint256) commitmentCount;
         address poster;
@@ -75,11 +75,11 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
     function postCommitments(
         bytes32 version,
         bytes32[] calldata handles,
-        bytes32[] calldata ctHashes
+        bytes32[] calldata commitHashes
     ) external onlyPoster {
         uint256 len = handles.length;
         if (len == 0) revert EmptyBatch();
-        if (len != ctHashes.length) revert LengthMismatch();
+        if (len != commitHashes.length) revert LengthMismatch();
 
         CommitmentRegistryStorage storage $ = _getStorage();
 
@@ -91,10 +91,10 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
 
         for (uint256 i = 0; i < len; ) {
             bytes32 handle = handles[i];
-            bytes32 ctHash = ctHashes[i];
-            if (ctHash == bytes32(0)) revert ZeroCtHash(handle);
+            bytes32 commitHash = commitHashes[i];
+            if (commitHash == bytes32(0)) revert ZeroCommitHash(handle);
             if (versionMap[handle] != bytes32(0)) revert CommitmentAlreadyExists(version, handle);
-            versionMap[handle] = ctHash;
+            versionMap[handle] = commitHash;
             unchecked { ++i; }
         }
 

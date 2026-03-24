@@ -7,19 +7,19 @@ UUPS-upgradeable contract for storing on-chain FHE computation commitments. Depl
 After CoFHE computes an FHE operation, it posts a commitment (`handle → hash(ciphertext)`) on-chain. The Threshold Network (TN) uses these commitments to verify ciphertext integrity before decrypting:
 
 1. TN receives a decrypt request for handle `X`
-2. TN calls `getCommitment(version, X)` → gets the committed `ctHash`
+2. TN calls `getCommitment(version, X)` → gets the committed `commitHash`
 3. TN fetches the actual ciphertext from the DB
-4. TN checks `keccak256(ciphertext) == ctHash` → proceeds with decrypt
+4. TN checks `keccak256(ciphertext) == commitHash` → proceeds with decrypt
 
 ## Data Model
 
 ```
-mapping(bytes32 version => mapping(bytes32 handle => bytes32 ctHash))
+mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash))
 ```
 
 - **version**: Opaque `bytes32` from the FHE engine — `keccak256(publicKey[securityZone], library_id, library_version, params)`. Scoped per security zone.
-- **handle**: The ciphertext identifier (same as `ctHash` in TaskManager).
-- **ctHash**: `keccak256` of the actual computed ciphertext bytes.
+- **handle**: The ciphertext identifier (same as `commitHash` in TaskManager).
+- **commitHash**: `keccak256` of the actual computed ciphertext bytes.
 
 ## Version Lifecycle
 
@@ -39,13 +39,13 @@ No resurrection — once Deprecated or Revoked, cannot go back to Active.
 ### Write (poster only)
 
 ```solidity
-postCommitments(bytes32 version, bytes32[] handles, bytes32[] ctHashes)
+postCommitments(bytes32 version, bytes32[] handles, bytes32[] commitHashes)
 ```
 
 Posts a batch of commitments. Reverts if:
 - Version is not Active
 - Any handle already has a commitment (write-once)
-- Any ctHash is zero
+- Any commitHash is zero
 - Arrays have different lengths or are empty
 
 ### Admin (owner only)
@@ -58,7 +58,7 @@ setVersionStatus(bytes32, VersionStatus) // Manage version lifecycle
 ### Views
 
 ```solidity
-getCommitment(bytes32 version, bytes32 handle) → bytes32 ctHash
+getCommitment(bytes32 version, bytes32 handle) → bytes32 commitHash
 getVersionStatus(bytes32 version) → VersionStatus
 getSize(bytes32 version) → uint256   // Number of commitments under a version
 getPoster() → address
