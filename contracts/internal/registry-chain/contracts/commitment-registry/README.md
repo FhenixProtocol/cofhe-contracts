@@ -60,21 +60,32 @@ setVersionStatus(bytes32, VersionStatus) // Manage version lifecycle
 ```solidity
 getCommitment(bytes32 version, bytes32 handle) → bytes32 commitHash
 getVersionStatus(bytes32 version) → VersionStatus
-getSize(bytes32 version) → uint256   // Number of commitments under a version
+getSize(bytes32 version) → uint256            // Number of commitments under a version
+getHandleByIndex(bytes32 version, uint256 index) → bytes32  // Enumerate by index
+getHandles(bytes32 version, uint256 offset, uint256 limit) → bytes32[]  // Paginated cursor
 getPoster() → address
 ```
 
 ## Gas Costs
 
-Measured on Hardhat (L2 execution only):
+Measured on Hardhat (L2 execution only, includes mapping + array storage):
 
 | Batch Size | Total Gas | Per Commitment |
 |---|---|---|
-| 10 | 291,238 | 29,124 |
-| 50 | 1,230,990 | 24,620 |
-| 100 | 2,405,779 | 24,058 |
+| 1 | 102,222 | 102,222 |
+| 10 | 517,726 | 51,773 |
+| 25 | 1,210,188 | 48,408 |
+| 50 | 2,364,306 | 47,286 |
+| 100 | 4,672,513 | 46,725 |
 
-Estimated Arbitrum One cost: ~$0.002/commitment at 0.03 gwei effective gas price.
+Per-commitment cost converges to ~47K gas at scale. The fixed overhead per batch is ~55K gas (tx base + access control + version check + event).
+
+Estimated Arbitrum One cost at 0.03 gwei effective gas price, ETH ~$2,140:
+- Single post: ~$0.007/CT
+- Batch of 10: ~$0.003/CT
+- Batch of 50: ~$0.003/CT
+
+Monthly projections (100K CTs/day): $9K-20K/mo depending on batch efficiency.
 
 ## Testing
 
@@ -97,6 +108,6 @@ npx hardhat run scripts/estimateGasArbitrum.ts --network arbitrumSepolia
 ## Upgradeability
 
 Uses UUPS proxy pattern with ERC-7201 namespaced storage. Future upgrades can add:
-- Array-based iteration over commitments per version
-- Merkle root storage for cheaper batch posting
+- Merkle root storage for cheaper batch posting (~10-20x cost reduction)
+- Additional access control roles
 - Additional access control roles
