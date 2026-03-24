@@ -14,9 +14,6 @@ declare module "mocha" {
     testSigner?: Wallet;
     otherAccount?: HardhatEthersSigner;
     originalSigner?: string;
-    // CommitmentRegistry test context
-    registry?: any;
-    poster?: HardhatEthersSigner;
   }
 }
 
