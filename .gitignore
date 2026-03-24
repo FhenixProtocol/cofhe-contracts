@@ -1,3 +1,11 @@
 
 # Build artifacts (generated)
 contracts/internal/host-chain/bin/solc-output-compile-all.json
+
+# Registry chain (generated)
+contracts/internal/registry-chain/node_modules/
+contracts/internal/registry-chain/artifacts/
+contracts/internal/registry-chain/cache/
+contracts/internal/registry-chain/types/
+contracts/internal/registry-chain/.openzeppelin/
+contracts/internal/registry-chain/.env
