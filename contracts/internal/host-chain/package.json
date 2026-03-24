@@ -8,6 +8,8 @@
     "test:localfhenix": "hardhat test",
     "test:decrypt-result:localfhenix": "hardhat test test/decryptResult/DecryptResult.ts",
     "test:onchain": "hardhat test test/onChain/OnChain.ts",
+    "test:commitment-registry": "hardhat test test/commitmentRegistry/CommitmentRegistry.ts --network hardhat",
+    "test:commitment-registry:gas": "REPORT_GAS=true hardhat test test/commitmentRegistry/CommitmentRegistry.ts --network hardhat",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json ./deployments/localfhenix ./ignition/deployments ./.openzeppelin/*",
     "compile": "hardhat compile",
     "task:deploy": "hardhat deploy",
