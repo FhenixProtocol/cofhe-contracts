@@ -20,7 +20,7 @@ contract OnChain {
         FHE.eq(ea, eb);
         FHE.ne(ea, eb);
         FHE.select(ebool.wrap(0), eb, ea);
-        FHE.decrypt(ea);
+
 
         ctHashBool = ea;
         return ctHashBool;
@@ -53,7 +53,7 @@ contract OnChain {
         FHE.max(ea, eb);
         FHE.not(ea);
         FHE.select(ebool.wrap(0), eb, ea);
-        FHE.decrypt(ea);
+
 
         ctHash8 = ea;
         return ctHash8;
@@ -86,7 +86,7 @@ contract OnChain {
         FHE.max(ea, eb);
         FHE.not(ea);
         FHE.select(ebool.wrap(0), eb, ea);
-        FHE.decrypt(ea);
+
 
         ctHash16 = ea;
         return ctHash16;
@@ -119,7 +119,7 @@ contract OnChain {
         FHE.max(ea, eb);
         FHE.not(ea);
         FHE.select(ebool.wrap(0), eb, ea);
-        FHE.decrypt(ea);
+
         ctHash32 = ea;
         return ctHash32;
     }
@@ -148,7 +148,7 @@ contract OnChain {
         return FHE.asEuint32(1000000000000); // Value taken from a real world example
     }
 
-    function cantEncryptWithFakeUintType() public returns (uint256) {
+    function cantEncryptWithFakeUintType() public returns (bytes32) {
         return Impl.trivialEncrypt(15, 100, 0);
     }
 
@@ -156,7 +156,7 @@ contract OnChain {
         return FHE.asEuint32(16, 200); // 200 is outside valid range (-128 to 127)
     }
 
-    function cantCastWithFakeType() public returns (uint256) {
+    function cantCastWithFakeType() public returns (bytes32) {
         euint32 v = FHE.asEuint32(16);
         return Impl.cast(euint32.unwrap(v), 150);
     }

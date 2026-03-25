@@ -232,10 +232,10 @@ library FHE {
     /// @return result of type euint8 containing the addition result
     function add(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.add));
@@ -248,10 +248,10 @@ library FHE {
     /// @return result of type euint16 containing the addition result
     function add(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.add));
@@ -264,10 +264,10 @@ library FHE {
     /// @return result of type euint32 containing the addition result
     function add(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.add));
@@ -280,10 +280,10 @@ library FHE {
     /// @return result of type euint64 containing the addition result
     function add(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.add));
@@ -296,10 +296,10 @@ library FHE {
     /// @return result of type euint128 containing the addition result
     function add(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.add));
@@ -313,10 +313,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lte(euint8 lhs, euint8 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.lte));
@@ -329,10 +329,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lte(euint16 lhs, euint16 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.lte));
@@ -345,10 +345,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lte(euint32 lhs, euint32 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.lte));
@@ -361,10 +361,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lte(euint64 lhs, euint64 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.lte));
@@ -377,10 +377,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lte(euint128 lhs, euint128 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.lte));
@@ -394,10 +394,10 @@ library FHE {
     /// @return result of type euint8 containing the subtraction result
     function sub(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.sub));
@@ -410,10 +410,10 @@ library FHE {
     /// @return result of type euint16 containing the subtraction result
     function sub(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.sub));
@@ -426,10 +426,10 @@ library FHE {
     /// @return result of type euint32 containing the subtraction result
     function sub(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.sub));
@@ -442,10 +442,10 @@ library FHE {
     /// @return result of type euint64 containing the subtraction result
     function sub(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.sub));
@@ -458,10 +458,10 @@ library FHE {
     /// @return result of type euint128 containing the subtraction result
     function sub(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.sub));
@@ -475,10 +475,10 @@ library FHE {
     /// @return result of type euint8 containing the multiplication result
     function mul(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.mul));
@@ -491,10 +491,10 @@ library FHE {
     /// @return result of type euint16 containing the multiplication result
     function mul(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.mul));
@@ -507,10 +507,10 @@ library FHE {
     /// @return result of type euint32 containing the multiplication result
     function mul(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.mul));
@@ -523,10 +523,10 @@ library FHE {
     /// @return result of type euint64 containing the multiplication result
     function mul(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.mul));
@@ -539,10 +539,10 @@ library FHE {
     /// @return result of type euint128 containing the multiplication result
     function mul(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.mul));
@@ -556,10 +556,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lt(euint8 lhs, euint8 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.lt));
@@ -572,10 +572,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lt(euint16 lhs, euint16 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.lt));
@@ -588,10 +588,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lt(euint32 lhs, euint32 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.lt));
@@ -604,10 +604,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lt(euint64 lhs, euint64 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.lt));
@@ -620,10 +620,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function lt(euint128 lhs, euint128 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.lt));
@@ -637,10 +637,10 @@ library FHE {
     /// @return result of type euint8 containing the division result
     function div(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.div));
@@ -653,10 +653,10 @@ library FHE {
     /// @return result of type euint16 containing the division result
     function div(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.div));
@@ -669,10 +669,10 @@ library FHE {
     /// @return result of type euint32 containing the division result
     function div(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.div));
@@ -685,10 +685,10 @@ library FHE {
     /// @return result of type euint64 containing the division result
     function div(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.div));
@@ -701,10 +701,10 @@ library FHE {
     /// @return result of type euint128 containing the division result
     function div(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.div));
@@ -718,10 +718,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gt(euint8 lhs, euint8 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.gt));
@@ -734,10 +734,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gt(euint16 lhs, euint16 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.gt));
@@ -750,10 +750,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gt(euint32 lhs, euint32 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.gt));
@@ -766,10 +766,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gt(euint64 lhs, euint64 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.gt));
@@ -782,10 +782,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gt(euint128 lhs, euint128 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.gt));
@@ -799,10 +799,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gte(euint8 lhs, euint8 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.gte));
@@ -815,10 +815,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gte(euint16 lhs, euint16 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.gte));
@@ -831,10 +831,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gte(euint32 lhs, euint32 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.gte));
@@ -847,10 +847,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gte(euint64 lhs, euint64 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.gte));
@@ -863,10 +863,10 @@ library FHE {
     /// @return result of type ebool containing the comparison result
     function gte(euint128 lhs, euint128 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.gte));
@@ -880,10 +880,10 @@ library FHE {
     /// @return result of type euint8 containing the remainder result
     function rem(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.rem));
@@ -896,10 +896,10 @@ library FHE {
     /// @return result of type euint16 containing the remainder result
     function rem(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.rem));
@@ -912,10 +912,10 @@ library FHE {
     /// @return result of type euint32 containing the remainder result
     function rem(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.rem));
@@ -928,10 +928,10 @@ library FHE {
     /// @return result of type euint64 containing the remainder result
     function rem(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.rem));
@@ -944,10 +944,10 @@ library FHE {
     /// @return result of type euint128 containing the remainder result
     function rem(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.rem));
@@ -977,10 +977,10 @@ library FHE {
     /// @return result of type euint8 containing the AND result
     function and(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.and));
@@ -993,10 +993,10 @@ library FHE {
     /// @return result of type euint16 containing the AND result
     function and(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.and));
@@ -1009,10 +1009,10 @@ library FHE {
     /// @return result of type euint32 containing the AND result
     function and(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.and));
@@ -1025,10 +1025,10 @@ library FHE {
     /// @return result of type euint64 containing the AND result
     function and(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.and));
@@ -1041,10 +1041,10 @@ library FHE {
     /// @return result of type euint128 containing the AND result
     function and(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.and));
@@ -1074,10 +1074,10 @@ library FHE {
     /// @return result of type euint8 containing the OR result
     function or(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.or));
@@ -1090,10 +1090,10 @@ library FHE {
     /// @return result of type euint16 containing the OR result
     function or(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.or));
@@ -1106,10 +1106,10 @@ library FHE {
     /// @return result of type euint32 containing the OR result
     function or(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.or));
@@ -1122,10 +1122,10 @@ library FHE {
     /// @return result of type euint64 containing the OR result
     function or(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.or));
@@ -1138,10 +1138,10 @@ library FHE {
     /// @return result of type euint128 containing the OR result
     function or(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.or));
@@ -1171,10 +1171,10 @@ library FHE {
     /// @return result of type euint8 containing the XOR result
     function xor(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.xor));
@@ -1187,10 +1187,10 @@ library FHE {
     /// @return result of type euint16 containing the XOR result
     function xor(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.xor));
@@ -1203,10 +1203,10 @@ library FHE {
     /// @return result of type euint32 containing the XOR result
     function xor(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.xor));
@@ -1219,10 +1219,10 @@ library FHE {
     /// @return result of type euint64 containing the XOR result
     function xor(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.xor));
@@ -1235,10 +1235,10 @@ library FHE {
     /// @return result of type euint128 containing the XOR result
     function xor(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.xor));
@@ -1268,10 +1268,10 @@ library FHE {
     /// @return result of type ebool containing the equality result
     function eq(euint8 lhs, euint8 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.eq));
@@ -1284,10 +1284,10 @@ library FHE {
     /// @return result of type ebool containing the equality result
     function eq(euint16 lhs, euint16 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.eq));
@@ -1300,10 +1300,10 @@ library FHE {
     /// @return result of type ebool containing the equality result
     function eq(euint32 lhs, euint32 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.eq));
@@ -1316,10 +1316,10 @@ library FHE {
     /// @return result of type ebool containing the equality result
     function eq(euint64 lhs, euint64 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.eq));
@@ -1332,10 +1332,10 @@ library FHE {
     /// @return result of type ebool containing the equality result
     function eq(euint128 lhs, euint128 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.eq));
@@ -1381,10 +1381,10 @@ library FHE {
     /// @return result of type ebool containing the inequality result
     function ne(euint8 lhs, euint8 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.ne));
@@ -1397,10 +1397,10 @@ library FHE {
     /// @return result of type ebool containing the inequality result
     function ne(euint16 lhs, euint16 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.ne));
@@ -1413,10 +1413,10 @@ library FHE {
     /// @return result of type ebool containing the inequality result
     function ne(euint32 lhs, euint32 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.ne));
@@ -1429,10 +1429,10 @@ library FHE {
     /// @return result of type ebool containing the inequality result
     function ne(euint64 lhs, euint64 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.ne));
@@ -1445,10 +1445,10 @@ library FHE {
     /// @return result of type ebool containing the inequality result
     function ne(euint128 lhs, euint128 rhs) internal returns (ebool) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return ebool.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.ne));
@@ -1478,10 +1478,10 @@ library FHE {
     /// @return result of type euint8 containing the minimum value
     function min(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.min));
@@ -1494,10 +1494,10 @@ library FHE {
     /// @return result of type euint16 containing the minimum value
     function min(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.min));
@@ -1510,10 +1510,10 @@ library FHE {
     /// @return result of type euint32 containing the minimum value
     function min(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.min));
@@ -1526,10 +1526,10 @@ library FHE {
     /// @return result of type euint64 containing the minimum value
     function min(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.min));
@@ -1542,10 +1542,10 @@ library FHE {
     /// @return result of type euint128 containing the minimum value
     function min(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.min));
@@ -1559,10 +1559,10 @@ library FHE {
     /// @return result of type euint8 containing the maximum result
     function max(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.max));
@@ -1575,10 +1575,10 @@ library FHE {
     /// @return result of type euint16 containing the maximum result
     function max(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.max));
@@ -1591,10 +1591,10 @@ library FHE {
     /// @return result of type euint32 containing the maximum result
     function max(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.max));
@@ -1607,10 +1607,10 @@ library FHE {
     /// @return result of type euint64 containing the maximum value
     function max(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.max));
@@ -1623,10 +1623,10 @@ library FHE {
     /// @return result of type euint128 containing the maximum value
     function max(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.max));
@@ -1640,10 +1640,10 @@ library FHE {
     /// @return result of type euint8 containing the left shift result
     function shl(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.shl));
@@ -1656,10 +1656,10 @@ library FHE {
     /// @return result of type euint16 containing the left shift result
     function shl(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.shl));
@@ -1672,10 +1672,10 @@ library FHE {
     /// @return result of type euint32 containing the left shift result
     function shl(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.shl));
@@ -1688,10 +1688,10 @@ library FHE {
     /// @return result of type euint64 containing the left shift result
     function shl(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.shl));
@@ -1704,10 +1704,10 @@ library FHE {
     /// @return result of type euint128 containing the left shift result
     function shl(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.shl));
@@ -1721,10 +1721,10 @@ library FHE {
     /// @return result of type euint8 containing the right shift result
     function shr(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.shr));
@@ -1737,10 +1737,10 @@ library FHE {
     /// @return result of type euint16 containing the right shift result
     function shr(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.shr));
@@ -1753,10 +1753,10 @@ library FHE {
     /// @return result of type euint32 containing the right shift result
     function shr(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.shr));
@@ -1769,10 +1769,10 @@ library FHE {
     /// @return result of type euint64 containing the right shift result
     function shr(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.shr));
@@ -1785,10 +1785,10 @@ library FHE {
     /// @return result of type euint128 containing the right shift result
     function shr(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.shr));
@@ -1802,10 +1802,10 @@ library FHE {
     /// @return result of type euint8 containing the left rotation result
     function rol(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.rol));
@@ -1818,10 +1818,10 @@ library FHE {
     /// @return result of type euint16 containing the left rotation result
     function rol(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.rol));
@@ -1834,10 +1834,10 @@ library FHE {
     /// @return result of type euint32 containing the left rotation result
     function rol(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.rol));
@@ -1850,10 +1850,10 @@ library FHE {
     /// @return result of type euint64 containing the left rotation result
     function rol(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.rol));
@@ -1866,10 +1866,10 @@ library FHE {
     /// @return result of type euint128 containing the left rotation result
     function rol(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.rol));
@@ -1883,10 +1883,10 @@ library FHE {
     /// @return result of type euint8 containing the right rotation result
     function ror(euint8 lhs, euint8 rhs) internal returns (euint8) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint8(0);
+            lhs = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint8(0);
+            rhs = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.mathOp(Utils.EUINT8_TFHE, euint8.unwrap(lhs), euint8.unwrap(rhs), FunctionId.ror));
@@ -1899,10 +1899,10 @@ library FHE {
     /// @return result of type euint16 containing the right rotation result
     function ror(euint16 lhs, euint16 rhs) internal returns (euint16) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint16(0);
+            lhs = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint16(0);
+            rhs = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.mathOp(Utils.EUINT16_TFHE, euint16.unwrap(lhs), euint16.unwrap(rhs), FunctionId.ror));
@@ -1915,10 +1915,10 @@ library FHE {
     /// @return result of type euint32 containing the right rotation result
     function ror(euint32 lhs, euint32 rhs) internal returns (euint32) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint32(0);
+            lhs = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint32(0);
+            rhs = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.mathOp(Utils.EUINT32_TFHE, euint32.unwrap(lhs), euint32.unwrap(rhs), FunctionId.ror));
@@ -1931,10 +1931,10 @@ library FHE {
     /// @return result of type euint64 containing the right rotation result
     function ror(euint64 lhs, euint64 rhs) internal returns (euint64) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint64(0);
+            lhs = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint64(0);
+            rhs = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.mathOp(Utils.EUINT64_TFHE, euint64.unwrap(lhs), euint64.unwrap(rhs), FunctionId.ror));
@@ -1947,10 +1947,10 @@ library FHE {
     /// @return result of type euint128 containing the right rotation result
     function ror(euint128 lhs, euint128 rhs) internal returns (euint128) {
         if (!Common.isInitialized(lhs)) {
-            lhs = asEuint128(0);
+            lhs = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(rhs)) {
-            rhs = asEuint128(0);
+            rhs = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.mathOp(Utils.EUINT128_TFHE, euint128.unwrap(lhs), euint128.unwrap(rhs), FunctionId.ror));
@@ -2133,10 +2133,10 @@ library FHE {
             input1 = asEbool(false);
         }
         if (!Common.isInitialized(input2)) {
-            input2 = asEuint8(0);
+            input2 = asEuint8(uint256(0));
         }
         if (!Common.isInitialized(input3)) {
-            input3 = asEuint8(0);
+            input3 = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.select(Utils.EUINT8_TFHE, input1, euint8.unwrap(input2), euint8.unwrap(input3)));
@@ -2153,10 +2153,10 @@ library FHE {
             input1 = asEbool(false);
         }
         if (!Common.isInitialized(input2)) {
-            input2 = asEuint16(0);
+            input2 = asEuint16(uint256(0));
         }
         if (!Common.isInitialized(input3)) {
-            input3 = asEuint16(0);
+            input3 = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.select(Utils.EUINT16_TFHE, input1, euint16.unwrap(input2), euint16.unwrap(input3)));
@@ -2173,10 +2173,10 @@ library FHE {
             input1 = asEbool(false);
         }
         if (!Common.isInitialized(input2)) {
-            input2 = asEuint32(0);
+            input2 = asEuint32(uint256(0));
         }
         if (!Common.isInitialized(input3)) {
-            input3 = asEuint32(0);
+            input3 = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.select(Utils.EUINT32_TFHE, input1, euint32.unwrap(input2), euint32.unwrap(input3)));
@@ -2193,10 +2193,10 @@ library FHE {
             input1 = asEbool(false);
         }
         if (!Common.isInitialized(input2)) {
-            input2 = asEuint64(0);
+            input2 = asEuint64(uint256(0));
         }
         if (!Common.isInitialized(input3)) {
-            input3 = asEuint64(0);
+            input3 = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.select(Utils.EUINT64_TFHE, input1, euint64.unwrap(input2), euint64.unwrap(input3)));
@@ -2213,10 +2213,10 @@ library FHE {
             input1 = asEbool(false);
         }
         if (!Common.isInitialized(input2)) {
-            input2 = asEuint128(0);
+            input2 = asEuint128(uint256(0));
         }
         if (!Common.isInitialized(input3)) {
-            input3 = asEuint128(0);
+            input3 = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.select(Utils.EUINT128_TFHE, input1, euint128.unwrap(input2), euint128.unwrap(input3)));
@@ -2259,7 +2259,7 @@ library FHE {
     /// @param input1 the input ciphertext
     function not(euint8 input1) internal returns (euint8) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint8(0);
+            input1 = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.not(Utils.EUINT8_TFHE, euint8.unwrap(input1)));
@@ -2269,7 +2269,7 @@ library FHE {
     /// @param input1 the input ciphertext
     function not(euint16 input1) internal returns (euint16) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint16(0);
+            input1 = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.not(Utils.EUINT16_TFHE, euint16.unwrap(input1)));
@@ -2279,7 +2279,7 @@ library FHE {
     /// @param input1 the input ciphertext
     function not(euint32 input1) internal returns (euint32) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint32(0);
+            input1 = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.not(Utils.EUINT32_TFHE, euint32.unwrap(input1)));
@@ -2292,7 +2292,7 @@ library FHE {
     /// @return An euint64 containing the bitwise NOT of the input
     function not(euint64 input1) internal returns (euint64) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint64(0);
+            input1 = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.not(Utils.EUINT64_TFHE, euint64.unwrap(input1)));
@@ -2305,7 +2305,7 @@ library FHE {
     /// @return An euint128 containing the bitwise NOT of the input
     function not(euint128 input1) internal returns (euint128) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint128(0);
+            input1 = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.not(Utils.EUINT128_TFHE, euint128.unwrap(input1)));
@@ -2319,7 +2319,7 @@ library FHE {
     /// @return An euint8 containing the square of the input
     function square(euint8 input1) internal returns (euint8) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint8(0);
+            input1 = asEuint8(uint256(0));
         }
 
         return euint8.wrap(Impl.square(Utils.EUINT8_TFHE, euint8.unwrap(input1)));
@@ -2332,7 +2332,7 @@ library FHE {
     /// @return An euint16 containing the square of the input
     function square(euint16 input1) internal returns (euint16) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint16(0);
+            input1 = asEuint16(uint256(0));
         }
 
         return euint16.wrap(Impl.square(Utils.EUINT16_TFHE, euint16.unwrap(input1)));
@@ -2345,7 +2345,7 @@ library FHE {
     /// @return An euint32 containing the square of the input
     function square(euint32 input1) internal returns (euint32) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint32(0);
+            input1 = asEuint32(uint256(0));
         }
 
         return euint32.wrap(Impl.square(Utils.EUINT32_TFHE, euint32.unwrap(input1)));
@@ -2358,7 +2358,7 @@ library FHE {
     /// @return An euint64 containing the square of the input
     function square(euint64 input1) internal returns (euint64) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint64(0);
+            input1 = asEuint64(uint256(0));
         }
 
         return euint64.wrap(Impl.square(Utils.EUINT64_TFHE, euint64.unwrap(input1)));
@@ -2371,7 +2371,7 @@ library FHE {
     /// @return An euint128 containing the square of the input
     function square(euint128 input1) internal returns (euint128) {
         if (!Common.isInitialized(input1)) {
-            input1 = asEuint128(0);
+            input1 = asEuint128(uint256(0));
         }
 
         return euint128.wrap(Impl.square(Utils.EUINT128_TFHE, euint128.unwrap(input1)));
@@ -2678,7 +2678,7 @@ library FHE {
 
     /// @notice Converts a euint8 to an ebool
     function asEbool(euint8 value) internal returns (ebool) {
-        return ne(value, asEuint8(0));
+        return ne(value, asEuint8(uint256(0)));
     }
     /// @notice Converts a euint8 to an euint16
     function asEuint16(euint8 value) internal returns (euint16) {
@@ -2699,7 +2699,7 @@ library FHE {
 
     /// @notice Converts a euint16 to an ebool
     function asEbool(euint16 value) internal returns (ebool) {
-        return ne(value, asEuint16(0));
+        return ne(value, asEuint16(uint256(0)));
     }
     /// @notice Converts a euint16 to an euint8
     function asEuint8(euint16 value) internal returns (euint8) {
@@ -2720,7 +2720,7 @@ library FHE {
 
     /// @notice Converts a euint32 to an ebool
     function asEbool(euint32 value) internal returns (ebool) {
-        return ne(value, asEuint32(0));
+        return ne(value, asEuint32(uint256(0)));
     }
     /// @notice Converts a euint32 to an euint8
     function asEuint8(euint32 value) internal returns (euint8) {
@@ -2741,7 +2741,7 @@ library FHE {
 
     /// @notice Converts a euint64 to an ebool
     function asEbool(euint64 value) internal returns (ebool) {
-        return ne(value, asEuint64(0));
+        return ne(value, asEuint64(uint256(0)));
     }
     /// @notice Converts a euint64 to an euint8
     function asEuint8(euint64 value) internal returns (euint8) {
@@ -2762,7 +2762,7 @@ library FHE {
 
     /// @notice Converts a euint128 to an ebool
     function asEbool(euint128 value) internal returns (ebool) {
-        return ne(value, asEuint128(0));
+        return ne(value, asEuint128(uint256(0)));
     }
     /// @notice Converts a euint128 to an euint8
     function asEuint8(euint128 value) internal returns (euint8) {

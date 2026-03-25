@@ -36,7 +36,7 @@ contract OnChain2 {
         FHE.max(ea, eb);
         FHE.not(ea);
         FHE.select(ebool.wrap(0), eb, ea);
-        FHE.decrypt(ea);
+
 
         ctHash64 = ea;
         return ctHash64;
@@ -69,7 +69,7 @@ contract OnChain2 {
         FHE.max(ea, eb);
         FHE.not(ea);
         FHE.select(ebool.wrap(0), eb, ea);
-        FHE.decrypt(ea);
+
 
         ctHash128 = ea;
         return ctHash128;
