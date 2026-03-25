@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@fhenixprotocol/cofhe-contracts':
-        specifier: 0.0.13
-        version: 0.0.13
+        specifier: file:../../
+        version: file:../..
       '@fhenixprotocol/contracts':
         specifier: 0.2.1
         version: 0.2.1
@@ -388,8 +388,8 @@ packages:
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
 
-  '@fhenixprotocol/cofhe-contracts@0.0.13':
-    resolution: {integrity: sha512-+lHo5v52fR7QfQj2ottDw4F/AqZg6obPBRqvK576SJatX3o4aH6ZSt2kxNb5kT8Ckthjw6FoNmLdUVCDpP400w==}
+  '@fhenixprotocol/cofhe-contracts@file:../..':
+    resolution: {directory: ../.., type: directory}
 
   '@fhenixprotocol/contracts@0.2.1':
     resolution: {integrity: sha512-3SQRdpjeQSxZFkhsl8xfARG3bNUEbD23mUmRB2qnGNJHLs9hNQwy8bvqQoJ/3zlhcqMLoDENBKtcP63LzCBe6g==}
@@ -3776,7 +3776,7 @@ snapshots:
 
   '@fastify/busboy@2.1.1': {}
 
-  '@fhenixprotocol/cofhe-contracts@0.0.13':
+  '@fhenixprotocol/cofhe-contracts@file:../..':
     dependencies:
       '@openzeppelin/contracts': 5.2.0
 

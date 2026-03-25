@@ -3786,49 +3786,49 @@ library FHE {
     /// @notice Wraps a bytes32 handle into an encrypted boolean type
     /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an ebool representing the encrypted value
-    function asEbool(bytes32 handle) internal pure returns (ebool) {
+    function wrapEbool(bytes32 handle) internal pure returns (ebool) {
         return ebool.wrap(handle);
     }
 
     /// @notice Wraps a bytes32 handle into an encrypted uint8 type
     /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint8 representing the encrypted value
-    function asEuint8(bytes32 handle) internal pure returns (euint8) {
+    function wrapEuint8(bytes32 handle) internal pure returns (euint8) {
         return euint8.wrap(handle);
     }
 
     /// @notice Wraps a bytes32 handle into an encrypted uint16 type
     /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint16 representing the encrypted value
-    function asEuint16(bytes32 handle) internal pure returns (euint16) {
+    function wrapEuint16(bytes32 handle) internal pure returns (euint16) {
         return euint16.wrap(handle);
     }
 
     /// @notice Wraps a bytes32 handle into an encrypted uint32 type
     /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint32 representing the encrypted value
-    function asEuint32(bytes32 handle) internal pure returns (euint32) {
+    function wrapEuint32(bytes32 handle) internal pure returns (euint32) {
         return euint32.wrap(handle);
     }
 
     /// @notice Wraps a bytes32 handle into an encrypted uint64 type
     /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint64 representing the encrypted value
-    function asEuint64(bytes32 handle) internal pure returns (euint64) {
+    function wrapEuint64(bytes32 handle) internal pure returns (euint64) {
         return euint64.wrap(handle);
     }
 
     /// @notice Wraps a bytes32 handle into an encrypted uint128 type
     /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint128 representing the encrypted value
-    function asEuint128(bytes32 handle) internal pure returns (euint128) {
+    function wrapEuint128(bytes32 handle) internal pure returns (euint128) {
         return euint128.wrap(handle);
     }
 
     /// @notice Wraps a bytes32 handle into an encrypted address type
     /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an eaddress representing the encrypted value
-    function asEaddress(bytes32 handle) internal pure returns (eaddress) {
+    function wrapEaddress(bytes32 handle) internal pure returns (eaddress) {
         return eaddress.wrap(handle);
     }
 }
