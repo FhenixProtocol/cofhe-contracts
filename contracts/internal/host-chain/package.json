@@ -22,7 +22,7 @@
   "author": "Fhenix",
   "license": "MIT",
   "devDependencies": {
-    "@fhenixprotocol/cofhe-contracts": "0.0.13",
+    "@fhenixprotocol/cofhe-contracts": "file:../../",
     "@fhenixprotocol/contracts": "0.2.1",
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
     "@nomicfoundation/hardhat-ethers": "^3.1.3",
