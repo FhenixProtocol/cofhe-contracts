@@ -143,12 +143,16 @@ library Impl {
         ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResult(uint256(ctHash), result, signature);
     }
 
+    function publishDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResultBatch(ctHashes, results, signatures);
+    }
+
     function publishDecryptResultBatch(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
         uint256[] memory ctHashesUint = new uint256[](ctHashes.length);
         for (uint256 i = 0; i < ctHashes.length; i++) {
             ctHashesUint[i] = uint256(ctHashes[i]);
         }
-        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResultBatch(ctHashesUint, results, signatures);
+        publishDecryptResultBatch(ctHashesUint, results, signatures);
     }
 
     function verifyDecryptResult(bytes32 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
@@ -157,6 +161,30 @@ library Impl {
 
     function verifyDecryptResultSafe(bytes32 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultSafe(uint256(ctHash), result, signature);
+    }
+
+    function verifyDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultBatch(ctHashes, results, signatures);
+    }
+
+    function verifyDecryptResultBatch(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashesUint = new uint256[](ctHashes.length);
+        for (uint256 i = 0; i < ctHashes.length; i++) {
+            ctHashesUint[i] = uint256(ctHashes[i]);
+        }
+        return verifyDecryptResultBatch(ctHashesUint, results, signatures);
+    }
+
+    function verifyDecryptResultBatchSafe(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultBatchSafe(ctHashes, results, signatures);
+    }
+
+    function verifyDecryptResultBatchSafe(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashesUint = new uint256[](ctHashes.length);
+        for (uint256 i = 0; i < ctHashes.length; i++) {
+            ctHashesUint[i] = uint256(ctHashes[i]);
+        }
+        return verifyDecryptResultBatchSafe(ctHashesUint, results, signatures);
     }
 
     function not(uint8 returnType, bytes32 input) internal returns (bytes32) {
@@ -3331,14 +3359,81 @@ library FHE {
         Impl.publishDecryptResult(eaddress.unwrap(input), uint256(uint160(result)), signature);
     }
 
-    /// @notice Publish multiple decrypt results in one transaction
-    /// @dev Amortizes base tx cost across multiple operations
-    function publishDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
-        bytes32[] memory ctHashesBytes32 = new bytes32[](ctHashes.length);
-        for (uint256 i = 0; i < ctHashes.length; i++) {
-            ctHashesBytes32[i] = bytes32(ctHashes[i]);
+    /// @notice Publish multiple ebool decrypt results in one transaction
+    function publishDecryptResultBatch(ebool[] memory inputs, bool[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(ebool.unwrap(inputs[i]));
+            resultsUint[i] = results[i] ? 1 : 0;
         }
-        Impl.publishDecryptResultBatch(ctHashesBytes32, results, signatures);
+        Impl.publishDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Publish multiple euint8 decrypt results in one transaction
+    function publishDecryptResultBatch(euint8[] memory inputs, uint8[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint8.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        Impl.publishDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Publish multiple euint16 decrypt results in one transaction
+    function publishDecryptResultBatch(euint16[] memory inputs, uint16[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint16.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        Impl.publishDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Publish multiple euint32 decrypt results in one transaction
+    function publishDecryptResultBatch(euint32[] memory inputs, uint32[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint32.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        Impl.publishDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Publish multiple euint64 decrypt results in one transaction
+    function publishDecryptResultBatch(euint64[] memory inputs, uint64[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint64.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        Impl.publishDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Publish multiple euint128 decrypt results in one transaction
+    function publishDecryptResultBatch(euint128[] memory inputs, uint128[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint128.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        Impl.publishDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Publish multiple eaddress decrypt results in one transaction
+    function publishDecryptResultBatch(eaddress[] memory inputs, address[] memory results, bytes[] memory signatures) internal {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(eaddress.unwrap(inputs[i]));
+            resultsUint[i] = uint256(uint160(results[i]));
+        }
+        Impl.publishDecryptResultBatch(ctHashes, resultsUint, signatures);
     }
 
     // ********** VERIFY DECRYPT RESULT ************* //
@@ -3387,6 +3482,85 @@ library FHE {
         return Impl.verifyDecryptResult(eaddress.unwrap(input), uint256(uint160(result)), signature);
     }
 
+    // ********** VERIFY DECRYPT RESULT BATCH ************* //
+
+    /// @notice Verify multiple ebool decrypt result signatures
+    function verifyDecryptResultBatch(ebool[] memory inputs, bool[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(ebool.unwrap(inputs[i]));
+            resultsUint[i] = results[i] ? 1 : 0;
+        }
+        return Impl.verifyDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint8 decrypt result signatures
+    function verifyDecryptResultBatch(euint8[] memory inputs, uint8[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint8.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint16 decrypt result signatures
+    function verifyDecryptResultBatch(euint16[] memory inputs, uint16[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint16.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint32 decrypt result signatures
+    function verifyDecryptResultBatch(euint32[] memory inputs, uint32[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint32.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint64 decrypt result signatures
+    function verifyDecryptResultBatch(euint64[] memory inputs, uint64[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint64.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint128 decrypt result signatures
+    function verifyDecryptResultBatch(euint128[] memory inputs, uint128[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint128.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple eaddress decrypt result signatures
+    function verifyDecryptResultBatch(eaddress[] memory inputs, address[] memory results, bytes[] memory signatures) internal view returns (bool) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(eaddress.unwrap(inputs[i]));
+            resultsUint[i] = uint256(uint160(results[i]));
+        }
+        return Impl.verifyDecryptResultBatch(ctHashes, resultsUint, signatures);
+    }
+
     // ********** VERIFY DECRYPT RESULT SAFE ************* //
 
     /// @notice Verify a decrypt result signature without publishing (non-reverting)
@@ -3431,6 +3605,85 @@ library FHE {
     /// @notice Verify a decrypt result signature for an eaddress (non-reverting)
     function verifyDecryptResultSafe(eaddress input, address result, bytes memory signature) internal view returns (bool) {
         return Impl.verifyDecryptResultSafe(eaddress.unwrap(input), uint256(uint160(result)), signature);
+    }
+
+    // ********** VERIFY DECRYPT RESULT BATCH SAFE ************* //
+
+    /// @notice Verify multiple ebool decrypt result signatures (non-reverting)
+    function verifyDecryptResultBatchSafe(ebool[] memory inputs, bool[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(ebool.unwrap(inputs[i]));
+            resultsUint[i] = results[i] ? 1 : 0;
+        }
+        return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint8 decrypt result signatures (non-reverting)
+    function verifyDecryptResultBatchSafe(euint8[] memory inputs, uint8[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint8.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint16 decrypt result signatures (non-reverting)
+    function verifyDecryptResultBatchSafe(euint16[] memory inputs, uint16[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint16.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint32 decrypt result signatures (non-reverting)
+    function verifyDecryptResultBatchSafe(euint32[] memory inputs, uint32[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint32.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint64 decrypt result signatures (non-reverting)
+    function verifyDecryptResultBatchSafe(euint64[] memory inputs, uint64[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint64.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple euint128 decrypt result signatures (non-reverting)
+    function verifyDecryptResultBatchSafe(euint128[] memory inputs, uint128[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(euint128.unwrap(inputs[i]));
+            resultsUint[i] = uint256(results[i]);
+        }
+        return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
+    }
+
+    /// @notice Verify multiple eaddress decrypt result signatures (non-reverting)
+    function verifyDecryptResultBatchSafe(eaddress[] memory inputs, address[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
+        uint256[] memory ctHashes = new uint256[](inputs.length);
+        uint256[] memory resultsUint = new uint256[](results.length);
+        for (uint256 i = 0; i < inputs.length; i++) {
+            ctHashes[i] = uint256(eaddress.unwrap(inputs[i]));
+            resultsUint[i] = uint256(uint160(results[i]));
+        }
+        return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
     }
 }
 

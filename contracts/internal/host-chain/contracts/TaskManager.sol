@@ -617,6 +617,39 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return _verifyDecryptResult(ctHash, result, signature, false);
     }
 
+    /// @notice Verify multiple decrypt result signatures without publishing
+    /// @dev Reverts if any signature is invalid
+    function verifyDecryptResultBatch(
+        uint256[] calldata ctHashes,
+        uint256[] calldata results,
+        bytes[] calldata signatures
+    ) external view returns (bool) {
+        uint256 length = ctHashes.length;
+        if (results.length != length || signatures.length != length) revert LengthMismatch();
+
+        for (uint256 i = 0; i < length; i++) {
+            _verifyDecryptResult(ctHashes[i], results[i], signatures[i], true);
+        }
+        return true;
+    }
+
+    /// @notice Verify multiple decrypt result signatures without publishing (non-reverting)
+    /// @dev Returns per-item results instead of reverting
+    function verifyDecryptResultBatchSafe(
+        uint256[] calldata ctHashes,
+        uint256[] calldata results,
+        bytes[] calldata signatures
+    ) external view returns (bool[] memory) {
+        uint256 length = ctHashes.length;
+        if (results.length != length || signatures.length != length) revert LengthMismatch();
+
+        bool[] memory validResults = new bool[](length);
+        for (uint256 i = 0; i < length; i++) {
+            validResults[i] = _verifyDecryptResult(ctHashes[i], results[i], signatures[i], false);
+        }
+        return validResults;
+    }
+
     /// @dev Verify decrypt result signature
     /// @dev Skips verification if decryptResultSigner is address(0) (debug mode)
     /// @param shouldRevert If true, reverts on invalid signature; if false, returns false
