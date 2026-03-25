@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+- Fix `asEuintX(0)` overload ambiguity caused by new `bytes32` handle overloads — all bare `0` literals now explicitly cast to `uint256(0)`
+- CI now compiles against local `cofhe-contracts` source instead of stale npm version, closing a gap where FHE.sol compilation errors were not caught
+- Update internal test contracts to match current FHE.sol API (remove `euint256`, `FHE.decrypt`, fix `bytes32` return types)
+
 ## v0.1.2 - 2025-03-16
 
 ### Added
