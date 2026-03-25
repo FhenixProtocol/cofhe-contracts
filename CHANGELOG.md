@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v0.1.3 - 2025-03-25
+
 ### Changed
 - Rename `FHE.asEbool(bytes32)`, `FHE.asEuint*(bytes32)`, `FHE.asEaddress(bytes32)` to `FHE.wrapEbool(bytes32)`, `FHE.wrapEuint*(bytes32)`, `FHE.wrapEaddress(bytes32)` to avoid overload ambiguity with `asEuintX(0)` calls and clarify intent
 
@@ -9,7 +11,7 @@
 - CI now compiles against local `cofhe-contracts` source instead of stale npm version, closing a gap where FHE.sol compilation errors were not caught
 - Update internal test contracts to match current FHE.sol API (remove `euint256`, `FHE.decrypt`, fix `bytes32` return types)
 
-## v0.1.2 - 2025-03-16
+## v0.1.2 - 2025-03-25 - DEPRECATED
 
 ### Added
 - `FHE.isInitialized()` overloads for all encrypted types (`ebool`, `euint8`, `euint16`, `euint32`, `euint64`, `euint128`, `eaddress`) to check whether a ciphertext handle is initialized
