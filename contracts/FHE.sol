@@ -3686,150 +3686,150 @@ library FHE {
     }
 
     /// @notice Returns true if the encrypted boolean is initialized and false otherwise
-    /// @param v the encrypted boolean value to check
+    /// @param value the encrypted boolean value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(ebool v) internal pure returns (bool) {
-        return Common.isInitialized(v);
+    function isInitialized(ebool value) internal pure returns (bool) {
+        return Common.isInitialized(value);
     }
 
     /// @notice Returns true if the encrypted uint8 is initialized and false otherwise
-    /// @param v the encrypted uint8 value to check
+    /// @param value the encrypted uint8 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint8 v) internal pure returns (bool) {
-        return Common.isInitialized(v);
+    function isInitialized(euint8 value) internal pure returns (bool) {
+        return Common.isInitialized(value);
     }
 
     /// @notice Returns true if the encrypted uint16 is initialized and false otherwise
-    /// @param v the encrypted uint16 value to check
+    /// @param value the encrypted uint16 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint16 v) internal pure returns (bool) {
-        return Common.isInitialized(v);
+    function isInitialized(euint16 value) internal pure returns (bool) {
+        return Common.isInitialized(value);
     }
 
     /// @notice Returns true if the encrypted uint32 is initialized and false otherwise
-    /// @param v the encrypted uint32 value to check
+    /// @param value the encrypted uint32 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint32 v) internal pure returns (bool) {
-        return Common.isInitialized(v);
+    function isInitialized(euint32 value) internal pure returns (bool) {
+        return Common.isInitialized(value);
     }
 
     /// @notice Returns true if the encrypted uint64 is initialized and false otherwise
-    /// @param v the encrypted uint64 value to check
+    /// @param value the encrypted uint64 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint64 v) internal pure returns (bool) {
-        return Common.isInitialized(v);
+    function isInitialized(euint64 value) internal pure returns (bool) {
+        return Common.isInitialized(value);
     }
 
     /// @notice Returns true if the encrypted uint128 is initialized and false otherwise
-    /// @param v the encrypted uint128 value to check
+    /// @param value the encrypted uint128 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint128 v) internal pure returns (bool) {
-        return Common.isInitialized(v);
+    function isInitialized(euint128 value) internal pure returns (bool) {
+        return Common.isInitialized(value);
     }
 
     /// @notice Returns true if the encrypted address is initialized and false otherwise
-    /// @param v the encrypted address value to check
+    /// @param value the encrypted address value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(eaddress v) internal pure returns (bool) {
-        return Common.isInitialized(v);
+    function isInitialized(eaddress value) internal pure returns (bool) {
+        return Common.isInitialized(value);
     }
 
-    /// @notice Unwraps an encrypted boolean value to its underlying bytes32 hash
-    /// @param v the encrypted boolean value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(ebool v) internal pure returns (bytes32) {
-        return ebool.unwrap(v);
+    /// @notice Unwraps an encrypted boolean value to its underlying bytes32 handle
+    /// @param value the encrypted boolean value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(ebool value) internal pure returns (bytes32) {
+        return ebool.unwrap(value);
     }
 
-    /// @notice Unwraps an encrypted uint8 value to its underlying bytes32 hash
-    /// @param v the encrypted uint8 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint8 v) internal pure returns (bytes32) {
-        return euint8.unwrap(v);
+    /// @notice Unwraps an encrypted uint8 value to its underlying bytes32 handle
+    /// @param value the encrypted uint8 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint8 value) internal pure returns (bytes32) {
+        return euint8.unwrap(value);
     }
 
-    /// @notice Unwraps an encrypted uint16 value to its underlying bytes32 hash
-    /// @param v the encrypted uint16 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint16 v) internal pure returns (bytes32) {
-        return euint16.unwrap(v);
+    /// @notice Unwraps an encrypted uint16 value to its underlying bytes32 handle
+    /// @param value the encrypted uint16 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint16 value) internal pure returns (bytes32) {
+        return euint16.unwrap(value);
     }
 
-    /// @notice Unwraps an encrypted uint32 value to its underlying bytes32 hash
-    /// @param v the encrypted uint32 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint32 v) internal pure returns (bytes32) {
-        return euint32.unwrap(v);
+    /// @notice Unwraps an encrypted uint32 value to its underlying bytes32 handle
+    /// @param value the encrypted uint32 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint32 value) internal pure returns (bytes32) {
+        return euint32.unwrap(value);
     }
 
-    /// @notice Unwraps an encrypted uint64 value to its underlying bytes32 hash
-    /// @param v the encrypted uint64 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint64 v) internal pure returns (bytes32) {
-        return euint64.unwrap(v);
+    /// @notice Unwraps an encrypted uint64 value to its underlying bytes32 handle
+    /// @param value the encrypted uint64 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint64 value) internal pure returns (bytes32) {
+        return euint64.unwrap(value);
     }
 
-    /// @notice Unwraps an encrypted uint128 value to its underlying bytes32 hash
-    /// @param v the encrypted uint128 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint128 v) internal pure returns (bytes32) {
-        return euint128.unwrap(v);
+    /// @notice Unwraps an encrypted uint128 value to its underlying bytes32 handle
+    /// @param value the encrypted uint128 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint128 value) internal pure returns (bytes32) {
+        return euint128.unwrap(value);
     }
 
-    /// @notice Unwraps an encrypted address value to its underlying bytes32 hash
-    /// @param v the encrypted address value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(eaddress v) internal pure returns (bytes32) {
-        return eaddress.unwrap(v);
+    /// @notice Unwraps an encrypted address value to its underlying bytes32 handle
+    /// @param value the encrypted address value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(eaddress value) internal pure returns (bytes32) {
+        return eaddress.unwrap(value);
     }
 
-    /// @notice Wraps a bytes32 hash into an encrypted boolean type
-    /// @param hash the bytes32 ciphertext hash to wrap
+    /// @notice Wraps a bytes32 handle into an encrypted boolean type
+    /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an ebool representing the encrypted value
-    function asEbool(bytes32 hash) internal pure returns (ebool) {
-        return ebool.wrap(hash);
+    function asEbool(bytes32 handle) internal pure returns (ebool) {
+        return ebool.wrap(handle);
     }
 
-    /// @notice Wraps a bytes32 hash into an encrypted uint8 type
-    /// @param hash the bytes32 ciphertext hash to wrap
+    /// @notice Wraps a bytes32 handle into an encrypted uint8 type
+    /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint8 representing the encrypted value
-    function asEuint8(bytes32 hash) internal pure returns (euint8) {
-        return euint8.wrap(hash);
+    function asEuint8(bytes32 handle) internal pure returns (euint8) {
+        return euint8.wrap(handle);
     }
 
-    /// @notice Wraps a bytes32 hash into an encrypted uint16 type
-    /// @param hash the bytes32 ciphertext hash to wrap
+    /// @notice Wraps a bytes32 handle into an encrypted uint16 type
+    /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint16 representing the encrypted value
-    function asEuint16(bytes32 hash) internal pure returns (euint16) {
-        return euint16.wrap(hash);
+    function asEuint16(bytes32 handle) internal pure returns (euint16) {
+        return euint16.wrap(handle);
     }
 
-    /// @notice Wraps a bytes32 hash into an encrypted uint32 type
-    /// @param hash the bytes32 ciphertext hash to wrap
+    /// @notice Wraps a bytes32 handle into an encrypted uint32 type
+    /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint32 representing the encrypted value
-    function asEuint32(bytes32 hash) internal pure returns (euint32) {
-        return euint32.wrap(hash);
+    function asEuint32(bytes32 handle) internal pure returns (euint32) {
+        return euint32.wrap(handle);
     }
 
-    /// @notice Wraps a bytes32 hash into an encrypted uint64 type
-    /// @param hash the bytes32 ciphertext hash to wrap
+    /// @notice Wraps a bytes32 handle into an encrypted uint64 type
+    /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint64 representing the encrypted value
-    function asEuint64(bytes32 hash) internal pure returns (euint64) {
-        return euint64.wrap(hash);
+    function asEuint64(bytes32 handle) internal pure returns (euint64) {
+        return euint64.wrap(handle);
     }
 
-    /// @notice Wraps a bytes32 hash into an encrypted uint128 type
-    /// @param hash the bytes32 ciphertext hash to wrap
+    /// @notice Wraps a bytes32 handle into an encrypted uint128 type
+    /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an euint128 representing the encrypted value
-    function asEuint128(bytes32 hash) internal pure returns (euint128) {
-        return euint128.wrap(hash);
+    function asEuint128(bytes32 handle) internal pure returns (euint128) {
+        return euint128.wrap(handle);
     }
 
-    /// @notice Wraps a bytes32 hash into an encrypted address type
-    /// @param hash the bytes32 ciphertext hash to wrap
+    /// @notice Wraps a bytes32 handle into an encrypted address type
+    /// @param handle the bytes32 ciphertext handle to wrap
     /// @return an eaddress representing the encrypted value
-    function asEaddress(bytes32 hash) internal pure returns (eaddress) {
-        return eaddress.wrap(hash);
+    function asEaddress(bytes32 handle) internal pure returns (eaddress) {
+        return eaddress.wrap(handle);
     }
 }
 
@@ -3930,16 +3930,16 @@ library BindingsEbool {
         FHE.allowTransient(ctHash, account);
     }
     /// @notice Returns true if the encrypted boolean is initialized and false otherwise
-    /// @param v the encrypted boolean value to check
+    /// @param value the encrypted boolean value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(ebool v) internal pure returns (bool) {
-        return FHE.isInitialized(v);
+    function isInitialized(ebool value) internal pure returns (bool) {
+        return FHE.isInitialized(value);
     }
-    /// @notice Unwraps an encrypted boolean value to its underlying bytes32 hash
-    /// @param v the encrypted boolean value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(ebool v) internal pure returns (bytes32) {
-        return FHE.unwrap(v);
+    /// @notice Unwraps an encrypted boolean value to its underlying bytes32 handle
+    /// @param value the encrypted boolean value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(ebool value) internal pure returns (bytes32) {
+        return FHE.unwrap(value);
     }
 }
 
@@ -4181,16 +4181,16 @@ library BindingsEuint8 {
         FHE.allowTransient(ctHash, account);
     }
     /// @notice Returns true if the encrypted uint8 is initialized and false otherwise
-    /// @param v the encrypted uint8 value to check
+    /// @param value the encrypted uint8 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint8 v) internal pure returns (bool) {
-        return FHE.isInitialized(v);
+    function isInitialized(euint8 value) internal pure returns (bool) {
+        return FHE.isInitialized(value);
     }
-    /// @notice Unwraps an encrypted uint8 value to its underlying bytes32 hash
-    /// @param v the encrypted uint8 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint8 v) internal pure returns (bytes32) {
-        return FHE.unwrap(v);
+    /// @notice Unwraps an encrypted uint8 value to its underlying bytes32 handle
+    /// @param value the encrypted uint8 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint8 value) internal pure returns (bytes32) {
+        return FHE.unwrap(value);
     }
 }
 
@@ -4432,16 +4432,16 @@ library BindingsEuint16 {
         FHE.allowTransient(ctHash, account);
     }
     /// @notice Returns true if the encrypted uint16 is initialized and false otherwise
-    /// @param v the encrypted uint16 value to check
+    /// @param value the encrypted uint16 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint16 v) internal pure returns (bool) {
-        return FHE.isInitialized(v);
+    function isInitialized(euint16 value) internal pure returns (bool) {
+        return FHE.isInitialized(value);
     }
-    /// @notice Unwraps an encrypted uint16 value to its underlying bytes32 hash
-    /// @param v the encrypted uint16 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint16 v) internal pure returns (bytes32) {
-        return FHE.unwrap(v);
+    /// @notice Unwraps an encrypted uint16 value to its underlying bytes32 handle
+    /// @param value the encrypted uint16 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint16 value) internal pure returns (bytes32) {
+        return FHE.unwrap(value);
     }
 }
 
@@ -4683,16 +4683,16 @@ library BindingsEuint32 {
         FHE.allowTransient(ctHash, account);
     }
     /// @notice Returns true if the encrypted uint32 is initialized and false otherwise
-    /// @param v the encrypted uint32 value to check
+    /// @param value the encrypted uint32 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint32 v) internal pure returns (bool) {
-        return FHE.isInitialized(v);
+    function isInitialized(euint32 value) internal pure returns (bool) {
+        return FHE.isInitialized(value);
     }
-    /// @notice Unwraps an encrypted uint32 value to its underlying bytes32 hash
-    /// @param v the encrypted uint32 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint32 v) internal pure returns (bytes32) {
-        return FHE.unwrap(v);
+    /// @notice Unwraps an encrypted uint32 value to its underlying bytes32 handle
+    /// @param value the encrypted uint32 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint32 value) internal pure returns (bytes32) {
+        return FHE.unwrap(value);
     }
 }
 
@@ -4916,16 +4916,16 @@ library BindingsEuint64 {
         FHE.allowTransient(ctHash, account);
     }
     /// @notice Returns true if the encrypted uint64 is initialized and false otherwise
-    /// @param v the encrypted uint64 value to check
+    /// @param value the encrypted uint64 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint64 v) internal pure returns (bool) {
-        return FHE.isInitialized(v);
+    function isInitialized(euint64 value) internal pure returns (bool) {
+        return FHE.isInitialized(value);
     }
-    /// @notice Unwraps an encrypted uint64 value to its underlying bytes32 hash
-    /// @param v the encrypted uint64 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint64 v) internal pure returns (bytes32) {
-        return FHE.unwrap(v);
+    /// @notice Unwraps an encrypted uint64 value to its underlying bytes32 handle
+    /// @param value the encrypted uint64 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint64 value) internal pure returns (bytes32) {
+        return FHE.unwrap(value);
     }
 }
 
@@ -5132,16 +5132,16 @@ library BindingsEuint128 {
         FHE.allowTransient(ctHash, account);
     }
     /// @notice Returns true if the encrypted uint128 is initialized and false otherwise
-    /// @param v the encrypted uint128 value to check
+    /// @param value the encrypted uint128 value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(euint128 v) internal pure returns (bool) {
-        return FHE.isInitialized(v);
+    function isInitialized(euint128 value) internal pure returns (bool) {
+        return FHE.isInitialized(value);
     }
-    /// @notice Unwraps an encrypted uint128 value to its underlying bytes32 hash
-    /// @param v the encrypted uint128 value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(euint128 v) internal pure returns (bytes32) {
-        return FHE.unwrap(v);
+    /// @notice Unwraps an encrypted uint128 value to its underlying bytes32 handle
+    /// @param value the encrypted uint128 value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(euint128 value) internal pure returns (bytes32) {
+        return FHE.unwrap(value);
     }
 }
 
@@ -5208,15 +5208,15 @@ library BindingsEaddress {
         FHE.allowTransient(ctHash, account);
     }
     /// @notice Returns true if the encrypted address is initialized and false otherwise
-    /// @param v the encrypted address value to check
+    /// @param value the encrypted address value to check
     /// @return true if initialized, false otherwise
-    function isInitialized(eaddress v) internal pure returns (bool) {
-        return FHE.isInitialized(v);
+    function isInitialized(eaddress value) internal pure returns (bool) {
+        return FHE.isInitialized(value);
     }
-    /// @notice Unwraps an encrypted address value to its underlying bytes32 hash
-    /// @param v the encrypted address value to unwrap
-    /// @return the underlying bytes32 hash
-    function unwrap(eaddress v) internal pure returns (bytes32) {
-        return FHE.unwrap(v);
+    /// @notice Unwraps an encrypted address value to its underlying bytes32 handle
+    /// @param value the encrypted address value to unwrap
+    /// @return the underlying bytes32 handle
+    function unwrap(eaddress value) internal pure returns (bytes32) {
+        return FHE.unwrap(value);
     }
 }

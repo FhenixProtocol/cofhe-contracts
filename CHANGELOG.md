@@ -6,9 +6,12 @@
 
 ### Added
 - `FHE.isInitialized()` overloads for all encrypted types (`ebool`, `euint8`, `euint16`, `euint32`, `euint64`, `euint128`, `eaddress`) to check whether a ciphertext handle is initialized
-- `FHE.unwrap()` overloads for all encrypted types to extract the underlying `bytes32` hash
-- `FHE.asEbool(bytes32)`, `FHE.asEuint*(bytes32)`, `FHE.asEaddress(bytes32)` to wrap a raw `bytes32` hash into the corresponding encrypted type
+- `FHE.unwrap()` overloads for all encrypted types to extract the underlying `bytes32` handle
+- `FHE.asEbool(bytes32)`, `FHE.asEuint*(bytes32)`, `FHE.asEaddress(bytes32)` to wrap a raw `bytes32` handle into the corresponding encrypted type
 - Bindings for `isInitialized()` and `unwrap()` on all encrypted types, enabling instance-style calls (e.g. `myEuint32.isInitialized()`, `myEuint32.unwrap()`)
+- Add `verifyDecryptResultBatch` and `verifyDecryptResultBatchSafe` to TaskManager (view functions for batch signature verification)
+- Add typed overloads for `publishDecryptResultBatch`, `verifyDecryptResultBatch`, and `verifyDecryptResultBatchSafe` in FHE.sol (per encrypted type: ebool, euint8-128, eaddress)
+- Update ITaskManager interface with new batch verify functions
 
 ## v0.1.1 - 2025-03-16
 
