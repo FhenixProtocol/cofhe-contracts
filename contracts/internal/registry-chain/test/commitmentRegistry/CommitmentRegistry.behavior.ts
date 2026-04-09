@@ -24,8 +24,12 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       expect(await this.registry.owner()).to.equal(this.owner.address);
     });
 
-    it("should set the correct poster", async function () {
-      expect(await this.registry.getPoster()).to.equal(this.poster.address);
+    it("should set the initial poster", async function () {
+      expect(await this.registry.isPoster(this.poster.address)).to.equal(true);
+    });
+
+    it("should not mark non-poster as poster", async function () {
+      expect(await this.registry.isPoster(this.otherAccount.address)).to.equal(false);
     });
 
     it("should not be re-initializable", async function () {
@@ -179,48 +183,104 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
   // ── Poster Management ──────────────────────────────────────────────
 
   describe("Poster Management", function () {
-    it("should allow owner to change poster", async function () {
-      await expect(this.registry.setPoster(this.otherAccount.address))
-        .to.emit(this.registry, "PosterChanged")
-        .withArgs(this.poster.address, this.otherAccount.address);
-      expect(await this.registry.getPoster()).to.equal(this.otherAccount.address);
+    it("should allow owner to add a poster", async function () {
+      await expect(this.registry.addPoster(this.otherAccount.address))
+        .to.emit(this.registry, "PosterAdded")
+        .withArgs(this.otherAccount.address);
+      expect(await this.registry.isPoster(this.otherAccount.address)).to.equal(true);
     });
 
-    it("should revoke old poster access after rotation", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
-      await this.registry.setPoster(this.otherAccount.address);
+    it("should allow owner to remove a poster", async function () {
+      await expect(this.registry.removePoster(this.poster.address))
+        .to.emit(this.registry, "PosterRemoved")
+        .withArgs(this.poster.address);
+      expect(await this.registry.isPoster(this.poster.address)).to.equal(false);
+    });
 
-      // Old poster should fail
+    it("should revoke access after removing poster", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.removePoster(this.poster.address);
+
       const registryAsOldPoster = this.registry.connect(this.poster);
       await expect(
         registryAsOldPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed");
+    });
 
-      // New poster should succeed
-      const registryAsNewPoster = this.registry.connect(this.otherAccount);
+    it("should allow multiple posters to post concurrently", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.addPoster(this.otherAccount.address);
+
+      const registryAsPoster1 = this.registry.connect(this.poster);
+      const registryAsPoster2 = this.registry.connect(this.otherAccount);
+
       await expect(
-        registryAsNewPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsPoster1.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.not.be.reverted;
-    });
 
-    it("should allow setting poster to the same address (no-op)", async function () {
-      await expect(this.registry.setPoster(this.poster.address))
-        .to.emit(this.registry, "PosterChanged")
-        .withArgs(this.poster.address, this.poster.address);
-      expect(await this.registry.getPoster()).to.equal(this.poster.address);
-    });
-
-    it("should revert when setting poster to zero address", async function () {
       await expect(
-        this.registry.setPoster(ethers.ZeroAddress)
+        registryAsPoster2.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+      ).to.not.be.reverted;
+
+      expect(await this.registry.getSize(VERSION_1)).to.equal(2);
+    });
+
+    it("should revert when adding a poster that already exists", async function () {
+      await expect(
+        this.registry.addPoster(this.poster.address)
+      ).to.be.revertedWithCustomError(this.registry, "PosterAlreadyExists")
+        .withArgs(this.poster.address);
+    });
+
+    it("should revert when removing a poster that is not registered", async function () {
+      await expect(
+        this.registry.removePoster(this.otherAccount.address)
+      ).to.be.revertedWithCustomError(this.registry, "PosterNotFound")
+        .withArgs(this.otherAccount.address);
+    });
+
+    it("should revert when adding zero address as poster", async function () {
+      await expect(
+        this.registry.addPoster(ethers.ZeroAddress)
       ).to.be.revertedWithCustomError(this.registry, "InvalidAddress");
     });
 
-    it("should revert when non-owner sets poster", async function () {
+    it("should revert when removing zero address as poster", async function () {
+      await expect(
+        this.registry.removePoster(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(this.registry, "InvalidAddress");
+    });
+
+    it("should revert when non-owner adds poster", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.setPoster(this.otherAccount.address)
+        registryAsPoster.addPoster(this.otherAccount.address)
       ).to.be.revertedWithCustomError(this.registry, "OwnableUnauthorizedAccount");
+    });
+
+    it("should revert when non-owner removes poster", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.removePoster(this.poster.address)
+      ).to.be.revertedWithCustomError(this.registry, "OwnableUnauthorizedAccount");
+    });
+
+    it("should allow re-adding a previously removed poster", async function () {
+      await this.registry.removePoster(this.poster.address);
+      expect(await this.registry.isPoster(this.poster.address)).to.equal(false);
+
+      await expect(this.registry.addPoster(this.poster.address))
+        .to.emit(this.registry, "PosterAdded")
+        .withArgs(this.poster.address);
+      expect(await this.registry.isPoster(this.poster.address)).to.equal(true);
+    });
+
+    it("should allow removing one poster without affecting others", async function () {
+      await this.registry.addPoster(this.otherAccount.address);
+      await this.registry.removePoster(this.poster.address);
+
+      expect(await this.registry.isPoster(this.poster.address)).to.equal(false);
+      expect(await this.registry.isPoster(this.otherAccount.address)).to.equal(true);
     });
   });
 
@@ -382,6 +442,24 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       ).to.be.revertedWithCustomError(this.registry, "CommitmentAlreadyExists")
         .withArgs(VERSION_1, handle);
     });
+
+    it("should prevent a second poster from overwriting commitments posted by the first", async function () {
+      await this.registry.addPoster(this.otherAccount.address);
+      const handle = randomBytes32();
+      const commitHash = randomBytes32();
+      const registryAsPoster1 = this.registry.connect(this.poster);
+      const registryAsPoster2 = this.registry.connect(this.otherAccount);
+
+      await registryAsPoster1.postCommitments(VERSION_1, [handle], [commitHash]);
+
+      await expect(
+        registryAsPoster2.postCommitments(VERSION_1, [handle], [randomBytes32()])
+      ).to.be.revertedWithCustomError(this.registry, "CommitmentAlreadyExists")
+        .withArgs(VERSION_1, handle);
+
+      // Original commitment is preserved
+      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
+    });
   });
 
   // ── Access Control ─────────────────────────────────────────────────
@@ -403,6 +481,15 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       await expect(
         this.registry.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed");
+    });
+
+    it("should revert after poster is removed", async function () {
+      await this.registry.removePoster(this.poster.address);
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+      ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed")
+        .withArgs(this.poster.address);
     });
   });
 
@@ -595,6 +682,23 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const receipt = await tx.wait();
       console.log(`    Gas used (setVersionStatus): ${receipt.gasUsed.toString()}`);
     });
+
+    it("GAS: addPoster", async function () {
+      const tx = await this.registry.addPoster(this.otherAccount.address);
+      const receipt = await tx.wait();
+      console.log(`    Gas used (addPoster): ${receipt.gasUsed.toString()}`);
+    });
+
+    it("GAS: removePoster", async function () {
+      const tx = await this.registry.removePoster(this.poster.address);
+      const receipt = await tx.wait();
+      console.log(`    Gas used (removePoster): ${receipt.gasUsed.toString()}`);
+    });
+
+    it("GAS: isPoster read", async function () {
+      const gasEstimate = await this.registry.isPoster.estimateGas(this.poster.address);
+      console.log(`    Gas estimate (isPoster): ${gasEstimate.toString()}`);
+    });
   });
 
   // ── Upgrade ────────────────────────────────────────────────────────
@@ -628,6 +732,9 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const registryAsPoster = this.registry.connect(this.poster);
       await registryAsPoster.postCommitments(VERSION_1, [handle], [commitHash]);
 
+      // Add a second poster before upgrade
+      await this.registry.addPoster(this.otherAccount.address);
+
       const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
       const newImpl = await CommitmentRegistry.deploy();
       await newImpl.waitForDeployment();
@@ -636,7 +743,8 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
       expect(await this.registry.getSize(VERSION_1)).to.equal(1);
       expect(await this.registry.getVersionStatus(VERSION_1)).to.equal(VersionStatus.Active);
-      expect(await this.registry.getPoster()).to.equal(this.poster.address);
+      expect(await this.registry.isPoster(this.poster.address)).to.equal(true);
+      expect(await this.registry.isPoster(this.otherAccount.address)).to.equal(true);
     });
   });
 }

@@ -11,6 +11,12 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
     /// @notice Returned when a non-poster address attempts to post commitments.
     error OnlyPosterAllowed(address caller);
 
+    /// @notice Returned when attempting to add a poster that is already registered.
+    error PosterAlreadyExists(address poster);
+
+    /// @notice Returned when attempting to remove a poster that is not registered.
+    error PosterNotFound(address poster);
+
     /// @notice Returned when attempting to post commitments under a non-active version.
     error VersionNotActive(bytes32 version);
 
@@ -37,7 +43,7 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash)) commitments;
         mapping(bytes32 version => bytes32[]) handlesByVersion;
         mapping(bytes32 version => VersionStatus) versionStatus;
-        address poster;
+        mapping(address => bool) posters;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("cofhe.storage.CommitmentRegistry")) - 1)) & ~bytes32(uint256(0xff))
@@ -46,11 +52,12 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
 
     event CommitmentsPosted(bytes32 indexed version, uint256 batchSize);
     event VersionStatusChanged(bytes32 indexed version, VersionStatus oldStatus, VersionStatus newStatus);
-    event PosterChanged(address indexed oldPoster, address indexed newPoster);
+    event PosterAdded(address indexed poster);
+    event PosterRemoved(address indexed poster);
 
     modifier onlyPoster() {
         CommitmentRegistryStorage storage $ = _getStorage();
-        if (msg.sender != $.poster) {
+        if (!$.posters[msg.sender]) {
             revert OnlyPosterAllowed(msg.sender);
         }
         _;
@@ -68,8 +75,8 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
         CommitmentRegistryStorage storage $ = _getStorage();
-        $.poster = initialPoster;
-        emit PosterChanged(address(0), initialPoster);
+        $.posters[initialPoster] = true;
+        emit PosterAdded(initialPoster);
     }
 
     function postCommitments(
@@ -101,12 +108,20 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         emit CommitmentsPosted(version, len);
     }
 
-    function setPoster(address newPoster) external onlyOwner {
-        if (newPoster == address(0)) revert InvalidAddress();
+    function addPoster(address poster) external onlyOwner {
+        if (poster == address(0)) revert InvalidAddress();
         CommitmentRegistryStorage storage $ = _getStorage();
-        address oldPoster = $.poster;
-        $.poster = newPoster;
-        emit PosterChanged(oldPoster, newPoster);
+        if ($.posters[poster]) revert PosterAlreadyExists(poster);
+        $.posters[poster] = true;
+        emit PosterAdded(poster);
+    }
+
+    function removePoster(address poster) external onlyOwner {
+        if (poster == address(0)) revert InvalidAddress();
+        CommitmentRegistryStorage storage $ = _getStorage();
+        if (!$.posters[poster]) revert PosterNotFound(poster);
+        $.posters[poster] = false;
+        emit PosterRemoved(poster);
     }
 
     function setVersionStatus(bytes32 version, VersionStatus newStatus) external onlyOwner {
@@ -163,8 +178,8 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         return result;
     }
 
-    function getPoster() external view returns (address) {
-        return _getStorage().poster;
+    function isPoster(address account) external view returns (bool) {
+        return _getStorage().posters[account];
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
