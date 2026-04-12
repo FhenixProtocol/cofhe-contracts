@@ -19,6 +19,14 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: { allowUnlimitedContractSize: true },
+    localfhenix: {
+      url: "http://127.0.0.1:42069",
+      accounts: process.env.KEY ? [process.env.KEY] : [],
+    },
+    localfhenixk8s: {
+      url: "http://hostchain:8547",
+      accounts: process.env.KEY ? [process.env.KEY] : [],
+    },
     arbitrumSepolia: {
       chainId: 421614,
       url: "https://little-convincing-fog.arbitrum-sepolia.quiknode.pro/e925be62bdfa8faab560daa332c0c95e26189870/",
