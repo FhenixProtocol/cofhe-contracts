@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import hre from "hardhat";
 const { ethers } = hre;
+import { upgrades } from "hardhat";
 
 function randomBytes32(): string {
   return ethers.hexlify(ethers.randomBytes(32));
@@ -50,29 +51,23 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
     it("should revert when initializing with zero owner", async function () {
       const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
-      const impl = await CommitmentRegistry.deploy();
-      await impl.waitForDeployment();
-      const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-      const initData = CommitmentRegistry.interface.encodeFunctionData("initialize", [
-        ethers.ZeroAddress,
-        this.poster.address,
-      ]);
       await expect(
-        ERC1967Proxy.deploy(await impl.getAddress(), initData)
+        upgrades.deployProxy(
+          CommitmentRegistry,
+          [ethers.ZeroAddress, this.poster.address],
+          { kind: "uups", initializer: "initialize" },
+        )
       ).to.be.reverted;
     });
 
     it("should revert when initializing with zero poster", async function () {
       const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
-      const impl = await CommitmentRegistry.deploy();
-      await impl.waitForDeployment();
-      const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-      const initData = CommitmentRegistry.interface.encodeFunctionData("initialize", [
-        this.owner.address,
-        ethers.ZeroAddress,
-      ]);
       await expect(
-        ERC1967Proxy.deploy(await impl.getAddress(), initData)
+        upgrades.deployProxy(
+          CommitmentRegistry,
+          [this.owner.address, ethers.ZeroAddress],
+          { kind: "uups", initializer: "initialize" },
+        )
       ).to.be.reverted;
     });
   });
@@ -591,6 +586,70 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
       expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
       expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+    });
+
+    it("should return handles with getHandles pagination", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      const handles = Array.from({ length: 10 }, () => randomBytes32());
+      const commitHashes = Array.from({ length: 10 }, () => randomBytes32());
+      const registryAsPoster = this.registry.connect(this.poster);
+      await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+
+      // First page
+      const page1 = await this.registry.getHandles(VERSION_1, 0, 5);
+      expect(page1.length).to.equal(5);
+      for (let i = 0; i < 5; i++) {
+        expect(page1[i]).to.equal(handles[i]);
+      }
+
+      // Second page
+      const page2 = await this.registry.getHandles(VERSION_1, 5, 5);
+      expect(page2.length).to.equal(5);
+      for (let i = 0; i < 5; i++) {
+        expect(page2[i]).to.equal(handles[5 + i]);
+      }
+    });
+
+    it("should return empty array when offset exceeds total", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      const registryAsPoster = this.registry.connect(this.poster);
+      await registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()]);
+
+      const result = await this.registry.getHandles(VERSION_1, 100, 10);
+      expect(result.length).to.equal(0);
+    });
+
+    it("should clamp limit when it exceeds remaining items", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      const handles = Array.from({ length: 3 }, () => randomBytes32());
+      const commitHashes = Array.from({ length: 3 }, () => randomBytes32());
+      const registryAsPoster = this.registry.connect(this.poster);
+      await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+
+      const result = await this.registry.getHandles(VERSION_1, 1, 100);
+      expect(result.length).to.equal(2);
+      expect(result[0]).to.equal(handles[1]);
+      expect(result[1]).to.equal(handles[2]);
+    });
+
+    it("should return handle by index", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      const handles = Array.from({ length: 5 }, () => randomBytes32());
+      const commitHashes = Array.from({ length: 5 }, () => randomBytes32());
+      const registryAsPoster = this.registry.connect(this.poster);
+      await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+
+      for (let i = 0; i < 5; i++) {
+        expect(await this.registry.getHandleByIndex(VERSION_1, i)).to.equal(handles[i]);
+      }
+    });
+
+    it("should revert when getHandleByIndex is out of bounds", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      const registryAsPoster = this.registry.connect(this.poster);
+      await registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()]);
+
+      await expect(this.registry.getHandleByIndex(VERSION_1, 1)).to.be.reverted;
     });
 
     it("should still return commitments after version is Revoked", async function () {
