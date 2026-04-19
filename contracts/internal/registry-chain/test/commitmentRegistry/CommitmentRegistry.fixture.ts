@@ -1,5 +1,6 @@
 import hre from "hardhat";
 const { ethers } = hre;
+import { upgrades } from "hardhat";
 import { BaseContract } from "ethers";
 
 export interface CommitmentRegistryFixture {
@@ -13,18 +14,12 @@ export async function deployCommitmentRegistryFixture(): Promise<CommitmentRegis
   const [owner, poster, otherAccount] = await ethers.getSigners();
 
   const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
-  const impl = await CommitmentRegistry.deploy();
-  await impl.waitForDeployment();
-
-  const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-  const initData = CommitmentRegistry.interface.encodeFunctionData("initialize", [
-    owner.address,
-    poster.address,
-  ]);
-  const proxy = await ERC1967Proxy.deploy(await impl.getAddress(), initData);
-  await proxy.waitForDeployment();
-
-  const registry = CommitmentRegistry.attach(await proxy.getAddress());
+  const deployed = await upgrades.deployProxy(
+    CommitmentRegistry,
+    [owner.address, poster.address],
+    { kind: "uups", initializer: "initialize" },
+  );
+  const registry = await deployed.waitForDeployment();
 
   return { registry, owner, poster, otherAccount };
 }
