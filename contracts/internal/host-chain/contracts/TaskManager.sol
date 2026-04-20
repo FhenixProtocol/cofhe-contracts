@@ -272,19 +272,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
     }
 
-    function createDecryptTask(uint256 ctHash, address requestor) public {
-        checkAllowed(ctHash);
-
-        (uint256 result, bool hasResult) = plaintextsStorage.getResult(ctHash);
-        if(hasResult) {
-            emit DecryptionResult(ctHash, result, requestor);
-        } else {
-            uint256[] memory inputs = new uint256[](1);
-            inputs[0] = uint256(uint160(requestor));
-            sendEventCreated(ctHash, Utils.functionIdToString(FunctionId.decrypt), inputs);
-        }
-    }
-
     function checkAllowed(uint256 ctHash) internal view {
         if (!acl.isAllowed(ctHash, msg.sender)) revert ACLNotAllowed(ctHash, msg.sender);
     }
