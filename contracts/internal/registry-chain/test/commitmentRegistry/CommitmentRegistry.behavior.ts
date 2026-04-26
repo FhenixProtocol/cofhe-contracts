@@ -457,6 +457,155 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     });
   });
 
+  // ── postCommitmentsSafe (idempotent) ────────────────────────────────
+
+  describe("Post Commitments Safe", function () {
+    beforeEach(async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+    });
+
+    it("should write all handles and emit (newlyPosted=N, skipped=0) on first call", async function () {
+      const handles = Array.from({ length: 3 }, () => randomBytes32());
+      const commitHashes = Array.from({ length: 3 }, () => randomBytes32());
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await expect(registryAsPoster.postCommitmentsSafe(VERSION_1, handles, commitHashes))
+        .to.emit(this.registry, "CommitmentsPostedSafe")
+        .withArgs(VERSION_1, 3, 0);
+
+      for (let i = 0; i < 3; i++) {
+        expect(await this.registry.getCommitment(VERSION_1, handles[i])).to.equal(commitHashes[i]);
+      }
+      expect(await this.registry.getSize(VERSION_1)).to.equal(3);
+    });
+
+    it("should silently skip already-committed handles", async function () {
+      const handle = randomBytes32();
+      const original = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [original]);
+
+      // Re-post same handle with a different commit hash — should NOT revert
+      // and should NOT overwrite the original.
+      await expect(
+        registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()])
+      )
+        .to.emit(this.registry, "CommitmentsPostedSafe")
+        .withArgs(VERSION_1, 0, 1);
+
+      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(original);
+      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+    });
+
+    it("should write only new handles in a mixed batch", async function () {
+      const existingHandle = randomBytes32();
+      const newHandle1 = randomBytes32();
+      const newHandle2 = randomBytes32();
+      const existingCommit = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitmentsSafe(VERSION_1, [existingHandle], [existingCommit]);
+
+      const newCommit1 = randomBytes32();
+      const newCommit2 = randomBytes32();
+      await expect(
+        registryAsPoster.postCommitmentsSafe(
+          VERSION_1,
+          [existingHandle, newHandle1, newHandle2],
+          [randomBytes32(), newCommit1, newCommit2]
+        )
+      )
+        .to.emit(this.registry, "CommitmentsPostedSafe")
+        .withArgs(VERSION_1, 2, 1);
+
+      // existing one preserved
+      expect(await this.registry.getCommitment(VERSION_1, existingHandle)).to.equal(existingCommit);
+      // new ones written
+      expect(await this.registry.getCommitment(VERSION_1, newHandle1)).to.equal(newCommit1);
+      expect(await this.registry.getCommitment(VERSION_1, newHandle2)).to.equal(newCommit2);
+      expect(await this.registry.getSize(VERSION_1)).to.equal(3);
+    });
+
+    it("should dedup duplicate handles within the same batch", async function () {
+      const handle = randomBytes32();
+      const commitHash = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      // Same handle three times in one call — should write once, skip twice.
+      await expect(
+        registryAsPoster.postCommitmentsSafe(
+          VERSION_1,
+          [handle, handle, handle],
+          [commitHash, randomBytes32(), randomBytes32()]
+        )
+      )
+        .to.emit(this.registry, "CommitmentsPostedSafe")
+        .withArgs(VERSION_1, 1, 2);
+
+      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
+      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+    });
+
+    it("should still revert on zero commitHash", async function () {
+      const handle = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await expect(
+        registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [ethers.ZeroHash])
+      )
+        .to.be.revertedWithCustomError(this.registry, "ZeroCommitHash")
+        .withArgs(handle);
+    });
+
+    it("should still revert on empty batch", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.postCommitmentsSafe(VERSION_1, [], [])
+      ).to.be.revertedWithCustomError(this.registry, "EmptyBatch");
+    });
+
+    it("should still revert on length mismatch", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.postCommitmentsSafe(
+          VERSION_1,
+          [randomBytes32()],
+          [randomBytes32(), randomBytes32()]
+        )
+      ).to.be.revertedWithCustomError(this.registry, "LengthMismatch");
+    });
+
+    it("should revert when version is not active", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.postCommitmentsSafe(VERSION_2, [randomBytes32()], [randomBytes32()])
+      )
+        .to.be.revertedWithCustomError(this.registry, "VersionNotActive")
+        .withArgs(VERSION_2);
+    });
+
+    it("should revert when caller is not a poster", async function () {
+      const registryAsOther = this.registry.connect(this.otherAccount);
+      await expect(
+        registryAsOther.postCommitmentsSafe(VERSION_1, [randomBytes32()], [randomBytes32()])
+      )
+        .to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed")
+        .withArgs(this.otherAccount.address);
+    });
+
+    it("should not double-count handles in handlesByVersion when re-posted", async function () {
+      const handle = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()]);
+      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()]);
+      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()]);
+
+      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+    });
+  });
+
   // ── Access Control ─────────────────────────────────────────────────
 
   describe("Access Control", function () {
