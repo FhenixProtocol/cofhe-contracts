@@ -2,7 +2,7 @@ import hre from "hardhat";
 import { deployUUPSProxy } from "../utils/deploy";
 
 // OZ Relayer signer address (deterministic from dev keystore)
-const DEFAULT_POSTER_ADDRESS = "0x3f1Eae7D46d88F08fc2F8ed27FCb2AB183EB2d0E";
+const DEFAULT_POSTER_ADDRESS = "0x53118C97bD4b7FdDb68244D788Ce7b2946ECd327";
 const OZ_RELAYER_ADDRESS = process.env.POSTER_ADDRESS || DEFAULT_POSTER_ADDRESS;
 
 // Commitment version to activate (must match COMMITMENT_VERSION in fhe-engine)
