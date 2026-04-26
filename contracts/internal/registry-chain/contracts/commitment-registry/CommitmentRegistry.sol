@@ -51,6 +51,10 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         keccak256(abi.encode(uint256(keccak256("cofhe.storage.CommitmentRegistry")) - 1)) & ~bytes32(uint256(0xff));
 
     event CommitmentsPosted(bytes32 indexed version, uint256 batchSize);
+    /// @notice Emitted by `postCommitmentsSafe` when a handle is skipped because
+    /// it was already committed under this version. `newlyPosted` is the count
+    /// of handles that actually got written (i.e. `handles.length - skipped`).
+    event CommitmentsPostedSafe(bytes32 indexed version, uint256 newlyPosted, uint256 skipped);
     event VersionStatusChanged(bytes32 indexed version, VersionStatus oldStatus, VersionStatus newStatus);
     event PosterAdded(address indexed poster);
     event PosterRemoved(address indexed poster);
@@ -106,6 +110,49 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
             unchecked { ++i; }
         }
         emit CommitmentsPosted(version, len);
+    }
+
+    /// @notice Idempotent variant of `postCommitments`. Handles already committed
+    /// under this version are silently skipped instead of reverting the batch.
+    /// Useful for callers (e.g. blockchain-poster) where the same handle may
+    /// arrive in multiple flushes due to deterministic FHE outputs or message
+    /// redeliveries — the on-chain end state is identical either way, and the
+    /// caller would rather make progress than roll back the whole batch.
+    ///
+    /// `ZeroCommitHash` and `LengthMismatch` still revert (those indicate caller
+    /// bugs, not duplicates). `VersionNotActive`, `EmptyBatch` likewise.
+    function postCommitmentsSafe(
+        bytes32 version,
+        bytes32[] calldata handles,
+        bytes32[] calldata commitHashes
+    ) external onlyPoster {
+        uint256 len = handles.length;
+        if (len == 0) revert EmptyBatch();
+        if (len != commitHashes.length) revert LengthMismatch();
+
+        CommitmentRegistryStorage storage $ = _getStorage();
+
+        if ($.versionStatus[version] != VersionStatus.Active) {
+            revert VersionNotActive(version);
+        }
+
+        mapping(bytes32 => bytes32) storage versionMap = $.commitments[version];
+
+        uint256 newlyPosted = 0;
+        for (uint256 i = 0; i < len; ) {
+            bytes32 handle = handles[i];
+            bytes32 commitHash = commitHashes[i];
+            if (commitHash == bytes32(0)) revert ZeroCommitHash(handle);
+            if (versionMap[handle] == bytes32(0)) {
+                versionMap[handle] = commitHash;
+                $.handlesByVersion[version].push(handle);
+                unchecked { ++newlyPosted; }
+            }
+            // else: handle already committed — silently skip. The desired end
+            // state (commitment recorded under (version, handle)) is unchanged.
+            unchecked { ++i; }
+        }
+        emit CommitmentsPostedSafe(version, newlyPosted, len - newlyPosted);
     }
 
     function addPoster(address poster) external onlyOwner {
