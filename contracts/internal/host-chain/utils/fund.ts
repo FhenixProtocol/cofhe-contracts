@@ -23,7 +23,13 @@ export async function fundAccount(
 ): Promise<any> {
   if ((await hre.ethers.provider.getBalance(signer.address)).toString() === "0") {
     if (hre.network.name === "localfhenixk8s") {
-      await getFunds(signer.address, "http://hostchain:3000");
+      // Local CoFHE hostchain now relies on prefunded genesis accounts instead of
+      // the old faucet service, so a zero balance here means the hostchain state
+      // was initialized from the wrong image/genesis and deployment cannot proceed.
+      throw new Error(
+        `Account ${signer.address} has zero balance on localfhenixk8s. ` +
+        "This devnet no longer exposes hostchain:3000/faucet; rebuild the hostchain image and wipe the hostchain/beacon volumes so the prefunded genesis accounts are applied."
+      );
     } else if (hre.network.name === "localfhenix") {
       await hre.fhenixjs.getFunds(signer.address);
       console.log(

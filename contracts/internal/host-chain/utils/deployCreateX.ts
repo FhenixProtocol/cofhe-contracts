@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import * as fs from "fs"
 import * as path from "path"
+import { TransactionReceipt } from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -14,6 +15,25 @@ const proxyTransactionDetails = {
 export const isAlreadyDeployed = async function (hre: HardhatRuntimeEnvironment, contractExpectedAddress: string): Promise<boolean> {
   const code = await hre.ethers.provider.getCode(contractExpectedAddress);
   return code !== "0x";
+}
+
+async function waitForReceiptWithIndexRetry(txHash: string, hre: HardhatRuntimeEnvironment): Promise<TransactionReceipt> {
+  for (;;) {
+    try {
+      const receipt = await hre.ethers.provider.getTransactionReceipt(txHash);
+      if (receipt) {
+        return receipt;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Local geth can briefly reject receipt lookups while its tx indexer warms up
+      // right after startup. Retrying here avoids failing the entire deployer on boot.
+      if (!message.includes("transaction indexing is in progress")) {
+        throw error;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 }
 
 export const deployCreateX = async function (hre: HardhatRuntimeEnvironment, signer: HardhatEthersSigner): Promise<boolean> {
@@ -47,7 +67,7 @@ export const deployCreateX = async function (hre: HardhatRuntimeEnvironment, sig
   // deploy proxy contract
   const txResponse = await ethers.provider.broadcastTransaction(transaction);
 
-  const receipt = await txResponse.wait();
+  const receipt = await waitForReceiptWithIndexRetry(txResponse.hash, hre);
   if (receipt?.contractAddress !== proxyTransactionDetails.address) {
     console.log(
       "Failed to deploy createX contract, resulting address",
