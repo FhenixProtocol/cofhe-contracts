@@ -132,10 +132,12 @@ library Impl {
     }
 
     function getDecryptResult(bytes32 input) internal view returns (uint256) {
+        require(Common.isInitialized(input), "FHE: getDecryptResult called with uninitialized handle");
         return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResult(uint256(input));
     }
 
     function getDecryptResultSafe(bytes32 input) internal view returns (uint256 result, bool decrypted) {
+        if (!Common.isInitialized(input)) return (0, false);
         return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResultSafe(uint256(input));
     }
 
