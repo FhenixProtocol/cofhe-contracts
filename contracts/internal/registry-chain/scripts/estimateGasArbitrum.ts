@@ -32,9 +32,10 @@ async function main() {
   const registryAddress = await proxy.getAddress();
   console.log(`Deployed at: ${registryAddress}`);
 
-  // Activate a version
+  // Activate a version on the gas-test chain
   const version = ethers.keccak256(ethers.toUtf8Bytes("gas-test-v1"));
-  const tx = await proxy.setVersionStatus(version, 1); // Active
+  const chainId = 42161n; // Arbitrum One — purely cosmetic for gas estimation
+  const tx = await proxy.setVersionStatus(chainId, version, 1); // Active
   await tx.wait();
   console.log("Version activated");
 
@@ -56,7 +57,7 @@ async function main() {
     const commitHashes = Array.from({ length: size }, () => randomBytes32());
 
     // Encode the calldata
-    const calldata = proxy.interface.encodeFunctionData("postCommitments", [version, handles, commitHashes]);
+    const calldata = proxy.interface.encodeFunctionData("postCommitments", [chainId, version, handles, commitHashes]);
 
     try {
       // Get gas components from Arbitrum's NodeInterface
@@ -87,7 +88,7 @@ async function main() {
   console.log("\n--- Actual Transaction (batch of 10) ---\n");
   const handles10 = Array.from({ length: 10 }, () => randomBytes32());
   const commitHashes10 = Array.from({ length: 10 }, () => randomBytes32());
-  const realTx = await proxy.postCommitments(version, handles10, commitHashes10);
+  const realTx = await proxy.postCommitments(chainId, version, handles10, commitHashes10);
   const receipt = await realTx.wait();
   const gasUsed = receipt!.gasUsed;
   const effectiveGasPrice = receipt!.gasPrice;
