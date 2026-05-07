@@ -4,45 +4,38 @@ pragma solidity >=0.8.25 <0.9.0;
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
+/// @title CommitmentRegistry
+/// @notice Stores FHE computation commitments scoped by (chainId, version, handle).
+///
+/// Storage hierarchy is chainId-first because chains are independent rollout
+/// surfaces: each chain has its own crypto-material lifecycle, and one chain
+/// migrating to a new version says nothing about another. The `version` is the
+/// cryptographic identity of the keys used to produce the ciphertext (per the
+/// engine's COMMITMENT_VERSION constant — currently a placeholder, eventually
+/// keccak256 of publicKey/library/params), so it is required data on every
+/// write and cannot be defaulted by the contract: filing a commitment under
+/// the wrong version would silently break TN's integrity check.
 contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
 
     enum VersionStatus { Unset, Active, Deprecated, Revoked }
 
-    /// @notice Returned when a non-poster address attempts to post commitments.
     error OnlyPosterAllowed(address caller);
-
-    /// @notice Returned when attempting to add a poster that is already registered.
     error PosterAlreadyExists(address poster);
-
-    /// @notice Returned when attempting to remove a poster that is not registered.
     error PosterNotFound(address poster);
-
-    /// @notice Returned when attempting to post commitments under a non-active version.
-    error VersionNotActive(bytes32 version);
-
-    /// @notice Returned when a commitment for the given handle already exists under this version.
-    error CommitmentAlreadyExists(bytes32 version, bytes32 handle);
-
-    /// @notice Returned when a zero address is provided where a non-zero address is required.
+    error VersionNotActive(uint64 chainId, bytes32 version);
+    error CommitmentAlreadyExists(uint64 chainId, bytes32 version, bytes32 handle);
     error InvalidAddress();
-
-    /// @notice Returned when the handles and commitHashes arrays have different lengths.
+    error InvalidChainId();
     error LengthMismatch();
-
-    /// @notice Returned when an empty batch is submitted.
     error EmptyBatch();
-
-    /// @notice Returned when a zero commitHash is provided for a handle.
     error ZeroCommitHash(bytes32 handle);
-
-    /// @notice Returned when an invalid version status transition is attempted.
-    error InvalidVersionTransition(bytes32 version, VersionStatus current, VersionStatus target);
+    error InvalidVersionTransition(uint64 chainId, bytes32 version, VersionStatus current, VersionStatus target);
 
     /// @custom:storage-location erc7201:cofhe.storage.CommitmentRegistry
     struct CommitmentRegistryStorage {
-        mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash)) commitments;
-        mapping(bytes32 version => bytes32[]) handlesByVersion;
-        mapping(bytes32 version => VersionStatus) versionStatus;
+        mapping(uint64 chainId => mapping(bytes32 version => mapping(bytes32 handle => bytes32 commitHash))) commitments;
+        mapping(uint64 chainId => mapping(bytes32 version => bytes32[])) handles;
+        mapping(uint64 chainId => mapping(bytes32 version => VersionStatus)) versionStatus;
         mapping(address => bool) posters;
     }
 
@@ -50,20 +43,30 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
     bytes32 private constant STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("cofhe.storage.CommitmentRegistry")) - 1)) & ~bytes32(uint256(0xff));
 
-    event CommitmentsPosted(bytes32 indexed version, uint256 batchSize);
-    /// @notice Emitted by `postCommitmentsSafe` when a handle is skipped because
-    /// it was already committed under this version. `newlyPosted` is the count
-    /// of handles that actually got written (i.e. `handles.length - skipped`).
-    event CommitmentsPostedSafe(bytes32 indexed version, uint256 newlyPosted, uint256 skipped);
-    event VersionStatusChanged(bytes32 indexed version, VersionStatus oldStatus, VersionStatus newStatus);
+    event CommitmentsPosted(uint64 indexed chainId, bytes32 indexed version, uint256 batchSize);
+    /// @notice Emitted by `postCommitmentsSafe` when some handles were already
+    /// committed under (chainId, version) and silently skipped.
+    event CommitmentsPostedSafe(uint64 indexed chainId, bytes32 indexed version, uint256 newlyPosted, uint256 skipped);
+    /// @notice Emitted by `postCommitmentsSafe` when an existing handle is
+    /// re-posted with a *different* commitHash than the one already stored.
+    /// The function still skips silently (per its idempotent contract) — this
+    /// event surfaces the disagreement so off-chain monitoring can detect
+    /// commitment drift between producers (e.g. two engine instances racing
+    /// after a key rotation, or a producer bug).
+    event CommitmentMismatchSkipped(
+        uint64 indexed chainId,
+        bytes32 indexed version,
+        bytes32 indexed handle,
+        bytes32 stored,
+        bytes32 attempted
+    );
+    event VersionStatusChanged(uint64 indexed chainId, bytes32 indexed version, VersionStatus oldStatus, VersionStatus newStatus);
     event PosterAdded(address indexed poster);
     event PosterRemoved(address indexed poster);
 
     modifier onlyPoster() {
         CommitmentRegistryStorage storage $ = _getStorage();
-        if (!$.posters[msg.sender]) {
-            revert OnlyPosterAllowed(msg.sender);
-        }
+        if (!$.posters[msg.sender]) revert OnlyPosterAllowed(msg.sender);
         _;
     }
 
@@ -84,75 +87,80 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
     }
 
     function postCommitments(
+        uint64 chainId,
         bytes32 version,
-        bytes32[] calldata handles,
+        bytes32[] calldata handlesArr,
         bytes32[] calldata commitHashes
     ) external onlyPoster {
-        uint256 len = handles.length;
+        if (chainId == 0) revert InvalidChainId();
+        uint256 len = handlesArr.length;
         if (len == 0) revert EmptyBatch();
         if (len != commitHashes.length) revert LengthMismatch();
 
         CommitmentRegistryStorage storage $ = _getStorage();
 
-        if ($.versionStatus[version] != VersionStatus.Active) {
-            revert VersionNotActive(version);
+        if ($.versionStatus[chainId][version] != VersionStatus.Active) {
+            revert VersionNotActive(chainId, version);
         }
 
-        mapping(bytes32 => bytes32) storage versionMap = $.commitments[version];
+        mapping(bytes32 => bytes32) storage commitMap = $.commitments[chainId][version];
+        bytes32[] storage handleList = $.handles[chainId][version];
 
         for (uint256 i = 0; i < len; ) {
-            bytes32 handle = handles[i];
+            bytes32 handle = handlesArr[i];
             bytes32 commitHash = commitHashes[i];
             if (commitHash == bytes32(0)) revert ZeroCommitHash(handle);
-            if (versionMap[handle] != bytes32(0)) revert CommitmentAlreadyExists(version, handle);
-            versionMap[handle] = commitHash;
-            $.handlesByVersion[version].push(handle);
+            if (commitMap[handle] != bytes32(0)) revert CommitmentAlreadyExists(chainId, version, handle);
+            commitMap[handle] = commitHash;
+            handleList.push(handle);
             unchecked { ++i; }
         }
-        emit CommitmentsPosted(version, len);
+        emit CommitmentsPosted(chainId, version, len);
     }
 
     /// @notice Idempotent variant of `postCommitments`. Handles already committed
-    /// under this version are silently skipped instead of reverting the batch.
-    /// Useful for callers (e.g. blockchain-poster) where the same handle may
-    /// arrive in multiple flushes due to deterministic FHE outputs or message
-    /// redeliveries — the on-chain end state is identical either way, and the
-    /// caller would rather make progress than roll back the whole batch.
-    ///
-    /// `ZeroCommitHash` and `LengthMismatch` still revert (those indicate caller
-    /// bugs, not duplicates). `VersionNotActive`, `EmptyBatch` likewise.
+    /// under (chainId, version) are silently skipped instead of reverting the
+    /// batch. Useful when the same handle may arrive across multiple flushes
+    /// due to deterministic FHE outputs or message redeliveries.
     function postCommitmentsSafe(
+        uint64 chainId,
         bytes32 version,
-        bytes32[] calldata handles,
+        bytes32[] calldata handlesArr,
         bytes32[] calldata commitHashes
     ) external onlyPoster {
-        uint256 len = handles.length;
+        if (chainId == 0) revert InvalidChainId();
+        uint256 len = handlesArr.length;
         if (len == 0) revert EmptyBatch();
         if (len != commitHashes.length) revert LengthMismatch();
 
         CommitmentRegistryStorage storage $ = _getStorage();
 
-        if ($.versionStatus[version] != VersionStatus.Active) {
-            revert VersionNotActive(version);
+        if ($.versionStatus[chainId][version] != VersionStatus.Active) {
+            revert VersionNotActive(chainId, version);
         }
 
-        mapping(bytes32 => bytes32) storage versionMap = $.commitments[version];
+        mapping(bytes32 => bytes32) storage commitMap = $.commitments[chainId][version];
+        bytes32[] storage handleList = $.handles[chainId][version];
 
         uint256 newlyPosted = 0;
         for (uint256 i = 0; i < len; ) {
-            bytes32 handle = handles[i];
+            bytes32 handle = handlesArr[i];
             bytes32 commitHash = commitHashes[i];
             if (commitHash == bytes32(0)) revert ZeroCommitHash(handle);
-            if (versionMap[handle] == bytes32(0)) {
-                versionMap[handle] = commitHash;
-                $.handlesByVersion[version].push(handle);
+            bytes32 stored = commitMap[handle];
+            if (stored == bytes32(0)) {
+                commitMap[handle] = commitHash;
+                handleList.push(handle);
                 unchecked { ++newlyPosted; }
+            } else if (stored != commitHash) {
+                // Idempotent skip is intentional, but a *disagreeing* re-post
+                // is a producer-side bug or rotation race the operator needs
+                // to see. Strictly-equal redeliveries stay silent.
+                emit CommitmentMismatchSkipped(chainId, version, handle, stored, commitHash);
             }
-            // else: handle already committed — silently skip. The desired end
-            // state (commitment recorded under (version, handle)) is unchanged.
             unchecked { ++i; }
         }
-        emit CommitmentsPostedSafe(version, newlyPosted, len - newlyPosted);
+        emit CommitmentsPostedSafe(chainId, version, newlyPosted, len - newlyPosted);
     }
 
     function addPoster(address poster) external onlyOwner {
@@ -171,9 +179,14 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         emit PosterRemoved(poster);
     }
 
-    function setVersionStatus(bytes32 version, VersionStatus newStatus) external onlyOwner {
+    /// @notice Owner-managed lifecycle for (chainId, version) pairs. Multiple
+    /// versions per chain may be Active simultaneously to support rotation
+    /// overlap (deploy v2 alongside v1, drain in-flight v1 work, then deprecate
+    /// v1) — the contract does not enforce a single-Active invariant.
+    function setVersionStatus(uint64 chainId, bytes32 version, VersionStatus newStatus) external onlyOwner {
+        if (chainId == 0) revert InvalidChainId();
         CommitmentRegistryStorage storage $ = _getStorage();
-        VersionStatus current = $.versionStatus[version];
+        VersionStatus current = $.versionStatus[chainId][version];
 
         // Allowed transitions:
         // Unset -> Active
@@ -186,32 +199,34 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
                        (current == VersionStatus.Deprecated && newStatus == VersionStatus.Revoked);
 
         if (!allowed) {
-            revert InvalidVersionTransition(version, current, newStatus);
+            revert InvalidVersionTransition(chainId, version, current, newStatus);
         }
 
-        $.versionStatus[version] = newStatus;
-        emit VersionStatusChanged(version, current, newStatus);
+        $.versionStatus[chainId][version] = newStatus;
+        emit VersionStatusChanged(chainId, version, current, newStatus);
     }
 
-    function getCommitment(bytes32 version, bytes32 handle) external view returns (bytes32) {
-        return _getStorage().commitments[version][handle];
+    function getCommitment(uint64 chainId, bytes32 version, bytes32 handle) external view returns (bytes32) {
+        return _getStorage().commitments[chainId][version][handle];
     }
 
-    function getVersionStatus(bytes32 version) external view returns (VersionStatus) {
-        return _getStorage().versionStatus[version];
+    function getVersionStatus(uint64 chainId, bytes32 version) external view returns (VersionStatus) {
+        return _getStorage().versionStatus[chainId][version];
     }
 
-    function getSize(bytes32 version) external view returns (uint256) {
-        return _getStorage().handlesByVersion[version].length;
+    function getSize(uint64 chainId, bytes32 version) external view returns (uint256) {
+        return _getStorage().handles[chainId][version].length;
     }
 
-    function getHandleByIndex(bytes32 version, uint256 index) external view returns (bytes32) {
-        return _getStorage().handlesByVersion[version][index];
+    function getHandleByIndex(uint64 chainId, bytes32 version, uint256 index) external view returns (bytes32) {
+        return _getStorage().handles[chainId][version][index];
     }
 
-    function getHandles(bytes32 version, uint256 offset, uint256 limit) external view returns (bytes32[] memory) {
+    function getHandles(uint64 chainId, bytes32 version, uint256 offset, uint256 limit)
+        external view returns (bytes32[] memory)
+    {
         CommitmentRegistryStorage storage $ = _getStorage();
-        bytes32[] storage allHandles = $.handlesByVersion[version];
+        bytes32[] storage allHandles = $.handles[chainId][version];
         uint256 total = allHandles.length;
         if (offset >= total) return new bytes32[](0);
         uint256 end = offset + limit;

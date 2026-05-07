@@ -17,6 +17,8 @@ const VersionStatus = {
 export function shouldBehaveLikeCommitmentRegistry(): void {
   const VERSION_1 = ethers.keccak256(ethers.toUtf8Bytes("version-1"));
   const VERSION_2 = ethers.keccak256(ethers.toUtf8Bytes("version-2"));
+  const CHAIN_A = 412346n;
+  const CHAIN_B = 420105n;
 
   // ── Initialization ──────────────────────────────────────────────────
 
@@ -72,106 +74,129 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     });
   });
 
-  // ── Version Lifecycle ───────────────────────────────────────────────
+  // ── Version Lifecycle (per-chain) ───────────────────────────────────
 
   describe("Version Lifecycle", function () {
-    it("should start with Unset status for unknown versions", async function () {
-      expect(await this.registry.getVersionStatus(VERSION_1)).to.equal(VersionStatus.Unset);
+    it("should start with Unset status for unknown (chainId, version)", async function () {
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Unset);
     });
 
     it("should allow Unset -> Active", async function () {
-      await expect(this.registry.setVersionStatus(VERSION_1, VersionStatus.Active))
+      await expect(this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active))
         .to.emit(this.registry, "VersionStatusChanged")
-        .withArgs(VERSION_1, VersionStatus.Unset, VersionStatus.Active);
-      expect(await this.registry.getVersionStatus(VERSION_1)).to.equal(VersionStatus.Active);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Unset, VersionStatus.Active);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Active);
     });
 
     it("should allow Active -> Deprecated", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
-      await expect(this.registry.setVersionStatus(VERSION_1, VersionStatus.Deprecated))
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await expect(this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated))
         .to.emit(this.registry, "VersionStatusChanged")
-        .withArgs(VERSION_1, VersionStatus.Active, VersionStatus.Deprecated);
-      expect(await this.registry.getVersionStatus(VERSION_1)).to.equal(VersionStatus.Deprecated);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Active, VersionStatus.Deprecated);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Deprecated);
     });
 
     it("should allow Active -> Revoked", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
-      await expect(this.registry.setVersionStatus(VERSION_1, VersionStatus.Revoked))
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await expect(this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Revoked))
         .to.emit(this.registry, "VersionStatusChanged")
-        .withArgs(VERSION_1, VersionStatus.Active, VersionStatus.Revoked);
-      expect(await this.registry.getVersionStatus(VERSION_1)).to.equal(VersionStatus.Revoked);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Active, VersionStatus.Revoked);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Revoked);
     });
 
     it("should allow Deprecated -> Revoked", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Deprecated);
-      await expect(this.registry.setVersionStatus(VERSION_1, VersionStatus.Revoked))
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated);
+      await expect(this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Revoked))
         .to.emit(this.registry, "VersionStatusChanged")
-        .withArgs(VERSION_1, VersionStatus.Deprecated, VersionStatus.Revoked);
-      expect(await this.registry.getVersionStatus(VERSION_1)).to.equal(VersionStatus.Revoked);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Deprecated, VersionStatus.Revoked);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Revoked);
     });
 
     it("should revert on Unset -> Unset", async function () {
       await expect(
-        this.registry.setVersionStatus(VERSION_1, VersionStatus.Unset)
+        this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Unset)
       ).to.be.revertedWithCustomError(this.registry, "InvalidVersionTransition")
-        .withArgs(VERSION_1, VersionStatus.Unset, VersionStatus.Unset);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Unset, VersionStatus.Unset);
     });
 
     it("should revert on Unset -> Deprecated", async function () {
       await expect(
-        this.registry.setVersionStatus(VERSION_1, VersionStatus.Deprecated)
+        this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated)
       ).to.be.revertedWithCustomError(this.registry, "InvalidVersionTransition")
-        .withArgs(VERSION_1, VersionStatus.Unset, VersionStatus.Deprecated);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Unset, VersionStatus.Deprecated);
     });
 
     it("should revert on Unset -> Revoked", async function () {
       await expect(
-        this.registry.setVersionStatus(VERSION_1, VersionStatus.Revoked)
+        this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Revoked)
       ).to.be.revertedWithCustomError(this.registry, "InvalidVersionTransition")
-        .withArgs(VERSION_1, VersionStatus.Unset, VersionStatus.Revoked);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Unset, VersionStatus.Revoked);
     });
 
     it("should revert on Deprecated -> Active (no resurrection)", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Deprecated);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated);
       await expect(
-        this.registry.setVersionStatus(VERSION_1, VersionStatus.Active)
+        this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active)
       ).to.be.revertedWithCustomError(this.registry, "InvalidVersionTransition")
-        .withArgs(VERSION_1, VersionStatus.Deprecated, VersionStatus.Active);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Deprecated, VersionStatus.Active);
     });
 
     it("should revert on Revoked -> Active (no resurrection)", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Revoked);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Revoked);
       await expect(
-        this.registry.setVersionStatus(VERSION_1, VersionStatus.Active)
+        this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active)
       ).to.be.revertedWithCustomError(this.registry, "InvalidVersionTransition")
-        .withArgs(VERSION_1, VersionStatus.Revoked, VersionStatus.Active);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Revoked, VersionStatus.Active);
     });
 
     it("should revert on Revoked -> Deprecated", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Revoked);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Revoked);
       await expect(
-        this.registry.setVersionStatus(VERSION_1, VersionStatus.Deprecated)
+        this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated)
       ).to.be.revertedWithCustomError(this.registry, "InvalidVersionTransition")
-        .withArgs(VERSION_1, VersionStatus.Revoked, VersionStatus.Deprecated);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Revoked, VersionStatus.Deprecated);
     });
 
     it("should revert on Active -> Active (no-op)", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       await expect(
-        this.registry.setVersionStatus(VERSION_1, VersionStatus.Active)
+        this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active)
       ).to.be.revertedWithCustomError(this.registry, "InvalidVersionTransition")
-        .withArgs(VERSION_1, VersionStatus.Active, VersionStatus.Active);
+        .withArgs(CHAIN_A, VERSION_1, VersionStatus.Active, VersionStatus.Active);
     });
 
     it("should revert when non-owner sets version status", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.setVersionStatus(VERSION_1, VersionStatus.Active)
+        registryAsPoster.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active)
       ).to.be.revertedWithCustomError(this.registry, "OwnableUnauthorizedAccount");
+    });
+
+    it("should keep version lifecycle independent across chains", async function () {
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      // CHAIN_B's V1 status should still be Unset.
+      expect(await this.registry.getVersionStatus(CHAIN_B, VERSION_1)).to.equal(VersionStatus.Unset);
+
+      // Activating on CHAIN_B is a fresh Unset -> Active on its own.
+      await expect(this.registry.setVersionStatus(CHAIN_B, VERSION_1, VersionStatus.Active))
+        .to.emit(this.registry, "VersionStatusChanged")
+        .withArgs(CHAIN_B, VERSION_1, VersionStatus.Unset, VersionStatus.Active);
+
+      // Deprecating on CHAIN_A leaves CHAIN_B Active.
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Deprecated);
+      expect(await this.registry.getVersionStatus(CHAIN_B, VERSION_1)).to.equal(VersionStatus.Active);
+    });
+
+    it("should support multiple Active versions on the same chain (rotation overlap)", async function () {
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_2, VersionStatus.Active);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Active);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_2)).to.equal(VersionStatus.Active);
     });
   });
 
@@ -193,31 +218,31 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     });
 
     it("should revoke access after removing poster", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       await this.registry.removePoster(this.poster.address);
 
       const registryAsOldPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsOldPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsOldPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed");
     });
 
     it("should allow multiple posters to post concurrently", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       await this.registry.addPoster(this.otherAccount.address);
 
       const registryAsPoster1 = this.registry.connect(this.poster);
       const registryAsPoster2 = this.registry.connect(this.otherAccount);
 
       await expect(
-        registryAsPoster1.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsPoster1.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.not.be.reverted;
 
       await expect(
-        registryAsPoster2.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsPoster2.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.not.be.reverted;
 
-      expect(await this.registry.getSize(VERSION_1)).to.equal(2);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(2);
     });
 
     it("should revert when adding a poster that already exists", async function () {
@@ -300,7 +325,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       await registryAsOther.acceptOwnership();
 
       await expect(
-        registryAsOther.setVersionStatus(VERSION_1, VersionStatus.Active)
+        registryAsOther.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active)
       ).to.not.be.reverted;
     });
   });
@@ -309,7 +334,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
   describe("Post Commitments", function () {
     beforeEach(async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
     });
 
     it("should post a single commitment", async function () {
@@ -317,12 +342,12 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const commitHash = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await expect(registryAsPoster.postCommitments(VERSION_1, [handle], [commitHash]))
+      await expect(registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [commitHash]))
         .to.emit(this.registry, "CommitmentsPosted")
-        .withArgs(VERSION_1, 1);
+        .withArgs(CHAIN_A, VERSION_1, 1);
 
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitHash);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(1);
     });
 
     it("should post a batch of 10 commitments", async function () {
@@ -330,14 +355,14 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const commitHashes = Array.from({ length: 10 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await expect(registryAsPoster.postCommitments(VERSION_1, handles, commitHashes))
+      await expect(registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes))
         .to.emit(this.registry, "CommitmentsPosted")
-        .withArgs(VERSION_1, 10);
+        .withArgs(CHAIN_A, VERSION_1, 10);
 
       for (let i = 0; i < 10; i++) {
-        expect(await this.registry.getCommitment(VERSION_1, handles[i])).to.equal(commitHashes[i]);
+        expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handles[i])).to.equal(commitHashes[i]);
       }
-      expect(await this.registry.getSize(VERSION_1)).to.equal(10);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(10);
     });
 
     it("should post a batch of 50 commitments", async function () {
@@ -345,13 +370,13 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const commitHashes = Array.from({ length: 50 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await expect(registryAsPoster.postCommitments(VERSION_1, handles, commitHashes))
+      await expect(registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes))
         .to.emit(this.registry, "CommitmentsPosted")
-        .withArgs(VERSION_1, 50);
+        .withArgs(CHAIN_A, VERSION_1, 50);
 
-      expect(await this.registry.getCommitment(VERSION_1, handles[0])).to.equal(commitHashes[0]);
-      expect(await this.registry.getCommitment(VERSION_1, handles[49])).to.equal(commitHashes[49]);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(50);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handles[0])).to.equal(commitHashes[0]);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handles[49])).to.equal(commitHashes[49]);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(50);
     });
 
     it("should accumulate count across multiple batches", async function () {
@@ -359,28 +384,132 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
       const handles1 = Array.from({ length: 5 }, () => randomBytes32());
       const commitHashes1 = Array.from({ length: 5 }, () => randomBytes32());
-      await registryAsPoster.postCommitments(VERSION_1, handles1, commitHashes1);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles1, commitHashes1);
 
       const handles2 = Array.from({ length: 3 }, () => randomBytes32());
       const commitHashes2 = Array.from({ length: 3 }, () => randomBytes32());
-      await registryAsPoster.postCommitments(VERSION_1, handles2, commitHashes2);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles2, commitHashes2);
 
-      expect(await this.registry.getSize(VERSION_1)).to.equal(8);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(8);
     });
 
-    it("should keep versions isolated", async function () {
-      await this.registry.setVersionStatus(VERSION_2, VersionStatus.Active);
+    it("should keep versions isolated within the same chain", async function () {
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_2, VersionStatus.Active);
       const registryAsPoster = this.registry.connect(this.poster);
 
       const handle = randomBytes32();
       const commitHash1 = randomBytes32();
       const commitHash2 = randomBytes32();
 
-      await registryAsPoster.postCommitments(VERSION_1, [handle], [commitHash1]);
-      await registryAsPoster.postCommitments(VERSION_2, [handle], [commitHash2]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [commitHash1]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_2, [handle], [commitHash2]);
 
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash1);
-      expect(await this.registry.getCommitment(VERSION_2, handle)).to.equal(commitHash2);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitHash1);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_2, handle)).to.equal(commitHash2);
+    });
+  });
+
+  // ── Chain Isolation ────────────────────────────────────────────────
+  //
+  // The whole point of chain-scoping the registry: the same handle bytes
+  // posted under chain A and chain B are independent commitments. A lookup
+  // for chain B's handle must NEVER resolve to chain A's commitHash.
+
+  describe("Chain Isolation", function () {
+    beforeEach(async function () {
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_B, VERSION_1, VersionStatus.Active);
+    });
+
+    it("should allow the same handle to coexist on two chains with different commitHashes", async function () {
+      const handle = randomBytes32();
+      const commitA = randomBytes32();
+      const commitB = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [commitA]);
+      await registryAsPoster.postCommitments(CHAIN_B, VERSION_1, [handle], [commitB]);
+
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitA);
+      expect(await this.registry.getCommitment(CHAIN_B, VERSION_1, handle)).to.equal(commitB);
+    });
+
+    it("should not leak handles across chains in getSize", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await registryAsPoster.postCommitments(
+        CHAIN_A, VERSION_1, [randomBytes32(), randomBytes32()], [randomBytes32(), randomBytes32()]
+      );
+      await registryAsPoster.postCommitments(
+        CHAIN_B, VERSION_1, [randomBytes32()], [randomBytes32()]
+      );
+
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(2);
+      expect(await this.registry.getSize(CHAIN_B, VERSION_1)).to.equal(1);
+    });
+
+    it("should not leak handles across chains in getHandles", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      const handlesA = [randomBytes32(), randomBytes32()];
+      const handlesB = [randomBytes32()];
+      await registryAsPoster.postCommitments(
+        CHAIN_A, VERSION_1, handlesA, [randomBytes32(), randomBytes32()]
+      );
+      await registryAsPoster.postCommitments(
+        CHAIN_B, VERSION_1, handlesB, [randomBytes32()]
+      );
+
+      const pageA = await this.registry.getHandles(CHAIN_A, VERSION_1, 0, 10);
+      const pageB = await this.registry.getHandles(CHAIN_B, VERSION_1, 0, 10);
+
+      expect(pageA).to.deep.equal(handlesA);
+      expect(pageB).to.deep.equal(handlesB);
+    });
+
+    it("should require activation per (chainId, version) — chain B Unset reverts even if chain A is Active", async function () {
+      // CHAIN_A is Active for VERSION_2? No. Activate only on CHAIN_A.
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_2, VersionStatus.Active);
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      // Posting under (CHAIN_B, VERSION_2) should still fail — CHAIN_B has no V2.
+      await expect(
+        registryAsPoster.postCommitments(CHAIN_B, VERSION_2, [randomBytes32()], [randomBytes32()])
+      )
+        .to.be.revertedWithCustomError(this.registry, "VersionNotActive")
+        .withArgs(CHAIN_B, VERSION_2);
+    });
+
+    it("should reject chainId 0 in postCommitments", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.postCommitments(0n, VERSION_1, [randomBytes32()], [randomBytes32()])
+      ).to.be.revertedWithCustomError(this.registry, "InvalidChainId");
+    });
+
+    it("should reject chainId 0 in postCommitmentsSafe", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.postCommitmentsSafe(0n, VERSION_1, [randomBytes32()], [randomBytes32()])
+      ).to.be.revertedWithCustomError(this.registry, "InvalidChainId");
+    });
+
+    it("should reject chainId 0 in setVersionStatus (defense-in-depth)", async function () {
+      // Without this, an owner could activate chainId 0 and unlock writes
+      // under it — invariant relies on hard rejection at every entry point.
+      await expect(
+        this.registry.setVersionStatus(0n, VERSION_1, VersionStatus.Active)
+      ).to.be.revertedWithCustomError(this.registry, "InvalidChainId");
+    });
+
+    it("should not let a duplicate handle on chain B revert chain A's prior commitment", async function () {
+      const handle = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [randomBytes32()]);
+
+      // Same handle on CHAIN_B is a fresh write, not a duplicate.
+      await expect(
+        registryAsPoster.postCommitments(CHAIN_B, VERSION_1, [handle], [randomBytes32()])
+      ).to.not.be.reverted;
     });
   });
 
@@ -388,19 +517,19 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
   describe("Write-Once Enforcement", function () {
     beforeEach(async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
     });
 
     it("should revert when overwriting an existing commitment", async function () {
       const handle = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await registryAsPoster.postCommitments(VERSION_1, [handle], [randomBytes32()]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [randomBytes32()]);
 
       await expect(
-        registryAsPoster.postCommitments(VERSION_1, [handle], [randomBytes32()])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "CommitmentAlreadyExists")
-        .withArgs(VERSION_1, handle);
+        .withArgs(CHAIN_A, VERSION_1, handle);
     });
 
     it("should revert entire batch if any handle is duplicate (existing)", async function () {
@@ -408,20 +537,20 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const handle2 = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await registryAsPoster.postCommitments(VERSION_1, [handle1], [randomBytes32()]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle1], [randomBytes32()]);
 
       // Batch with handle1 (existing) and handle2 (new) should revert entirely
       await expect(
         registryAsPoster.postCommitments(
-          VERSION_1,
+          CHAIN_A, VERSION_1,
           [handle1, handle2],
           [randomBytes32(), randomBytes32()]
         )
       ).to.be.revertedWithCustomError(this.registry, "CommitmentAlreadyExists")
-        .withArgs(VERSION_1, handle1);
+        .withArgs(CHAIN_A, VERSION_1, handle1);
 
       // handle2 should NOT have been written since batch reverted
-      expect(await this.registry.getCommitment(VERSION_1, handle2)).to.equal(ethers.ZeroHash);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle2)).to.equal(ethers.ZeroHash);
     });
 
     it("should revert if duplicate handles within same batch", async function () {
@@ -430,12 +559,12 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
       await expect(
         registryAsPoster.postCommitments(
-          VERSION_1,
+          CHAIN_A, VERSION_1,
           [handle, handle],
           [randomBytes32(), randomBytes32()]
         )
       ).to.be.revertedWithCustomError(this.registry, "CommitmentAlreadyExists")
-        .withArgs(VERSION_1, handle);
+        .withArgs(CHAIN_A, VERSION_1, handle);
     });
 
     it("should prevent a second poster from overwriting commitments posted by the first", async function () {
@@ -445,15 +574,15 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const registryAsPoster1 = this.registry.connect(this.poster);
       const registryAsPoster2 = this.registry.connect(this.otherAccount);
 
-      await registryAsPoster1.postCommitments(VERSION_1, [handle], [commitHash]);
+      await registryAsPoster1.postCommitments(CHAIN_A, VERSION_1, [handle], [commitHash]);
 
       await expect(
-        registryAsPoster2.postCommitments(VERSION_1, [handle], [randomBytes32()])
+        registryAsPoster2.postCommitments(CHAIN_A, VERSION_1, [handle], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "CommitmentAlreadyExists")
-        .withArgs(VERSION_1, handle);
+        .withArgs(CHAIN_A, VERSION_1, handle);
 
       // Original commitment is preserved
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitHash);
     });
   });
 
@@ -461,7 +590,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
   describe("Post Commitments Safe", function () {
     beforeEach(async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
     });
 
     it("should write all handles and emit (newlyPosted=N, skipped=0) on first call", async function () {
@@ -469,14 +598,14 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const commitHashes = Array.from({ length: 3 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await expect(registryAsPoster.postCommitmentsSafe(VERSION_1, handles, commitHashes))
+      await expect(registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, handles, commitHashes))
         .to.emit(this.registry, "CommitmentsPostedSafe")
-        .withArgs(VERSION_1, 3, 0);
+        .withArgs(CHAIN_A, VERSION_1, 3, 0);
 
       for (let i = 0; i < 3; i++) {
-        expect(await this.registry.getCommitment(VERSION_1, handles[i])).to.equal(commitHashes[i]);
+        expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handles[i])).to.equal(commitHashes[i]);
       }
-      expect(await this.registry.getSize(VERSION_1)).to.equal(3);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(3);
     });
 
     it("should silently skip already-committed handles", async function () {
@@ -484,18 +613,18 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const original = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [original]);
+      await registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [original]);
 
       // Re-post same handle with a different commit hash — should NOT revert
       // and should NOT overwrite the original.
       await expect(
-        registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()])
+        registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [randomBytes32()])
       )
         .to.emit(this.registry, "CommitmentsPostedSafe")
-        .withArgs(VERSION_1, 0, 1);
+        .withArgs(CHAIN_A, VERSION_1, 0, 1);
 
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(original);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(original);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(1);
     });
 
     it("should write only new handles in a mixed batch", async function () {
@@ -505,26 +634,26 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const existingCommit = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await registryAsPoster.postCommitmentsSafe(VERSION_1, [existingHandle], [existingCommit]);
+      await registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [existingHandle], [existingCommit]);
 
       const newCommit1 = randomBytes32();
       const newCommit2 = randomBytes32();
       await expect(
         registryAsPoster.postCommitmentsSafe(
-          VERSION_1,
+          CHAIN_A, VERSION_1,
           [existingHandle, newHandle1, newHandle2],
           [randomBytes32(), newCommit1, newCommit2]
         )
       )
         .to.emit(this.registry, "CommitmentsPostedSafe")
-        .withArgs(VERSION_1, 2, 1);
+        .withArgs(CHAIN_A, VERSION_1, 2, 1);
 
       // existing one preserved
-      expect(await this.registry.getCommitment(VERSION_1, existingHandle)).to.equal(existingCommit);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, existingHandle)).to.equal(existingCommit);
       // new ones written
-      expect(await this.registry.getCommitment(VERSION_1, newHandle1)).to.equal(newCommit1);
-      expect(await this.registry.getCommitment(VERSION_1, newHandle2)).to.equal(newCommit2);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(3);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, newHandle1)).to.equal(newCommit1);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, newHandle2)).to.equal(newCommit2);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(3);
     });
 
     it("should dedup duplicate handles within the same batch", async function () {
@@ -535,16 +664,16 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       // Same handle three times in one call — should write once, skip twice.
       await expect(
         registryAsPoster.postCommitmentsSafe(
-          VERSION_1,
+          CHAIN_A, VERSION_1,
           [handle, handle, handle],
           [commitHash, randomBytes32(), randomBytes32()]
         )
       )
         .to.emit(this.registry, "CommitmentsPostedSafe")
-        .withArgs(VERSION_1, 1, 2);
+        .withArgs(CHAIN_A, VERSION_1, 1, 2);
 
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitHash);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(1);
     });
 
     it("should still revert on zero commitHash", async function () {
@@ -552,7 +681,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const registryAsPoster = this.registry.connect(this.poster);
 
       await expect(
-        registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [ethers.ZeroHash])
+        registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [ethers.ZeroHash])
       )
         .to.be.revertedWithCustomError(this.registry, "ZeroCommitHash")
         .withArgs(handle);
@@ -561,7 +690,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     it("should still revert on empty batch", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitmentsSafe(VERSION_1, [], [])
+        registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [], [])
       ).to.be.revertedWithCustomError(this.registry, "EmptyBatch");
     });
 
@@ -569,40 +698,75 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
         registryAsPoster.postCommitmentsSafe(
-          VERSION_1,
+          CHAIN_A, VERSION_1,
           [randomBytes32()],
           [randomBytes32(), randomBytes32()]
         )
       ).to.be.revertedWithCustomError(this.registry, "LengthMismatch");
     });
 
-    it("should revert when version is not active", async function () {
+    it("should revert when version is not active on this chain", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitmentsSafe(VERSION_2, [randomBytes32()], [randomBytes32()])
+        registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_2, [randomBytes32()], [randomBytes32()])
       )
         .to.be.revertedWithCustomError(this.registry, "VersionNotActive")
-        .withArgs(VERSION_2);
+        .withArgs(CHAIN_A, VERSION_2);
     });
 
     it("should revert when caller is not a poster", async function () {
       const registryAsOther = this.registry.connect(this.otherAccount);
       await expect(
-        registryAsOther.postCommitmentsSafe(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsOther.postCommitmentsSafe(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       )
         .to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed")
         .withArgs(this.otherAccount.address);
     });
 
-    it("should not double-count handles in handlesByVersion when re-posted", async function () {
+    it("should not double-count handles in the per-(chainId, version) index when re-posted", async function () {
       const handle = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
 
-      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()]);
-      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()]);
-      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()]);
+      await registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [randomBytes32()]);
+      await registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [randomBytes32()]);
+      await registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [randomBytes32()]);
 
-      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(1);
+    });
+
+    it("should emit CommitmentMismatchSkipped when re-post has a DIFFERENT commitHash", async function () {
+      const handle = randomBytes32();
+      const original = randomBytes32();
+      const conflicting = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [original]);
+
+      // Different commitHash for same handle → silently skipped, but the
+      // disagreement must surface as an event for off-chain monitoring.
+      await expect(
+        registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [conflicting])
+      )
+        .to.emit(this.registry, "CommitmentMismatchSkipped")
+        .withArgs(CHAIN_A, VERSION_1, handle, original, conflicting)
+        .and.to.emit(this.registry, "CommitmentsPostedSafe")
+        .withArgs(CHAIN_A, VERSION_1, 0, 1);
+
+      // Stored value is unchanged.
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(original);
+    });
+
+    it("should NOT emit CommitmentMismatchSkipped when re-post has the SAME commitHash", async function () {
+      const handle = randomBytes32();
+      const commitHash = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [commitHash]);
+
+      // Identical re-delivery (the common case) must stay quiet.
+      await expect(
+        registryAsPoster.postCommitmentsSafe(CHAIN_A, VERSION_1, [handle], [commitHash])
+      ).to.not.emit(this.registry, "CommitmentMismatchSkipped");
     });
   });
 
@@ -610,20 +774,20 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
   describe("Access Control", function () {
     beforeEach(async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
     });
 
     it("should revert when non-poster posts commitments", async function () {
       const registryAsOther = this.registry.connect(this.otherAccount);
       await expect(
-        registryAsOther.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsOther.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed")
         .withArgs(this.otherAccount.address);
     });
 
     it("should revert when owner (non-poster) posts commitments", async function () {
       await expect(
-        this.registry.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        this.registry.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed");
     });
 
@@ -631,7 +795,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       await this.registry.removePoster(this.poster.address);
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed")
         .withArgs(this.poster.address);
     });
@@ -641,20 +805,20 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
   describe("Input Validation", function () {
     beforeEach(async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
     });
 
     it("should revert on empty batch", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitments(VERSION_1, [], [])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [], [])
       ).to.be.revertedWithCustomError(this.registry, "EmptyBatch");
     });
 
     it("should revert on length mismatch", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32(), randomBytes32()])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32(), randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "LengthMismatch");
     });
 
@@ -662,7 +826,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const handle = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitments(VERSION_1, [handle], [ethers.ZeroHash])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [ethers.ZeroHash])
       ).to.be.revertedWithCustomError(this.registry, "ZeroCommitHash")
         .withArgs(handle);
     });
@@ -675,7 +839,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
       await expect(
         registryAsPoster.postCommitments(
-          VERSION_1,
+          CHAIN_A, VERSION_1,
           [handle1, handle2, handle3],
           [randomBytes32(), ethers.ZeroHash, randomBytes32()]
         )
@@ -683,33 +847,33 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
         .withArgs(handle2);
 
       // First item should not be persisted due to revert
-      expect(await this.registry.getCommitment(VERSION_1, handle1)).to.equal(ethers.ZeroHash);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle1)).to.equal(ethers.ZeroHash);
     });
 
     it("should revert when version is not Active (Unset)", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitments(VERSION_2, [randomBytes32()], [randomBytes32()])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_2, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "VersionNotActive")
-        .withArgs(VERSION_2);
+        .withArgs(CHAIN_A, VERSION_2);
     });
 
     it("should revert when version is Deprecated", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Deprecated);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated);
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "VersionNotActive")
-        .withArgs(VERSION_1);
+        .withArgs(CHAIN_A, VERSION_1);
     });
 
     it("should revert when version is Revoked", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Revoked);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Revoked);
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
-        registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
+        registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "VersionNotActive")
-        .withArgs(VERSION_1);
+        .withArgs(CHAIN_A, VERSION_1);
     });
   });
 
@@ -717,42 +881,42 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
   describe("View Functions", function () {
     it("should return zero hash for non-existent commitment", async function () {
-      expect(await this.registry.getCommitment(VERSION_1, randomBytes32())).to.equal(ethers.ZeroHash);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, randomBytes32())).to.equal(ethers.ZeroHash);
     });
 
-    it("should return zero size for unused version", async function () {
-      expect(await this.registry.getSize(VERSION_1)).to.equal(0);
+    it("should return zero size for unused (chainId, version)", async function () {
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(0);
     });
 
     it("should still return commitments after version is Deprecated", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const handle = randomBytes32();
       const commitHash = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, [handle], [commitHash]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [commitHash]);
 
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Deprecated);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Deprecated);
 
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitHash);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(1);
     });
 
     it("should return handles with getHandles pagination", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const handles = Array.from({ length: 10 }, () => randomBytes32());
       const commitHashes = Array.from({ length: 10 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes);
 
       // First page
-      const page1 = await this.registry.getHandles(VERSION_1, 0, 5);
+      const page1 = await this.registry.getHandles(CHAIN_A, VERSION_1, 0, 5);
       expect(page1.length).to.equal(5);
       for (let i = 0; i < 5; i++) {
         expect(page1[i]).to.equal(handles[i]);
       }
 
       // Second page
-      const page2 = await this.registry.getHandles(VERSION_1, 5, 5);
+      const page2 = await this.registry.getHandles(CHAIN_A, VERSION_1, 5, 5);
       expect(page2.length).to.equal(5);
       for (let i = 0; i < 5; i++) {
         expect(page2[i]).to.equal(handles[5 + i]);
@@ -760,58 +924,58 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     });
 
     it("should return empty array when offset exceeds total", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()]);
 
-      const result = await this.registry.getHandles(VERSION_1, 100, 10);
+      const result = await this.registry.getHandles(CHAIN_A, VERSION_1, 100, 10);
       expect(result.length).to.equal(0);
     });
 
     it("should clamp limit when it exceeds remaining items", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const handles = Array.from({ length: 3 }, () => randomBytes32());
       const commitHashes = Array.from({ length: 3 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes);
 
-      const result = await this.registry.getHandles(VERSION_1, 1, 100);
+      const result = await this.registry.getHandles(CHAIN_A, VERSION_1, 1, 100);
       expect(result.length).to.equal(2);
       expect(result[0]).to.equal(handles[1]);
       expect(result[1]).to.equal(handles[2]);
     });
 
     it("should return handle by index", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const handles = Array.from({ length: 5 }, () => randomBytes32());
       const commitHashes = Array.from({ length: 5 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes);
 
       for (let i = 0; i < 5; i++) {
-        expect(await this.registry.getHandleByIndex(VERSION_1, i)).to.equal(handles[i]);
+        expect(await this.registry.getHandleByIndex(CHAIN_A, VERSION_1, i)).to.equal(handles[i]);
       }
     });
 
     it("should revert when getHandleByIndex is out of bounds", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()]);
 
-      await expect(this.registry.getHandleByIndex(VERSION_1, 1)).to.be.reverted;
+      await expect(this.registry.getHandleByIndex(CHAIN_A, VERSION_1, 1)).to.be.reverted;
     });
 
     it("should still return commitments after version is Revoked", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const handle = randomBytes32();
       const commitHash = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, [handle], [commitHash]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [commitHash]);
 
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Revoked);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Revoked);
 
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitHash);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(1);
     });
   });
 
@@ -819,12 +983,12 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
   describe("Gas Measurement", function () {
     beforeEach(async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
     });
 
     it("GAS: post 1 commitment", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
-      const tx = await registryAsPoster.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()]);
+      const tx = await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [randomBytes32()], [randomBytes32()]);
       const receipt = await tx.wait();
       console.log(`    Gas used (1 commitment): ${receipt.gasUsed.toString()}`);
     });
@@ -833,7 +997,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const handles = Array.from({ length: 10 }, () => randomBytes32());
       const commitHashes = Array.from({ length: 10 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
-      const tx = await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+      const tx = await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes);
       const receipt = await tx.wait();
       console.log(`    Gas used (10 commitments): ${receipt.gasUsed.toString()}`);
       console.log(`    Gas per commitment: ${(Number(receipt.gasUsed) / 10).toFixed(0)}`);
@@ -843,7 +1007,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const handles = Array.from({ length: 25 }, () => randomBytes32());
       const commitHashes = Array.from({ length: 25 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
-      const tx = await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+      const tx = await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes);
       const receipt = await tx.wait();
       console.log(`    Gas used (25 commitments): ${receipt.gasUsed.toString()}`);
       console.log(`    Gas per commitment: ${(Number(receipt.gasUsed) / 25).toFixed(0)}`);
@@ -853,7 +1017,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const handles = Array.from({ length: 50 }, () => randomBytes32());
       const commitHashes = Array.from({ length: 50 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
-      const tx = await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+      const tx = await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes);
       const receipt = await tx.wait();
       console.log(`    Gas used (50 commitments): ${receipt.gasUsed.toString()}`);
       console.log(`    Gas per commitment: ${(Number(receipt.gasUsed) / 50).toFixed(0)}`);
@@ -863,7 +1027,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const handles = Array.from({ length: 100 }, () => randomBytes32());
       const commitHashes = Array.from({ length: 100 }, () => randomBytes32());
       const registryAsPoster = this.registry.connect(this.poster);
-      const tx = await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+      const tx = await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, handles, commitHashes);
       const receipt = await tx.wait();
       console.log(`    Gas used (100 commitments): ${receipt.gasUsed.toString()}`);
       console.log(`    Gas per commitment: ${(Number(receipt.gasUsed) / 100).toFixed(0)}`);
@@ -873,20 +1037,20 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const handle = randomBytes32();
       const commitHash = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, [handle], [commitHash]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [commitHash]);
 
-      const gasEstimate = await this.registry.getCommitment.estimateGas(VERSION_1, handle);
+      const gasEstimate = await this.registry.getCommitment.estimateGas(CHAIN_A, VERSION_1, handle);
       console.log(`    Gas estimate (getCommitment): ${gasEstimate.toString()}`);
     });
 
     it("GAS: getSize read", async function () {
-      const gasEstimate = await this.registry.getSize.estimateGas(VERSION_1);
+      const gasEstimate = await this.registry.getSize.estimateGas(CHAIN_A, VERSION_1);
       console.log(`    Gas estimate (getSize): ${gasEstimate.toString()}`);
     });
 
     it("GAS: setVersionStatus", async function () {
       const version = randomBytes32();
-      const tx = await this.registry.setVersionStatus(version, VersionStatus.Active);
+      const tx = await this.registry.setVersionStatus(CHAIN_A, version, VersionStatus.Active);
       const receipt = await tx.wait();
       console.log(`    Gas used (setVersionStatus): ${receipt.gasUsed.toString()}`);
     });
@@ -934,11 +1098,11 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     });
 
     it("should preserve state after upgrade", async function () {
-      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      await this.registry.setVersionStatus(CHAIN_A, VERSION_1, VersionStatus.Active);
       const handle = randomBytes32();
       const commitHash = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
-      await registryAsPoster.postCommitments(VERSION_1, [handle], [commitHash]);
+      await registryAsPoster.postCommitments(CHAIN_A, VERSION_1, [handle], [commitHash]);
 
       // Add a second poster before upgrade
       await this.registry.addPoster(this.otherAccount.address);
@@ -948,9 +1112,9 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       await newImpl.waitForDeployment();
       await this.registry.upgradeToAndCall(await newImpl.getAddress(), "0x");
 
-      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(commitHash);
-      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
-      expect(await this.registry.getVersionStatus(VERSION_1)).to.equal(VersionStatus.Active);
+      expect(await this.registry.getCommitment(CHAIN_A, VERSION_1, handle)).to.equal(commitHash);
+      expect(await this.registry.getSize(CHAIN_A, VERSION_1)).to.equal(1);
+      expect(await this.registry.getVersionStatus(CHAIN_A, VERSION_1)).to.equal(VersionStatus.Active);
       expect(await this.registry.isPoster(this.poster.address)).to.equal(true);
       expect(await this.registry.isPoster(this.otherAccount.address)).to.equal(true);
     });
