@@ -1,3 +1,5 @@
+# Packages
+node_modules/
 
 # Build artifacts (generated)
 contracts/internal/host-chain/bin/solc-output-compile-all.json
