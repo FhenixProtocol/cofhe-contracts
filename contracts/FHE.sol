@@ -2489,7 +2489,7 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An ebool containing the verified encrypted value
-    function asEbool(encryptedEbool hash, bytes memory proof) internal returns (ebool) {
+    function asEbool(externalEbool hash, bytes memory proof) internal returns (ebool) {
         EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EBOOL_TFHE);
         return ebool.wrap(Impl.verifyInput(input));
     }
