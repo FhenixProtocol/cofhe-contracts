@@ -32,6 +32,7 @@ error InvalidAddress();
 error OnlyOwnerAllowed(address caller);
 error OnlyAggregatorAllowed(address caller);
 error CofheIsUnavailable();
+error NotOnAccessList(address caller);
 
 
 // Operation-specific errors
@@ -204,6 +205,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
     event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
     event VerifierSignerChanged(address indexed oldSigner, address indexed newSigner);
+    event AccessListEnabledSet(bool enabled);
+    event AccessGranted(address indexed account);
+    event AccessRevoked(address indexed account);
 
     struct Task {
         address creator;
@@ -240,6 +244,12 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     // When set to address(0), signature verification is skipped (debug mode)
     address public decryptResultSigner;
 
+    // Optional, owner-controlled access list. Off by default (zero after upgrade) so behavior is
+    // unchanged until explicitly enabled. Declared here so the bool packs into the free trailing
+    // bytes of the slot shared with isEnabled/decryptResultSigner; the mapping takes the next slot.
+    bool public accessListEnabled;
+    mapping(address account => bool isAllowed) public accessList;
+
     modifier onlyAggregator() {
         if (!aggregators[msg.sender]) {
             revert OnlyAggregatorAllowed(msg.sender);
@@ -254,12 +264,48 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         _;
     }
 
+    // Gates task intake to allowlisted callers when the access list is enabled.
+    // Short-circuits when disabled, so the mapping is only read while the list is active.
+    modifier onlyAccessListed() {
+        if (accessListEnabled && !accessList[msg.sender]) {
+            revert NotOnAccessList(msg.sender);
+        }
+        _;
+    }
+
     function enable() external onlyOwner {
         isEnabled = true;
     }
 
     function disable() external onlyOwner {
         isEnabled = false;
+    }
+
+    function enableAccessList() external onlyOwner {
+        accessListEnabled = true;
+        emit AccessListEnabledSet(true);
+    }
+
+    function disableAccessList() external onlyOwner {
+        accessListEnabled = false;
+        emit AccessListEnabledSet(false);
+    }
+
+    function addToAccessList(address[] calldata accounts) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            if (accounts[i] == address(0)) {
+                revert InvalidAddress();
+            }
+            accessList[accounts[i]] = true;
+            emit AccessGranted(accounts[i]);
+        }
+    }
+
+    function removeFromAccessList(address[] calldata accounts) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            accessList[accounts[i]] = false;
+            emit AccessRevoked(accounts[i]);
+        }
     }
 
     function sendEventCreated(uint256 ctHash, string memory operation, uint256[] memory inputs) private onlyIfEnabled {
@@ -483,7 +529,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
     }
 
-    function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external returns (uint256) {
+    function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external onlyAccessListed returns (uint256) {
         if (!isValidType(returnType)) {
             revert UnsupportedType(returnType);
         }
@@ -513,7 +559,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
     }
 
-    function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external returns (uint256) {
+    function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external onlyAccessListed returns (uint256) {
         if (funcId == FunctionId.random) {
             revert RandomFunctionNotSupported();
         }
@@ -714,7 +760,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return result;
     }
 
-    function verifyInput(EncryptedInput memory input, address sender) external returns (uint256) {
+    function verifyInput(EncryptedInput memory input, address sender) external onlyAccessListed returns (uint256) {
         int32 securityZone = int32(uint32(input.securityZone));
 
         // When signer is set to 0 address we skip this logic to be able to support debug use cases.
