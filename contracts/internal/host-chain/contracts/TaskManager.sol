@@ -244,9 +244,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     // When set to address(0), signature verification is skipped (debug mode)
     address public decryptResultSigner;
 
-    // Optional, owner-controlled access list. Off by default (zero after upgrade) so behavior is
-    // unchanged until explicitly enabled. Declared here so the bool packs into the free trailing
-    // bytes of the slot shared with isEnabled/decryptResultSigner; the mapping takes the next slot.
+    // Optional, owner-controlled access list, off by default (no behavior change until enabled).
     bool public accessListEnabled;
     mapping(address account => bool isAllowed) public accessList;
 
