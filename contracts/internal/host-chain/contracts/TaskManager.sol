@@ -301,6 +301,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
     function removeFromAccessList(address[] calldata accounts) external onlyOwner {
         for (uint256 i = 0; i < accounts.length; i++) {
+            if (accounts[i] == address(0)) {
+                revert InvalidAddress();
+            }
             accessList[accounts[i]] = false;
             emit AccessRevoked(accounts[i]);
         }

@@ -83,8 +83,10 @@ describe("TaskManager access list", function () {
       .to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
   });
 
-  it("rejects the zero address when adding", async function () {
+  it("rejects the zero address when adding or removing", async function () {
     await expect(taskManager.connect(owner).addToAccessList([hre.ethers.ZeroAddress]))
+      .to.be.revertedWithCustomError(taskManager, "InvalidAddress");
+    await expect(taskManager.connect(owner).removeFromAccessList([hre.ethers.ZeroAddress]))
       .to.be.revertedWithCustomError(taskManager, "InvalidAddress");
   });
 
