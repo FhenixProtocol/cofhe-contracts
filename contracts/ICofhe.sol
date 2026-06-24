@@ -246,13 +246,23 @@ library Utils {
         return v;
     }
 
-    function inputFromHashAndProof(bytes32 hash, bytes memory signature, uint8 utype) internal pure returns (EncryptedInput memory) {
+    function inputFromHashAndProof(
+        bytes32 hash,
+        bytes memory signature,
+        uint8 utype,
+        uint8 securityZone
+    ) internal pure returns (EncryptedInput memory) {
         return EncryptedInput({
             ctHash: uint256(hash),
-            securityZone: 0,
+            securityZone: securityZone,
             utype: utype,
             signature: signature
         });
+    }
+
+    /// @dev Convenience overload that defaults to securityZone 0.
+    function inputFromHashAndProof(bytes32 hash, bytes memory signature, uint8 utype) internal pure returns (EncryptedInput memory) {
+        return inputFromHashAndProof(hash, signature, utype, 0);
     }
 
     function expectUtype(uint8 actual, uint8 expected) internal pure {
