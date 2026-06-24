@@ -1,0 +1,11 @@
+node_modules/
+artifacts/
+cache/
+types/
+coverage/
+.openzeppelin/
+*.env
+*.log
+.DS_Store
+coverage.json
+deployments/
