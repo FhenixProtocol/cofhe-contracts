@@ -236,8 +236,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
     mapping(address aggregator => bool isActiveAggregator) public aggregators;
 
-    // Whether the task manager is enabled
-    // If disabled, all operations will revert
+    // Master kill-switch for coprocessor intake.
+    // When disabled, task creation (createTask, createRandomTask) and
+    // decrypt-result publishing revert.
     bool public isEnabled;
 
     // Signer address for decrypt result verification (threshold network's signing key)
@@ -530,7 +531,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
     }
 
-    function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external onlyAccessListed returns (uint256) {
+    function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external onlyIfEnabled onlyAccessListed returns (uint256) {
         if (!isValidType(returnType)) {
             revert UnsupportedType(returnType);
         }
