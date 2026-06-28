@@ -7,6 +7,7 @@
 
 ### Fixed
 - `Utils.inputFromHashAndProof` no longer hardcodes `securityZone: 0`. A new 4-argument overload accepts an explicit `securityZone`, bringing it in line with the other `inputFrom*` helpers. The original 3-argument signature is kept as a backward-compatible wrapper defaulting to zone `0`. Fixes `verifyInput` failures when building an `EncryptedInput` from a hash and proof for a ciphertext on a non-zero security zone.
+- `FHE.getDecryptResult` and `FHE.getDecryptResultSafe` now guard against uninitialized (zero) ciphertext handles instead of forwarding them to the task manager: the reverting variant reverts early with a clear message, and the safe variant returns `(0, false)`.
 
 ## v0.1.4 - 2026-06-01
 
