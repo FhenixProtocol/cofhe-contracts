@@ -35,14 +35,21 @@ export function updateTaskManagerAddressInSolidity(newProxyAddress: string) {
 }
 
 export async function updateTaskManagerAddressInJsonArtifact(newAddress: string, hre: HardhatRuntimeEnvironment) {
-  const filePath = path.join(
+  const artifactsDir = path.join(
     __dirname,
     `../ignition/deployments/chain-${await hre.getChainId()}/artifacts/`,
-    "DeterministicTM#DeterministicTM.json",
   );
+  const filePath = path.join(artifactsDir, "DeterministicTM#DeterministicTM.json");
 
-  let fileContent = fs.readFileSync(filePath, "utf8");
-  let json = JSON.parse(fileContent);
+  fs.mkdirSync(artifactsDir, { recursive: true });
+
+  let json: any;
+  if (fs.existsSync(filePath)) {
+    json = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } else {
+    // Ignition artifact was not written (e.g. create2 strategy on a fresh chain) — synthesise it
+    json = { address: newAddress };
+  }
   json.address = newAddress;
 
   // Write the updated content back to the file
