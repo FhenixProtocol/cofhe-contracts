@@ -14,6 +14,14 @@ type euint64 is bytes32;
 type euint128 is bytes32;
 type eaddress is bytes32;
 
+type externalEbool is bytes32;
+type externalEuint8 is bytes32;
+type externalEuint16 is bytes32;
+type externalEuint32 is bytes32;
+type externalEuint64 is bytes32;
+type externalEuint128 is bytes32;
+type externalEaddress is bytes32;
+
 // ================================
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
 // TODO : CHANGE ME AFTER DEPLOYING
@@ -2483,8 +2491,8 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An ebool containing the verified encrypted value
-    function asEbool(bytes32 hash, bytes memory proof) internal returns (ebool) {
-        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EBOOL_TFHE);
+    function asEbool(externalEbool hash, bytes memory proof) internal returns (ebool) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(externalEbool.unwrap(hash), proof, Utils.EBOOL_TFHE);
         return ebool.wrap(Impl.verifyInput(input));
     }
 
@@ -2511,8 +2519,8 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An euint8 containing the verified encrypted value
-    function asEuint8(bytes32 hash, bytes memory proof) internal returns (euint8) {
-        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT8_TFHE);
+    function asEuint8(externalEuint8 hash, bytes memory proof) internal returns (euint8) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(externalEuint8.unwrap(hash), proof, Utils.EUINT8_TFHE);
         return euint8.wrap(Impl.verifyInput(input));
     }
 
@@ -2539,8 +2547,8 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An euint16 containing the verified encrypted value
-    function asEuint16(bytes32 hash, bytes memory proof) internal returns (euint16) {
-        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT16_TFHE);
+    function asEuint16(externalEuint16 hash, bytes memory proof) internal returns (euint16) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(externalEuint16.unwrap(hash), proof, Utils.EUINT16_TFHE);
         return euint16.wrap(Impl.verifyInput(input));
     }
 
@@ -2567,8 +2575,8 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An euint32 containing the verified encrypted value
-    function asEuint32(bytes32 hash, bytes memory proof) internal returns (euint32) {
-        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT32_TFHE);
+    function asEuint32(externalEuint32 hash, bytes memory proof) internal returns (euint32) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(externalEuint32.unwrap(hash), proof, Utils.EUINT32_TFHE);
         return euint32.wrap(Impl.verifyInput(input));
     }
 
@@ -2595,8 +2603,8 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An euint64 containing the verified encrypted value
-    function asEuint64(bytes32 hash, bytes memory proof) internal returns (euint64) {
-        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT64_TFHE);
+    function asEuint64(externalEuint64 hash, bytes memory proof) internal returns (euint64) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(externalEuint64.unwrap(hash), proof, Utils.EUINT64_TFHE);
         return euint64.wrap(Impl.verifyInput(input));
     }
 
@@ -2623,8 +2631,8 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An euint128 containing the verified encrypted value
-    function asEuint128(bytes32 hash, bytes memory proof) internal returns (euint128) {
-        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EUINT128_TFHE);
+    function asEuint128(externalEuint128 hash, bytes memory proof) internal returns (euint128) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(externalEuint128.unwrap(hash), proof, Utils.EUINT128_TFHE);
         return euint128.wrap(Impl.verifyInput(input));
     }
 
@@ -2651,8 +2659,8 @@ library FHE {
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
     /// @return An eaddress containing the verified encrypted value
-    function asEaddress(bytes32 hash, bytes memory proof) internal returns (eaddress) {
-        EncryptedInput memory input = Utils.inputFromHashAndProof(hash, proof, Utils.EADDRESS_TFHE);
+    function asEaddress(externalEaddress hash, bytes memory proof) internal returns (eaddress) {
+        EncryptedInput memory input = Utils.inputFromHashAndProof(externalEaddress.unwrap(hash), proof, Utils.EADDRESS_TFHE);
         return eaddress.wrap(Impl.verifyInput(input));
     }
 

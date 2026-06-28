@@ -3,9 +3,20 @@
 ## [Unreleased]
 
 ### Added
+- **TaskManager access list** — optional, owner-controlled allowlist that gates task intake (`createTask`, `createRandomTask`, `verifyInput`) to approved callers. Off by default, so behavior is unchanged on upgrade; the owner turns it on with `enableAccessList()` / off with `disableAccessList()`, and manages members via batch `addToAccessList` / `removeFromAccessList`. Intended for controlled early-mainnet rollout. ACL `allow*` and decrypt-result publishing are intentionally not gated (ACL is reachable only through gated intake, and decrypt publishing is signature-gated). New storage is appended (the toggle packs into an existing slot, the mapping takes the next), keeping UUPS upgrades storage-layout-compatible.
+
+### Fixed
+- `Utils.inputFromHashAndProof` no longer hardcodes `securityZone: 0`. A new 4-argument overload accepts an explicit `securityZone`, bringing it in line with the other `inputFrom*` helpers. The original 3-argument signature is kept as a backward-compatible wrapper defaulting to zone `0`. Fixes `verifyInput` failures when building an `EncryptedInput` from a hash and proof for a ciphertext on a non-zero security zone.
+
+## v0.1.4 - 2026-06-01
+
+### Added
 - **CommitmentRegistry** — UUPS-upgradeable contract for on-chain FHE computation commitments (`handle → commitHash`) grouped by state version. Threshold Network uses these to verify ciphertext integrity before decrypting. Includes version lifecycle state machine, write-once enforcement, batch posting, array-based enumeration with paginated cursor, and Arbitrum gas estimation script.
 
-## v0.1.3 - 2025-03-25
+### Changed
+- **External Inputs API** - External inputs are represented with named types
+
+## v0.1.3 - 2026-03-25
 
 ### Changed
 - Rename `FHE.asEbool(bytes32)`, `FHE.asEuint*(bytes32)`, `FHE.asEaddress(bytes32)` to `FHE.wrapEbool(bytes32)`, `FHE.wrapEuint*(bytes32)`, `FHE.wrapEaddress(bytes32)` to avoid overload ambiguity with `asEuintX(0)` calls and clarify intent
@@ -14,7 +25,7 @@
 - CI now compiles against local `cofhe-contracts` source instead of stale npm version, closing a gap where FHE.sol compilation errors were not caught
 - Update internal test contracts to match current FHE.sol API (remove `euint256`, `FHE.decrypt`, fix `bytes32` return types)
 
-## v0.1.2 - 2025-03-25 - DEPRECATED
+## v0.1.2 - 2026-03-25 - DEPRECATED
 
 ### Added
 - `FHE.isInitialized()` overloads for all encrypted types (`ebool`, `euint8`, `euint16`, `euint32`, `euint64`, `euint128`, `eaddress`) to check whether a ciphertext handle is initialized
@@ -25,11 +36,11 @@
 - Add typed overloads for `publishDecryptResultBatch`, `verifyDecryptResultBatch`, and `verifyDecryptResultBatchSafe` in FHE.sol (per encrypted type: ebool, euint8-128, eaddress)
 - Update ITaskManager interface with new batch verify functions
 
-## v0.1.1 - 2025-03-16
+## v0.1.1 - 2026-03-16
 
 - Remove decryption endpoints 
 
-## v0.1.0 - 2025-02-25
+## v0.1.0 - 2026-02-25
 
 ### Breaking Changes
 - **Ciphertext handle type change (`uint256` → `bytes32`)**: All encrypted types (`ebool`, `euint8`, `euint16`, `euint32`, `euint64`, `euint128`, `eaddress`) now use `bytes32` as their underlying type instead of `uint256`. This changes the ABI encoding of any function that accepts or returns encrypted types.
