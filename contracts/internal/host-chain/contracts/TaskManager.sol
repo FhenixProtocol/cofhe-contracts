@@ -762,7 +762,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return result;
     }
 
-    function verifyInput(EncryptedInput memory input, address sender) external onlyAccessListed returns (uint256) {
+    function verifyInput(EncryptedInput memory input, address sender) external onlyIfEnabled onlyAccessListed returns (uint256) {
         int32 securityZone = int32(uint32(input.securityZone));
 
         // When signer is set to 0 address we skip this logic to be able to support debug use cases.
