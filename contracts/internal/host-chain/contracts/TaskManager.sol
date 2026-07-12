@@ -781,7 +781,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
         uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
 
-        emit InputVerified(appendedHash, keccak256(abi.encodePacked(input.ctHash, input.securityZone)));
+        emit InputVerified(appendedHash, bytes32(input.ctHash));
 
         acl.allowTransient(appendedHash, msg.sender, address(this));
         return appendedHash;

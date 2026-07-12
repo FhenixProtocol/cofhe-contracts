@@ -73,8 +73,8 @@ async function deployTm(factoryName: string) {
     return { tm, owner };
 }
 
-function expectedCommitment(ctHash: bigint, securityZone: number): string {
-    return ethers.solidityPackedKeccak256(["uint256", "uint8"], [ctHash, securityZone]);
+function expectedCommitment(ctHash: bigint): string {
+    return ethers.toBeHex(ctHash, 32);
 }
 
 describe("TaskManager InputVerified event", function () {
@@ -92,22 +92,24 @@ describe("TaskManager InputVerified event", function () {
         const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
         await expect(tm.verifyInput(input, owner.address))
             .to.emit(tm, "InputVerified")
-            .withArgs(expectedHandle, expectedCommitment(ctHash, 0));
-        // Known-answer vector shared with teecryptor's input_commit_hash layout guard —
-        // pins the Solidity and Rust encodings to the same 33-byte preimage.
-        expect(expectedCommitment(ctHash, 0)).to.equal(
-            "0x0697ff96c18ff49889bbe0e00b266c4a3a325fcf4ed301bd4c14330d547c7403"
+            .withArgs(expectedHandle, expectedCommitment(ctHash));
+        // Known-answer vector shared with teecryptor's layout guard — the commitment
+        // is the raw verifier-signed digest keccak256(ct bytes), verbatim.
+        expect(expectedCommitment(ctHash)).to.equal(
+            "0x40d2fbec275af2d35e33af88ddc72e89b518580794c21654f4138a12ae622613"
         );
     });
 
-    it("binds the security zone into the commitment", async function () {
+    it("emits the raw ctHash for any zone, with the zone pinned in handle byte 31", async function () {
         const ctHash = ethers.toBigInt(ethers.keccak256(ethers.toUtf8Bytes("other-bytes")));
         const input = { ctHash, securityZone: 1, utype: 4, signature: "0x" };
 
         const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
         await expect(tm.verifyInput(input, owner.address))
             .to.emit(tm, "InputVerified")
-            .withArgs(expectedHandle, expectedCommitment(ctHash, 1));
-        expect(expectedCommitment(ctHash, 1)).to.not.equal(expectedCommitment(ctHash, 0));
+            .withArgs(expectedHandle, expectedCommitment(ctHash));
+        // Zone is not in the commitment value; it is bound by the lookup key —
+        // the appended handle carries the zone in its last byte.
+        expect(expectedHandle & 0xffn).to.equal(1n);
     });
 });
