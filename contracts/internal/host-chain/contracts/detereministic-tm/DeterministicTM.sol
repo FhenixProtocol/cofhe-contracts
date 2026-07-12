@@ -179,6 +179,7 @@ contract DeterministicTM is ITaskManager, Initializable, UUPSUpgradeable, Ownabl
     event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
     event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
     event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
+    event InputVerified(uint256 indexed ctHash, bytes32 commitment);
 
     struct Task {
         address creator;
@@ -423,6 +424,8 @@ contract DeterministicTM is ITaskManager, Initializable, UUPSUpgradeable, Ownabl
         }
 
         uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
+
+        emit InputVerified(appendedHash, keccak256(abi.encodePacked(input.ctHash, input.securityZone)));
 
         acl.allowTransient(appendedHash, msg.sender, address(this));
         return appendedHash;
