@@ -94,6 +94,11 @@ for (const factoryName of ["TaskManager", "DeterministicTM"]) {
             await expect(tm.verifyInput(input, owner.address))
                 .to.emit(tm, "InputVerified")
                 .withArgs(expectedHandle, expectedCommitment(ctHash, 0));
+            // Known-answer vector shared with teecryptor's input_commit_hash layout guard —
+            // pins the Solidity and Rust encodings to the same 33-byte preimage.
+            expect(expectedCommitment(ctHash, 0)).to.equal(
+                "0x0697ff96c18ff49889bbe0e00b266c4a3a325fcf4ed301bd4c14330d547c7403"
+            );
         });
 
         it("binds the security zone into the commitment", async function () {
