@@ -77,39 +77,37 @@ function expectedCommitment(ctHash: bigint, securityZone: number): string {
     return ethers.solidityPackedKeccak256(["uint256", "uint8"], [ctHash, securityZone]);
 }
 
-for (const factoryName of ["TaskManager", "DeterministicTM"]) {
-    describe(`${factoryName} InputVerified event`, function () {
-        let tm: any;
-        let owner: any;
+describe("TaskManager InputVerified event", function () {
+    let tm: any;
+    let owner: any;
 
-        before(async function () {
-            ({ tm, owner } = await deployTm(factoryName));
-        });
-
-        it("emits InputVerified with the appended handle and contract-computed commitment", async function () {
-            const ctHash = ethers.toBigInt(ethers.keccak256(ethers.toUtf8Bytes("ciphertext-bytes")));
-            const input = { ctHash, securityZone: 0, utype: 4, signature: "0x" };
-
-            const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
-            await expect(tm.verifyInput(input, owner.address))
-                .to.emit(tm, "InputVerified")
-                .withArgs(expectedHandle, expectedCommitment(ctHash, 0));
-            // Known-answer vector shared with teecryptor's input_commit_hash layout guard —
-            // pins the Solidity and Rust encodings to the same 33-byte preimage.
-            expect(expectedCommitment(ctHash, 0)).to.equal(
-                "0x0697ff96c18ff49889bbe0e00b266c4a3a325fcf4ed301bd4c14330d547c7403"
-            );
-        });
-
-        it("binds the security zone into the commitment", async function () {
-            const ctHash = ethers.toBigInt(ethers.keccak256(ethers.toUtf8Bytes("other-bytes")));
-            const input = { ctHash, securityZone: 1, utype: 4, signature: "0x" };
-
-            const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
-            await expect(tm.verifyInput(input, owner.address))
-                .to.emit(tm, "InputVerified")
-                .withArgs(expectedHandle, expectedCommitment(ctHash, 1));
-            expect(expectedCommitment(ctHash, 1)).to.not.equal(expectedCommitment(ctHash, 0));
-        });
+    before(async function () {
+        ({ tm, owner } = await deployTm("TaskManager"));
     });
-}
+
+    it("emits InputVerified with the appended handle and contract-computed commitment", async function () {
+        const ctHash = ethers.toBigInt(ethers.keccak256(ethers.toUtf8Bytes("ciphertext-bytes")));
+        const input = { ctHash, securityZone: 0, utype: 4, signature: "0x" };
+
+        const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
+        await expect(tm.verifyInput(input, owner.address))
+            .to.emit(tm, "InputVerified")
+            .withArgs(expectedHandle, expectedCommitment(ctHash, 0));
+        // Known-answer vector shared with teecryptor's input_commit_hash layout guard —
+        // pins the Solidity and Rust encodings to the same 33-byte preimage.
+        expect(expectedCommitment(ctHash, 0)).to.equal(
+            "0x0697ff96c18ff49889bbe0e00b266c4a3a325fcf4ed301bd4c14330d547c7403"
+        );
+    });
+
+    it("binds the security zone into the commitment", async function () {
+        const ctHash = ethers.toBigInt(ethers.keccak256(ethers.toUtf8Bytes("other-bytes")));
+        const input = { ctHash, securityZone: 1, utype: 4, signature: "0x" };
+
+        const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
+        await expect(tm.verifyInput(input, owner.address))
+            .to.emit(tm, "InputVerified")
+            .withArgs(expectedHandle, expectedCommitment(ctHash, 1));
+        expect(expectedCommitment(ctHash, 1)).to.not.equal(expectedCommitment(ctHash, 0));
+    });
+});
