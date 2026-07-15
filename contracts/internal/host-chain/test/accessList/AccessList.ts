@@ -48,7 +48,7 @@ describe("TaskManager access list", function () {
       .to.be.revertedWithCustomError(taskManager, "NotOnAccessList")
       .withArgs(other.address);
 
-    await expect(taskManager.connect(other).verifyInput(DUMMY_INPUT, other.address))
+    await expect(taskManager.connect(other).verifyInput(DUMMY_INPUT, other.address, "0x"))
       .to.be.revertedWithCustomError(taskManager, "NotOnAccessList")
       .withArgs(other.address);
   });

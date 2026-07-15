@@ -58,9 +58,9 @@ describe("TaskManager verifyInput contract binding", function () {
     const signature = signInput(CT_HASH, EUINT8, SECURITY_ZONE, user.address, chainId, caller.address);
     const input = { ctHash: CT_HASH, securityZone: SECURITY_ZONE, utype: EUINT8, signature };
 
-    const handle = await taskManager.connect(caller).verifyInput.staticCall(input, user.address);
+    const handle = await taskManager.connect(caller).verifyInput.staticCall(input, user.address, input.signature);
     expect(handle).to.not.equal(0n);
-    await expect(taskManager.connect(caller).verifyInput(input, user.address)).to.not.be.reverted;
+    await expect(taskManager.connect(caller).verifyInput(input, user.address, input.signature)).to.not.be.reverted;
   });
 
   it("rejects replay into a different contract than the one signed for", async function () {
@@ -71,7 +71,7 @@ describe("TaskManager verifyInput contract binding", function () {
     const input = { ctHash: CT_HASH, securityZone: SECURITY_ZONE, utype: EUINT8, signature };
 
     await expect(
-      taskManager.connect(caller).verifyInput(input, user.address)
+      taskManager.connect(caller).verifyInput(input, user.address, input.signature)
     ).to.be.revertedWithCustomError(taskManager, "InvalidSigner");
   });
 
@@ -79,7 +79,7 @@ describe("TaskManager verifyInput contract binding", function () {
     await taskManager.connect(owner).setVerifierSigner(ethers.ZeroAddress);
     // Bogus signature; debug mode must accept regardless of contract binding.
     const input = { ctHash: CT_HASH, securityZone: SECURITY_ZONE, utype: EUINT8, signature: "0x" };
-    await expect(taskManager.connect(caller).verifyInput(input, user.address)).to.not.be.reverted;
+    await expect(taskManager.connect(caller).verifyInput(input, user.address, input.signature)).to.not.be.reverted;
     await taskManager.connect(owner).setVerifierSigner(VERIFIER.address);
   });
 });
