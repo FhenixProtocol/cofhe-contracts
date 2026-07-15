@@ -8,6 +8,12 @@ struct EncryptedInput {
     bytes signature;
 }
 
+struct BatchedEncryptedInput {
+    uint256 ctHash;
+    uint8 securityZone;
+    uint8 utype;
+}
+
 struct InEbool {
     uint256 ctHash;
     uint8 securityZone;
@@ -98,7 +104,8 @@ interface ITaskManager {
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedInputs, uint256[] memory extraInputs) external returns (uint256);
     function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external returns (uint256);
 
-    function verifyInput(EncryptedInput memory input, address sender) external returns (uint256);
+    function verifyInput(EncryptedInput memory input, address sender, bytes memory signature) external returns (uint256);
+    function batchVerifyInputs(BatchedEncryptedInput[] memory inputs, address sender, bytes memory signature) external returns (uint256[] memory);
 
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
@@ -244,6 +251,26 @@ library Utils {
 
         expectUtype(v.utype, expected);
         return v;
+    }
+
+    function batchInputEntryFromBytes(bytes memory data, uint8 expected) internal pure returns (BatchedEncryptedInput memory) {
+        BatchedEncryptedInput memory v;
+        (
+            v.ctHash,
+            v.securityZone,
+            v.utype
+        ) = abi.decode(data, (uint256, uint8, uint8));
+
+        expectUtype(v.utype, expected);
+        return v;
+    }
+
+    function batchInputsFromBytes(bytes[] memory data, uint8 expected) internal pure returns (BatchedEncryptedInput[] memory) {
+        BatchedEncryptedInput[] memory inputs = new BatchedEncryptedInput[](data.length);
+        for (uint256 i = 0; i < data.length; i++) {
+            inputs[i] = batchInputEntryFromBytes(data[i], expected);
+        }
+        return inputs;
     }
 
     function inputFromHashAndProof(
