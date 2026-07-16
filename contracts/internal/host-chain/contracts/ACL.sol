@@ -3,7 +3,7 @@ pragma solidity >=0.8.25 <0.9.0;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
 import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
 
@@ -14,7 +14,9 @@ import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
  *         By defining and enforcing these permissions, the ACL ensures that encrypted data remains secure while still being usable
  *         within authorized contexts.
  */
-contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeable {
+contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, PermissionedUpgradeable {
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
     /// @notice Returned if the delegatee contract is already delegatee for sender & delegator addresses.
     error AlreadyDelegated();
 
@@ -72,11 +74,20 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /**
      * @notice              Initializes the contract.
-     * @param initialOwner  Initial owner address.
+     * @param initialAdmin  Initial admin address.
+     * @param initialDelay  Initial delay for the default admin transfer.
      */
-    function initialize(address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
+    function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __PermissionedUpgradeable_init();
+    }
+
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
+    ///      implementation. Do not call on a freshly `initialize`d proxy: it would
+    ///      grant a second DEFAULT_ADMIN_ROLE holder, breaking the single-admin invariant.
+    /// @custom:oz-upgrades-validate-as-initializer
+    function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
     }
 
     /**
@@ -328,7 +339,7 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
      *      Empty implementation since authorization is handled by onlyOwner modifier.
      */
     /* solhint-disable-next-line no-empty-blocks */
-    function _authorizeUpgrade(address _newImplementation) internal virtual override onlyOwner {}
+    function _authorizeUpgrade(address _newImplementation) internal virtual override onlyRole(UPGRADER_ROLE) {}
 
     /**
      * @dev                         Returns the ACL storage location.
