@@ -2,9 +2,11 @@
 pragma solidity >=0.8.25 <0.9.0;
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 
-contract PlaintextsStorage is UUPSUpgradeable, OwnableUpgradeable {
+contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
     struct PlaintextResult {
         bool existenceIndicator;
         uint256 result;
@@ -40,10 +42,18 @@ contract PlaintextsStorage is UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
+    function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __UUPSUpgradeable_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
+    ///      implementation. Do not call on a freshly `initialize`d proxy: it would
+    ///      grant a second DEFAULT_ADMIN_ROLE holder, breaking the single-admin invariant.
+    /// @custom:oz-upgrades-validate-as-initializer
+    function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 }
