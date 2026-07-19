@@ -45,4 +45,12 @@ export function shouldBehaveLikeOnChain(): void {
     console.log("funcName cantCastWithFakeType");
     await expect(contract.cantCastWithFakeType()).to.be.revertedWithCustomError(taskManager, "UnsupportedType");
   });
+
+  it("createTask rejects on-chain decrypt tasks", async function () {
+    const taskManager = await hre.ethers.getContractAt("TaskManager", "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9");
+    const DECRYPT = 6; // FunctionId.decrypt — on-chain decrypt was removed (#63), decryption is off-chain
+    await expect(
+      taskManager.connect(this.signers.admin).createTask(0, DECRYPT, [], []),
+    ).to.be.revertedWithCustomError(taskManager, "DecryptFunctionNotSupported");
+  });
 }

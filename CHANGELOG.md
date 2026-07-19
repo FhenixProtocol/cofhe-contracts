@@ -8,6 +8,7 @@
 ### Fixed
 - `createRandomTask` now respects the `isEnabled` kill-switch (`onlyIfEnabled`). Previously it emitted `TaskCreated` and granted ACL access even while the TaskManager was disabled, so the coprocessor still received random-generation intake during a halt. It now reverts with `CofheIsUnavailable` when disabled, consistent with `createTask` and decrypt-result publishing. Also corrected the `isEnabled` comment, which claimed all operations revert when disabled.
 - `Utils.inputFromHashAndProof` no longer hardcodes `securityZone: 0`. A new 4-argument overload accepts an explicit `securityZone`, bringing it in line with the other `inputFrom*` helpers. The original 3-argument signature is kept as a backward-compatible wrapper defaulting to zone `0`. Fixes `verifyInput` failures when building an `EncryptedInput` from a hash and proof for a ciphertext on a non-zero security zone.
+- **TaskManager** — `createTask` now rejects `FunctionId.decrypt` with `DecryptFunctionNotSupported`. On-chain decrypt was removed (#63), but the generic `createTask` still accepted `funcId == decrypt` and emitted decrypt tasks with a derived (never-stored) ctHash that the coprocessor could not resolve, stranding them. Decryption is off-chain; the signed result is published via `publishDecryptResult`.
 
 ## v0.1.4 - 2026-06-01
 

@@ -37,6 +37,7 @@ error NotOnAccessList(address caller);
 
 // Operation-specific errors
 error RandomFunctionNotSupported();
+error DecryptFunctionNotSupported();
 
 library TMCommon {
     uint256 private constant HASH_MASK_FOR_METADATA  = type(uint256).max - type(uint16).max; // 2 bytes reserved for metadata
@@ -564,6 +565,10 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external onlyAccessListed returns (uint256) {
         if (funcId == FunctionId.random) {
             revert RandomFunctionNotSupported();
+        }
+
+        if (funcId == FunctionId.decrypt) {
+            revert DecryptFunctionNotSupported();
         }
 
         if (!isValidType(returnType)) {
