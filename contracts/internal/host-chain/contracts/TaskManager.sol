@@ -5,7 +5,7 @@ import {ACL, Permission} from "./ACL.sol";
 import {PlaintextsStorage} from "./PlaintextsStorage.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ITaskManager, FunctionId, Utils, EncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
@@ -152,7 +152,16 @@ library TMCommon {
     }
 }
 
-contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2StepUpgradeable {
+contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant SECURITY_ZONE_MANAGER_ROLE = keccak256("SECURITY_ZONE_MANAGER_ROLE");
+    bytes32 public constant AGGREGATOR_MANAGER_ROLE = keccak256("AGGREGATOR_MANAGER_ROLE");
+    bytes32 public constant ACCESS_LIST_MANAGER_ROLE = keccak256("ACCESS_LIST_MANAGER_ROLE");
+    bytes32 public constant VERIFIER_SIGNER_MANAGER_ROLE = keccak256("VERIFIER_SIGNER_MANAGER_ROLE");
+    bytes32 public constant DECRYPT_SIGNER_MANAGER_ROLE = keccak256("DECRYPT_SIGNER_MANAGER_ROLE");
+    bytes32 public constant CONFIG_MANAGER_ROLE = keccak256("CONFIG_MANAGER_ROLE");
+
     bool private initialized;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -162,11 +171,12 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
     /**
      * @notice              Initializes the contract.
-     * @param initialOwner  Initial owner address.
+     * @param initialAdmin  Initial admin address.
+     * @param initialDelay  Initial delay for the default admin transfer.
      */
     function initialize(
-        address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
+        address initialAdmin, uint48 initialDelay) public initializer {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __UUPSUpgradeable_init();
         initialized = true;
         verifierSigner = address(1);
@@ -174,7 +184,15 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         isEnabled = true;
     }
 
-    function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyOwner {
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
+    ///      implementation. Reverts with AccessControlEnforcedDefaultAdminRules if the
+    ///      proxy already has a default admin, so it is safe against accidental reuse.
+    /// @custom:oz-upgrades-validate-as-initializer
+    function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+    }
+
+    function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
         securityZoneMin = minSZ;
         securityZoneMax = maxSZ;
     }
@@ -187,13 +205,13 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return version;
     }
 
-    function incVersion() public onlyOwner {
+    function incVersion() public onlyRole(CONFIG_MANAGER_ROLE) {
         version++;
     }
 
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyOwner {}
+    ) internal override onlyRole(UPGRADER_ROLE) {}
 
     // Errors
     // Returned when the handle is not allowed in the ACL for the account.
@@ -272,25 +290,25 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         _;
     }
 
-    function enable() external onlyOwner {
+    function enable() external onlyRole(PAUSER_ROLE) {
         isEnabled = true;
     }
 
-    function disable() external onlyOwner {
+    function disable() external onlyRole(PAUSER_ROLE) {
         isEnabled = false;
     }
 
-    function enableAccessList() external onlyOwner {
+    function enableAccessList() external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
         accessListEnabled = true;
         emit AccessListEnabledSet(true);
     }
 
-    function disableAccessList() external onlyOwner {
+    function disableAccessList() external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
         accessListEnabled = false;
         emit AccessListEnabledSet(false);
     }
 
-    function addToAccessList(address[] calldata accounts) external onlyOwner {
+    function addToAccessList(address[] calldata accounts) external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
         for (uint256 i = 0; i < accounts.length; i++) {
             if (accounts[i] == address(0)) {
                 revert InvalidAddress();
@@ -300,7 +318,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
     }
 
-    function removeFromAccessList(address[] calldata accounts) external onlyOwner {
+    function removeFromAccessList(address[] calldata accounts) external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
         for (uint256 i = 0; i < accounts.length; i++) {
             if (accounts[i] == address(0)) {
                 revert InvalidAddress();
@@ -829,7 +847,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return signer;
     }
 
-    function setVerifierSigner(address signer) external onlyOwner {
+    function setVerifierSigner(address signer) external onlyRole(VERIFIER_SIGNER_MANAGER_ROLE) {
         address oldSigner = verifierSigner;
         verifierSigner = signer;
         emit VerifierSignerChanged(oldSigner, signer);
@@ -837,41 +855,41 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
     /// @notice Set the authorized signer for decrypt results
     /// @param signer The new signer address (address(0) disables verification)
-    function setDecryptResultSigner(address signer) external onlyOwner {
+    function setDecryptResultSigner(address signer) external onlyRole(DECRYPT_SIGNER_MANAGER_ROLE) {
         address oldSigner = decryptResultSigner;
         decryptResultSigner = signer;
         emit DecryptResultSignerChanged(oldSigner, signer);
     }
 
-    function setSecurityZoneMax(int32 securityZone) external onlyOwner {
+    function setSecurityZoneMax(int32 securityZone) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
         if (securityZone < securityZoneMin) {
             revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
         }
         securityZoneMax = securityZone;
     }
 
-    function setSecurityZoneMin(int32 securityZone) external onlyOwner {
+    function setSecurityZoneMin(int32 securityZone) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
         if (securityZone > securityZoneMax) {
             revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
         }
         securityZoneMin = securityZone;
     }
 
-    function setACLContract(address _aclAddress) external onlyOwner {
+    function setACLContract(address _aclAddress) external onlyRole(CONFIG_MANAGER_ROLE) {
         if (_aclAddress == address(0)) {
             revert InvalidAddress();
         }
         acl = ACL(_aclAddress);
     }
 
-    function setPlaintextsStorage(address _plaintextsStorageAddress) external onlyOwner {
+    function setPlaintextsStorage(address _plaintextsStorageAddress) external onlyRole(CONFIG_MANAGER_ROLE) {
         if (_plaintextsStorageAddress == address(0)) {
             revert InvalidAddress();
         }
         plaintextsStorage = PlaintextsStorage(_plaintextsStorageAddress);
     }
 
-    function addAggregator(address _aggregatorAddress) external onlyOwner {
+    function addAggregator(address _aggregatorAddress) external onlyRole(AGGREGATOR_MANAGER_ROLE) {
         if (_aggregatorAddress == address(0)) {
             revert InvalidAddress();
         }
@@ -879,7 +897,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         aggregators[_aggregatorAddress] = true;
     }
 
-    function removeAggregator(address _aggregatorAddress) external onlyOwner {
+    function removeAggregator(address _aggregatorAddress) external onlyRole(AGGREGATOR_MANAGER_ROLE) {
         if (_aggregatorAddress == address(0)) {
             revert InvalidAddress();
         }
