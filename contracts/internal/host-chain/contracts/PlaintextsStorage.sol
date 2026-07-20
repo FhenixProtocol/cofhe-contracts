@@ -48,8 +48,8 @@ contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpg
     }
 
     /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
-    ///      implementation. Do not call on a freshly `initialize`d proxy: it would
-    ///      grant a second DEFAULT_ADMIN_ROLE holder, breaking the single-admin invariant.
+    ///      implementation. Reverts with AccessControlEnforcedDefaultAdminRules if the
+    ///      proxy already has a default admin, so it is safe against accidental reuse.
     /// @custom:oz-upgrades-validate-as-initializer
     function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);

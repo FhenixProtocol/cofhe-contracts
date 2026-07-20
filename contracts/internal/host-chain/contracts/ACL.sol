@@ -83,8 +83,8 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     }
 
     /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
-    ///      implementation. Do not call on a freshly `initialize`d proxy: it would
-    ///      grant a second DEFAULT_ADMIN_ROLE holder, breaking the single-admin invariant.
+    ///      implementation. Reverts with AccessControlEnforcedDefaultAdminRules if the
+    ///      proxy already has a default admin, so it is safe against accidental reuse.
     /// @custom:oz-upgrades-validate-as-initializer
     function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
@@ -336,7 +336,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
 
     /**
      * @dev Should revert when `msg.sender` is not authorized to upgrade the contract.
-     *      Empty implementation since authorization is handled by onlyOwner modifier.
+     *      Empty implementation since authorization is handled by onlyRole(UPGRADER_ROLE) modifier.
      */
     /* solhint-disable-next-line no-empty-blocks */
     function _authorizeUpgrade(address _newImplementation) internal virtual override onlyRole(UPGRADER_ROLE) {}
