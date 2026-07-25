@@ -24,58 +24,45 @@ function getTestSignerWallet(): Wallet {
 }
 
 /**
- * Deploy a proxy at a specific address using hardhat_setCode
+ * Install a UUPS proxy's runtime bytecode at a fixed address and initialize it
+ * in place. We can't `deployProxy` at an arbitrary address, and AccessControl
+ * stores role membership in computed mapping slots (not one fixed slot), so we
+ * initialize through the real proxy rather than copying storage slots.
  */
 async function deployProxyAtAddress(
   targetAddress: string,
   implementationAddress: string,
   initData: string
 ): Promise<void> {
-  // Get the proxy bytecode by deploying one temporarily
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-  const tempProxy = await ERC1967Proxy.deploy(implementationAddress, initData);
+  // Deploy a throwaway proxy only to capture the proxy runtime bytecode.
+  const tempProxy = await ERC1967Proxy.deploy(implementationAddress, "0x");
   await tempProxy.waitForDeployment();
-
-  // Get the runtime bytecode from the deployed proxy
   const proxyBytecode = await ethers.provider.getCode(await tempProxy.getAddress());
 
-  // Set the bytecode at our target address
+  // Install proxy code at the fixed address.
   await ethers.provider.send("hardhat_setCode", [targetAddress, proxyBytecode]);
 
-  // Storage slots to copy (ERC1967 + OZ v5 namespaced storage)
-  const storageSlots = [
-    // ERC1967 implementation slot
-    "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
-    // OZ Initializable slot: keccak256("openzeppelin.storage.Initializable") - 1
-    "0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00",
-    // OZ Ownable slot: keccak256("openzeppelin.storage.Ownable") - 1
-    "0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300",
-    // OZ Ownable2Step pending owner slot (next slot after owner)
-    "0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199301",
-    // TaskManager storage slots (slot 0-10 for custom state variables)
-    "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "0x0000000000000000000000000000000000000000000000000000000000000001",
-    "0x0000000000000000000000000000000000000000000000000000000000000002",
-    "0x0000000000000000000000000000000000000000000000000000000000000003",
-    "0x0000000000000000000000000000000000000000000000000000000000000004",
-    "0x0000000000000000000000000000000000000000000000000000000000000005",
-    "0x0000000000000000000000000000000000000000000000000000000000000006",
-    "0x0000000000000000000000000000000000000000000000000000000000000007",
-    "0x0000000000000000000000000000000000000000000000000000000000000008",
-    "0x0000000000000000000000000000000000000000000000000000000000000009",
-    "0x000000000000000000000000000000000000000000000000000000000000000a",
-  ];
+  // Point the ERC1967 implementation slot at our implementation.
+  const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+  await ethers.provider.send("hardhat_setStorageAt", [
+    targetAddress,
+    IMPL_SLOT,
+    ethers.zeroPadValue(implementationAddress, 32),
+  ]);
 
-  const tempAddress = await tempProxy.getAddress();
-  for (const slot of storageSlots) {
-    const value = await ethers.provider.getStorage(tempAddress, slot);
-    if (value !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
-      await ethers.provider.send("hardhat_setStorageAt", [targetAddress, slot, value]);
-    }
-  }
+  // Initialize the proxy in place (fresh storage at the target address).
+  const [signer] = await ethers.getSigners();
+  const tx = await signer.sendTransaction({ to: targetAddress, data: initData });
+  await tx.wait();
 }
 
 export async function deployDecryptResultFixture(): Promise<DecryptResultFixture> {
+  // Multiple test files deploy TaskManager at the same hardcoded address within
+  // the same Hardhat network process; reset so `initialize` sees fresh storage
+  // (hardhat_setCode/hardhat_setStorageAt below only work on the Hardhat network).
+  await ethers.provider.send("hardhat_reset", []);
+
   const [owner, otherAccount] = await ethers.getSigners();
 
   // Deploy TaskManager implementation
@@ -84,7 +71,7 @@ export async function deployDecryptResultFixture(): Promise<DecryptResultFixture
   await taskManagerImpl.waitForDeployment();
 
   // Prepare init data
-  const initData = TaskManager.interface.encodeFunctionData("initialize", [owner.address]);
+  const initData = TaskManager.interface.encodeFunctionData("initialize", [owner.address, 0]);
 
   // Deploy proxy at the hardcoded address
   await deployProxyAtAddress(
@@ -102,7 +89,7 @@ export async function deployDecryptResultFixture(): Promise<DecryptResultFixture
   await aclImpl.waitForDeployment();
 
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-  const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address]);
+  const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address, 0]);
   const aclProxy = await ERC1967Proxy.deploy(await aclImpl.getAddress(), aclInitData);
   await aclProxy.waitForDeployment();
   const acl = ACL.attach(await aclProxy.getAddress());
@@ -112,10 +99,23 @@ export async function deployDecryptResultFixture(): Promise<DecryptResultFixture
   const psImpl = await PlaintextsStorage.deploy();
   await psImpl.waitForDeployment();
 
-  const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address]);
+  const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address, 0]);
   const psProxy = await ERC1967Proxy.deploy(await psImpl.getAddress(), psInitData);
   await psProxy.waitForDeployment();
   const plaintextsStorage = PlaintextsStorage.attach(await psProxy.getAddress());
+
+  // Owner holds DEFAULT_ADMIN_ROLE from init; grant the operational roles it exercises.
+  for (const role of [
+    await taskManager.CONFIG_MANAGER_ROLE(),
+    await taskManager.SECURITY_ZONE_MANAGER_ROLE(),
+    await taskManager.PAUSER_ROLE(),
+    await taskManager.ACCESS_LIST_MANAGER_ROLE(),
+    await taskManager.AGGREGATOR_MANAGER_ROLE(),
+    await taskManager.VERIFIER_SIGNER_MANAGER_ROLE(),
+    await taskManager.DECRYPT_SIGNER_MANAGER_ROLE(),
+  ]) {
+    await taskManager.grantRole(role, owner.address);
+  }
 
   // Configure TaskManager
   await taskManager.setACLContract(await acl.getAddress());

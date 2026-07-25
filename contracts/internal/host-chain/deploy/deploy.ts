@@ -23,7 +23,7 @@ async function getProxyContract(adminAddress: string, contractName: string) {
   const TaskManager = await ethers.getContractFactory(contractName);
   const ProxyContract = await upgrades.deployProxy(
     TaskManager,
-    [adminAddress],
+    [adminAddress, 0],
     { kind: "uups", initializer: "initialize" },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
@@ -52,7 +52,7 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
       TMProxyContract,
     );
     const isInitialized = await TMProxyContract.isInitialized();
-    const owner = await TMProxyContract.owner();
+    const owner = await TMProxyContract.defaultAdmin();
     console.log(
       "Implementation address:",
       currentImplementation,
@@ -63,6 +63,25 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
     );
   } catch (e) {
     console.error(chalk.red(`Failed isInitialized transaction: ${e}`));
+    return e;
+  }
+
+  // Grant the setup signer the operational roles it needs before using them.
+  try {
+    const admin = aggregatorSigners[0];
+    const tm = TMProxyContract.connect(admin);
+    for (const role of [
+      await TMProxyContract.AGGREGATOR_MANAGER_ROLE(),
+      await TMProxyContract.PAUSER_ROLE(),
+      await TMProxyContract.SECURITY_ZONE_MANAGER_ROLE(),
+      await TMProxyContract.VERIFIER_SIGNER_MANAGER_ROLE(),
+      await TMProxyContract.DECRYPT_SIGNER_MANAGER_ROLE(),
+      await TMProxyContract.CONFIG_MANAGER_ROLE(),
+    ]) {
+      await (await tm.grantRole(role, admin.address)).wait();
+    }
+  } catch (e) {
+    console.error(chalk.red(`Failed granting setup roles: ${e}`));
     return e;
   }
 
@@ -285,7 +304,7 @@ async function getImplementationAddress(proxy: any) {
 async function upgradeTM(TMProxyContract: any, TMFactory: any, aggregatorSigner: any) {
   console.log(chalk.bold.blue("-----------------------Upgrading TaskManager--------------------------"));
   console.log(chalk.green("Aggregator signer:", aggregatorSigner.address));
-  console.log(chalk.green("owner:", await TMProxyContract.owner()));
+  console.log(chalk.green("owner:", await TMProxyContract.defaultAdmin()));
   const connectedImplementation = TMProxyContract.connect(aggregatorSigner);
   const oldImplementationAddress = await getImplementationAddress(connectedImplementation);
   console.log(chalk.green("Old implementation address:", oldImplementationAddress));

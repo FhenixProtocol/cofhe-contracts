@@ -46,7 +46,7 @@ async function validateUpgrade(upgrades: any, TMProxyContract: any, TMFactory: a
 
 async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any, adminSigner: any) {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
-    console.log(chalk.green("TMProxyContract owner:", await TMProxyContract.owner()));
+    console.log(chalk.green("TMProxyContract owner:", await TMProxyContract.defaultAdmin()));
     const oldImplementationAddress = await getImplementationAddress(ethers, connectedImplementation);
     console.log(chalk.green("Old implementation address:", oldImplementationAddress));
 
