@@ -6,7 +6,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
 import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
-import {ACPVerifier, ACPermission} from "./ACP.sol";
+import {ACPVerifier, ACP} from "./ACP.sol";
 
 /**
  * @title  ACL
@@ -379,7 +379,7 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     ///      Contract scope intersects the EXISTING persistedAllowedPairs
     ///      (populated via FHE.allow/allowThis) — no new data structures.
     ///      Only persisted grants satisfy contract scope (not transient).
-    function isAllowedWithACP(ACPermission memory permission, uint256 handle) public view returns (bool) {
+    function isAllowedWithACP(ACP memory permission, uint256 handle) public view returns (bool) {
         ACPVerifier(_getACLStorage().acpVerifier).checkPermissionValidity(permission);
 
         if (!isAllowed(handle, permission.issuer)) return false;
@@ -394,7 +394,7 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         return false;
     }
 
-    function checkACPValidity(ACPermission memory permission) public view returns (bool) {
+    function checkACPValidity(ACP memory permission) public view returns (bool) {
         return ACPVerifier(_getACLStorage().acpVerifier).checkPermissionValidity(permission);
     }
 }
