@@ -79,7 +79,7 @@ struct ACP {
   // (scope) Contracts whose readable values this permission grants access to (SCOPE_CONTRACT only)
   address[] contracts;
   // (scope) Ciphertext handles this permission grants access to (SCOPE_HANDLES only)
-  uint256[] handles;
+  bytes32[] handles;
   // (base) The publicKey of a sealingPair used to re-encrypt `issuer`s confidential data
   //   (non-sharing) Populated by `issuer`
   //   (sharing)     Populated by `recipient`
@@ -137,59 +137,59 @@ contract PermissionedUpgradeable is Initializable, EIP712Upgradeable {
     return "2";
   }
 
-  /// @dev Emitted when `permission.expiration` is in the past (< block.timestamp)
+  /// @dev Emitted when `acp.expiration` is in the past (< block.timestamp)
   error PermissionInvalid_Expired();
 
-  /// @dev Emitted when `issuerSignature` is malformed or was not signed by `permission.issuer`
+  /// @dev Emitted when `issuerSignature` is malformed or was not signed by `acp.issuer`
   error PermissionInvalid_IssuerSignature();
 
-  /// @dev Emitted when `recipientSignature` is malformed or was not signed by `permission.recipient`
+  /// @dev Emitted when `recipientSignature` is malformed or was not signed by `acp.recipient`
   error PermissionInvalid_RecipientSignature();
 
   /// @dev Emitted when `revokerContract` returned `true` indicating that this permission has been externally disabled
   error PermissionInvalid_Disabled();
 
-  /// @dev Validates a `permission`s access of sensitive data.
-  /// `permission` may be invalid or unauthorized for the following reasons:
-  ///    - Expired:                  `permission.expiration` is in the past (< block.timestamp)
-  ///    - Issuer signature:         `issuerSignature` is malformed or was not signed by `permission.issuer`
-  ///    - Recipient signature:      `recipientSignature` is malformed or was not signed by `permission.recipient`
+  /// @dev Validates an `acp`s access of sensitive data.
+  /// `acp` may be invalid or unauthorized for the following reasons:
+  ///    - Expired:                  `acp.expiration` is in the past (< block.timestamp)
+  ///    - Issuer signature:         `issuerSignature` is malformed or was not signed by `acp.issuer`
+  ///    - Recipient signature:      `recipientSignature` is malformed or was not signed by `acp.recipient`
   ///    - Disabled:                 `revokerContract` returned `true` indicating that this permission has been externally disabled
-  /// @param permission ACP struct containing data necessary to validate data access and seal for return.
+  /// @param acp ACP struct containing data necessary to validate data access and seal for return.
   ///
-  /// NOTE: Functions protected by `withPermission` should return ONLY the sensitive data of `permission.issuer`.
+  /// NOTE: Functions protected by `withPermission` should return ONLY the sensitive data of `acp.issuer`.
   /// !! Returning data of `msg.sender` will leak sensitive values - `msg.sender` cannot be trusted in view functions !!
-  modifier withPermission(ACP memory permission) {
+  modifier withPermission(ACP memory acp) {
     // Expiration
-    if (permission.expiration < block.timestamp)
+    if (acp.expiration < block.timestamp)
       revert PermissionInvalid_Expired();
 
     // Issuer signature
     if (
       !SignatureChecker.isValidSignatureNow(
-        permission.issuer,
-        _hashTypedDataV4(permission.issuerHash()),
-        permission.issuerSignature
+        acp.issuer,
+        _hashTypedDataV4(acp.issuerHash()),
+        acp.issuerSignature
       )
     ) revert PermissionInvalid_IssuerSignature();
 
     // (if applicable) Recipient signature
     if (
-      permission.recipient != address(0) &&
+      acp.recipient != address(0) &&
       !SignatureChecker.isValidSignatureNow(
-        permission.recipient,
-        _hashTypedDataV4(permission.recipientHash()),
-        permission.recipientSignature
+        acp.recipient,
+        _hashTypedDataV4(acp.recipientHash()),
+        acp.recipientSignature
       )
     ) revert PermissionInvalid_RecipientSignature();
 
     // (if applicable) Externally disabled (revoked)
     if (
-      permission.revokerData != 0 &&
-      permission.revokerContract != address(0) &&
-      IPermissionCustomIdValidator(permission.revokerContract).disabled(
-        permission.issuer,
-        permission.revokerData
+      acp.revokerData != 0 &&
+      acp.revokerContract != address(0) &&
+      IPermissionCustomIdValidator(acp.revokerContract).disabled(
+        acp.issuer,
+        acp.revokerData
       )
     ) revert PermissionInvalid_Disabled();
 
@@ -198,8 +198,8 @@ contract PermissionedUpgradeable is Initializable, EIP712Upgradeable {
 
   /// @dev Structure-validity probe (expiration / signatures / revocation).
   function checkPermissionValidity(
-    ACP memory permission
-  ) public view withPermission(permission) returns (bool) {
+    ACP memory acp
+  ) public view withPermission(acp) returns (bool) {
     return true;
   }
 }
@@ -208,63 +208,63 @@ contract PermissionedUpgradeable is Initializable, EIP712Upgradeable {
 /// Primarily focused on signature type hashes. Field order must match the struct and the
 /// SDK's SignatureTypes exactly — pinned by tests on both sides.
 library ACPUtils {
-  function issuerHash(ACP memory permission) internal pure returns (bytes32) {
-    if (permission.recipient == address(0)) return issuerSelfHash(permission);
-    return issuerSharedHash(permission);
+  function issuerHash(ACP memory acp) internal pure returns (bytes32) {
+    if (acp.recipient == address(0)) return issuerSelfHash(acp);
+    return issuerSharedHash(acp);
   }
 
   function issuerSelfHash(
-    ACP memory permission
+    ACP memory acp
   ) internal pure returns (bytes32) {
     return
       keccak256(
         abi.encode(
           keccak256(
-            "ACPIssuerSelf(address issuer,uint64 expiration,address recipient,uint256 revokerData,address revokerContract,uint8 scope,address[] contracts,uint256[] handles,bytes32 sealingKey)"
+            "ACPIssuerSelf(address issuer,uint64 expiration,address recipient,uint256 revokerData,address revokerContract,uint8 scope,address[] contracts,bytes32[] handles,bytes32 sealingKey)"
           ),
-          permission.issuer,
-          permission.expiration,
-          permission.recipient,
-          permission.revokerData,
-          permission.revokerContract,
-          permission.scope,
-          keccak256(abi.encodePacked(permission.contracts)),
-          keccak256(abi.encodePacked(permission.handles)),
-          permission.sealingKey
+          acp.issuer,
+          acp.expiration,
+          acp.recipient,
+          acp.revokerData,
+          acp.revokerContract,
+          acp.scope,
+          keccak256(abi.encodePacked(acp.contracts)),
+          keccak256(abi.encodePacked(acp.handles)),
+          acp.sealingKey
         )
       );
   }
 
   function issuerSharedHash(
-    ACP memory permission
+    ACP memory acp
   ) internal pure returns (bytes32) {
     return
       keccak256(
         abi.encode(
           keccak256(
-            "ACPIssuerShared(address issuer,uint64 expiration,address recipient,uint256 revokerData,address revokerContract,uint8 scope,address[] contracts,uint256[] handles)"
+            "ACPIssuerShared(address issuer,uint64 expiration,address recipient,uint256 revokerData,address revokerContract,uint8 scope,address[] contracts,bytes32[] handles)"
           ),
-          permission.issuer,
-          permission.expiration,
-          permission.recipient,
-          permission.revokerData,
-          permission.revokerContract,
-          permission.scope,
-          keccak256(abi.encodePacked(permission.contracts)),
-          keccak256(abi.encodePacked(permission.handles))
+          acp.issuer,
+          acp.expiration,
+          acp.recipient,
+          acp.revokerData,
+          acp.revokerContract,
+          acp.scope,
+          keccak256(abi.encodePacked(acp.contracts)),
+          keccak256(abi.encodePacked(acp.handles))
         )
       );
   }
 
   function recipientHash(
-    ACP memory permission
+    ACP memory acp
   ) internal pure returns (bytes32) {
     return
       keccak256(
         abi.encode(
           keccak256("ACPRecipient(bytes32 sealingKey,bytes issuerSignature)"),
-          permission.sealingKey,
-          keccak256(permission.issuerSignature)
+          acp.sealingKey,
+          keccak256(acp.issuerSignature)
         )
       );
   }
