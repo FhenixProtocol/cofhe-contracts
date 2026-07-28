@@ -45,10 +45,6 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         mapping(uint256 handle => mapping(address account => bool isAllowed)) persistedAllowedPairs;
         mapping(uint256 => bool) allowedForDecryption;
         mapping(address account => mapping(address delegatee => mapping(address contractAddress => bool isDelegate))) delegates;
-        /// @dev Reserved. Previously held the ACP structure verifier address, before ACP
-        ///      verification was folded into the ACL itself. Kept so the ERC-7201 layout
-        ///      stays append-only; do not reuse for unrelated state.
-        address __reserved_acpVerifier;
     }
 
     /// @notice Name of the contract.
