@@ -5,8 +5,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
-import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
-import {ACPVerifier, ACP} from "./ACP.sol";
+import {PermissionedUpgradeable, ACP, SCOPE_GLOBAL, SCOPE_CONTRACT, SCOPE_HANDLES} from "./Permissioned.sol";
 
 /**
  * @title  ACL
@@ -46,8 +45,10 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         mapping(uint256 handle => mapping(address account => bool isAllowed)) persistedAllowedPairs;
         mapping(uint256 => bool) allowedForDecryption;
         mapping(address account => mapping(address delegatee => mapping(address contractAddress => bool isDelegate))) delegates;
-        /// @dev ACP (Permit V3) structure verifier; address(0) until the ACP upgrade is wired
-        address acpVerifier;
+        /// @dev Reserved. Previously held the ACP structure verifier address, before ACP
+        ///      verification was folded into the ACL itself. Kept so the ERC-7201 layout
+        ///      stays append-only; do not reuse for unrelated state.
+        address __reserved_acpVerifier;
     }
 
     /// @notice Name of the contract.
@@ -343,58 +344,48 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         }
     }
 
-    function isAllowedWithPermission(Permission memory permission, uint256 handle) public view withPermission(permission) returns (bool) {
-        return isAllowed(handle, permission.issuer);
-    }
-
-    function checkPermitValidity(Permission memory permission) public view withPermission(permission) returns (bool) {
-        return true;
-    }
-
     // ---------------------------------------------------------------------------
-    // ACP (Permit V3)
+    // ACP (Permit V3) — scope-checked access
     // ---------------------------------------------------------------------------
+    //
+    // Structure validity (expiration / signatures / revocation) and the EIP-712
+    // domain live on this contract, inherited from PermissionedUpgradeable —
+    // `withPermission` and `checkPermissionValidity` are the entry points.
 
-    /// @notice V3 structure verifier (carries the V3 EIP-712 domain, version "2").
-    function acpVerifier() public view returns (address) {
-        return _getACLStorage().acpVerifier;
-    }
-
-    function setACPVerifier(address verifier) external onlyOwner {
-        _getACLStorage().acpVerifier = verifier;
-    }
-
-    /// @notice V3 (ACP) access check — the scope table. Replaces
-    ///         `isAllowedWithPermission` once the V2 permit path is dropped.
+    /// @notice ACP access check — the scope table.
     ///
     ///         | condition                                          | result |
+    ///         |----------------------------------------------------|--------|
     ///         | permission structure invalid (expired/sig/revoked) | REVERT |
     ///         | issuer does NOT have access to handle              | false  |
-    ///         | permission.global                                  | true   |
-    ///         | any permission.contracts allowed for handle        | true   |
-    ///         | permission.handles contains handle                 | true   |
+    ///         | scope == SCOPE_GLOBAL                              | true   |
+    ///         | scope == SCOPE_CONTRACT, a contract may read handle| true   |
+    ///         | scope == SCOPE_HANDLES, handles contains handle    | true   |
     ///         | otherwise                                          | false  |
     ///
     /// @dev Scopes narrow the issuer's existing access, never widen it.
-    ///      Contract scope intersects the EXISTING persistedAllowedPairs
+    ///      Contract scope intersects the EXISTING allowances
     ///      (populated via FHE.allow/allowThis) — no new data structures.
-    ///      Only persisted grants satisfy contract scope (not transient).
-    function isAllowedWithACP(ACP memory permission, uint256 handle) public view returns (bool) {
-        ACPVerifier(_getACLStorage().acpVerifier).checkPermissionValidity(permission);
-
+    function isAllowedWithACP(ACP memory permission, uint256 handle) public view withPermission(permission) returns (bool) {
+        // Scopes narrow the issuer's existing access, never widen it
         if (!isAllowed(handle, permission.issuer)) return false;
-        if (permission.global) return true;
 
-        for (uint256 i = 0; i < permission.contracts.length; i++) {
-            if (persistAllowed(handle, permission.contracts[i])) return true;
+        if (permission.scope == SCOPE_GLOBAL) return true;
+
+        if (permission.scope == SCOPE_CONTRACT) {
+            for (uint256 i = 0; i < permission.contracts.length; i++) {
+                if (isAllowed(handle, permission.contracts[i])) return true;
+            }
+            return false;
         }
-        for (uint256 i = 0; i < permission.handles.length; i++) {
-            if (permission.handles[i] == handle) return true;
+
+        if (permission.scope == SCOPE_HANDLES) {
+            for (uint256 i = 0; i < permission.handles.length; i++) {
+                if (permission.handles[i] == handle) return true;
+            }
+            return false;
         }
+
         return false;
-    }
-
-    function checkACPValidity(ACP memory permission) public view returns (bool) {
-        return ACPVerifier(_getACLStorage().acpVerifier).checkPermissionValidity(permission);
     }
 }
