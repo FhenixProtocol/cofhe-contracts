@@ -3,6 +3,7 @@ pragma solidity >=0.8.25 <0.9.0;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ACP, IPermissionCustomIdValidator} from "./Permissioned.sol";
 
 /**
@@ -30,17 +31,17 @@ import {ACP, IPermissionCustomIdValidator} from "./Permissioned.sol";
  * parallel entry type; this registry's cleartext entries would be unaffected.)
  */
 contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
     /// @notice Role allowed to upgrade the implementation.
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /// @custom:storage-location erc7201:cofhe.storage.ACPShareRegistry
     struct ACPShareRegistryStorage {
         /// @dev recipient => ids of shares addressed to them
-        mapping(address => bytes32[]) shareIdsFor;
+        mapping(address => EnumerableSet.Bytes32Set) shareIdsFor;
         /// @dev share id => stored payload
         mapping(bytes32 => ACP) shares;
-        /// @dev share id => index+1 in the recipient's id list (0 = not present)
-        mapping(bytes32 => uint256) sharePos;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACPShareRegistry")) - 1)) & ~bytes32(uint256(0xff))
@@ -86,11 +87,9 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
         ACPShareRegistryStorage storage $ = _getStorage();
 
         shareId = keccak256(abi.encode(acp));
-        if ($.sharePos[shareId] != 0) revert AlreadyShared();
-
+        // the id commits to the recipient, so a duplicate can only be in this set
+        if (!$.shareIdsFor[acp.recipient].add(shareId)) revert AlreadyShared();
         $.shares[shareId] = acp;
-        $.shareIdsFor[acp.recipient].push(shareId);
-        $.sharePos[shareId] = $.shareIdsFor[acp.recipient].length;
 
         emit Shared(acp.recipient, acp.issuer, shareId);
     }
@@ -100,26 +99,14 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     function removeShare(bytes32 shareId) external {
         ACPShareRegistryStorage storage $ = _getStorage();
 
-        uint256 pos = $.sharePos[shareId];
-        if (pos == 0) revert UnknownShare();
-
         ACP storage acp = $.shares[shareId];
+        if (acp.issuer == address(0)) revert UnknownShare();
         if (msg.sender != acp.issuer && msg.sender != acp.recipient) revert NotIssuerOrRecipient();
 
         address recipient = acp.recipient;
         address issuer = acp.issuer;
 
-        // swap-and-pop the recipient's id list
-        bytes32[] storage ids = $.shareIdsFor[recipient];
-        uint256 idx = pos - 1;
-        uint256 lastIdx = ids.length - 1;
-        if (idx != lastIdx) {
-            bytes32 movedId = ids[lastIdx];
-            ids[idx] = movedId;
-            $.sharePos[movedId] = pos;
-        }
-        ids.pop();
-        delete $.sharePos[shareId];
+        $.shareIdsFor[recipient].remove(shareId);
         delete $.shares[shareId];
 
         emit ShareRemoved(recipient, issuer, shareId);
@@ -129,17 +116,18 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     ///         Dead entries stay in storage until removed but are filtered here.
     function sharesFor(address recipient) external view returns (ACP[] memory acps) {
         ACPShareRegistryStorage storage $ = _getStorage();
-        bytes32[] storage ids = $.shareIdsFor[recipient];
+        EnumerableSet.Bytes32Set storage ids = $.shareIdsFor[recipient];
+        uint256 len = ids.length();
 
         uint256 live = 0;
-        for (uint256 i = 0; i < ids.length; i++) {
-            if (_isValid($.shares[ids[i]])) live++;
+        for (uint256 i = 0; i < len; i++) {
+            if (_isValid($.shares[ids.at(i)])) live++;
         }
 
         acps = new ACP[](live);
         uint256 j = 0;
-        for (uint256 i = 0; i < ids.length; i++) {
-            ACP storage acp = $.shares[ids[i]];
+        for (uint256 i = 0; i < len; i++) {
+            ACP storage acp = $.shares[ids.at(i)];
             if (_isValid(acp)) {
                 acps[j] = acp;
                 j++;
@@ -157,7 +145,7 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     ///         revoked per its own revoker contract.
     function isShareValid(bytes32 shareId) external view returns (bool) {
         ACPShareRegistryStorage storage $ = _getStorage();
-        if ($.sharePos[shareId] == 0) return false;
+        if ($.shares[shareId].issuer == address(0)) return false;
         return _isValid($.shares[shareId]);
     }
 
