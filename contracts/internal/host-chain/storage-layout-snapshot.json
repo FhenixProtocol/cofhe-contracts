@@ -396,6 +396,160 @@
           }
         ]
       }
+    },
+    "ACPShareRegistry": {
+      "solcVersion": "0.8.25",
+      "storage": [],
+      "types": {
+        "t_mapping(t_address,t_array(t_bytes32)dyn_storage)": {
+          "label": "mapping(address => bytes32[])"
+        },
+        "t_address": {
+          "label": "address"
+        },
+        "t_array(t_bytes32)dyn_storage": {
+          "label": "bytes32[]"
+        },
+        "t_bytes32": {
+          "label": "bytes32"
+        },
+        "t_mapping(t_bytes32,t_struct(ACP)9920_storage)": {
+          "label": "mapping(bytes32 => struct ACP)"
+        },
+        "t_struct(ACP)9920_storage": {
+          "label": "struct ACP",
+          "members": [
+            {
+              "label": "issuer",
+              "type": "t_address"
+            },
+            {
+              "label": "expiration",
+              "type": "t_uint64"
+            },
+            {
+              "label": "recipient",
+              "type": "t_address"
+            },
+            {
+              "label": "revokerData",
+              "type": "t_uint256"
+            },
+            {
+              "label": "revokerContract",
+              "type": "t_address"
+            },
+            {
+              "label": "scope",
+              "type": "t_uint8"
+            },
+            {
+              "label": "contracts",
+              "type": "t_array(t_address)dyn_storage"
+            },
+            {
+              "label": "handles",
+              "type": "t_array(t_bytes32)dyn_storage"
+            },
+            {
+              "label": "sealingKey",
+              "type": "t_bytes32"
+            },
+            {
+              "label": "issuerSignature",
+              "type": "t_bytes_storage"
+            },
+            {
+              "label": "recipientSignature",
+              "type": "t_bytes_storage"
+            }
+          ]
+        },
+        "t_uint64": {
+          "label": "uint64"
+        },
+        "t_uint256": {
+          "label": "uint256"
+        },
+        "t_uint8": {
+          "label": "uint8"
+        },
+        "t_array(t_address)dyn_storage": {
+          "label": "address[]"
+        },
+        "t_bytes_storage": {
+          "label": "bytes"
+        },
+        "t_mapping(t_bytes32,t_uint256)": {
+          "label": "mapping(bytes32 => uint256)"
+        },
+        "t_mapping(t_bytes32,t_struct(RoleData)783_storage)": {
+          "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+        },
+        "t_struct(RoleData)783_storage": {
+          "label": "struct AccessControlUpgradeable.RoleData",
+          "members": [
+            {
+              "label": "hasRole",
+              "type": "t_mapping(t_address,t_bool)"
+            },
+            {
+              "label": "adminRole",
+              "type": "t_bytes32"
+            }
+          ]
+        },
+        "t_mapping(t_address,t_bool)": {
+          "label": "mapping(address => bool)"
+        },
+        "t_bool": {
+          "label": "bool"
+        }
+      },
+      "namespaces": {
+        "erc7201:cofhe.storage.ACPShareRegistry": [
+          {
+            "contract": "ACPShareRegistry",
+            "label": "shareIdsFor",
+            "type": "t_mapping(t_address,t_array(t_bytes32)dyn_storage)",
+            "src": "contracts/ACPShareRegistry.sol:39"
+          },
+          {
+            "contract": "ACPShareRegistry",
+            "label": "shares",
+            "type": "t_mapping(t_bytes32,t_struct(ACP)9920_storage)",
+            "src": "contracts/ACPShareRegistry.sol:41"
+          },
+          {
+            "contract": "ACPShareRegistry",
+            "label": "sharePos",
+            "type": "t_mapping(t_bytes32,t_uint256)",
+            "src": "contracts/ACPShareRegistry.sol:43"
+          }
+        ],
+        "erc7201:openzeppelin.storage.AccessControl": [
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)783_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Initializable": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint64",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+          }
+        ]
+      }
     }
   }
 }
