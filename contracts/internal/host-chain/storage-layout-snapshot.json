@@ -48,7 +48,7 @@
           "label": "acl",
           "offset": 0,
           "slot": "3",
-          "type": "t_contract(ACL)27434",
+          "type": "t_contract(ACL)28545",
           "contract": "TaskManager",
           "src": "contracts/TaskManager.sol:229"
         },
@@ -72,7 +72,7 @@
           "label": "plaintextsStorage",
           "offset": 0,
           "slot": "5",
-          "type": "t_contract(PlaintextsStorage)28051",
+          "type": "t_contract(PlaintextsStorage)29702",
           "contract": "TaskManager",
           "src": "contracts/TaskManager.sol:236"
         },
@@ -126,11 +126,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_contract(ACL)27434": {
+        "t_contract(ACL)28545": {
           "label": "contract ACL",
           "numberOfBytes": "20"
         },
-        "t_contract(PlaintextsStorage)28051": {
+        "t_contract(PlaintextsStorage)29702": {
           "label": "contract PlaintextsStorage",
           "numberOfBytes": "20"
         },
@@ -329,7 +329,7 @@
           "label": "plaintextResults",
           "offset": 0,
           "slot": "0",
-          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)27952_storage)",
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)29603_storage)",
           "contract": "PlaintextsStorage",
           "src": "contracts/PlaintextsStorage.sol:13"
         }
@@ -339,11 +339,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_mapping(t_uint256,t_struct(PlaintextResult)27952_storage)": {
+        "t_mapping(t_uint256,t_struct(PlaintextResult)29603_storage)": {
           "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
           "numberOfBytes": "32"
         },
-        "t_struct(PlaintextResult)27952_storage": {
+        "t_struct(PlaintextResult)29603_storage": {
           "label": "struct PlaintextsStorage.PlaintextResult",
           "members": [
             {
@@ -401,22 +401,50 @@
       "solcVersion": "0.8.25",
       "storage": [],
       "types": {
-        "t_mapping(t_address,t_array(t_bytes32)dyn_storage)": {
-          "label": "mapping(address => bytes32[])"
+        "t_mapping(t_address,t_struct(Bytes32Set)27273_storage)": {
+          "label": "mapping(address => struct EnumerableSet.Bytes32Set)"
         },
         "t_address": {
           "label": "address"
         },
+        "t_struct(Bytes32Set)27273_storage": {
+          "label": "struct EnumerableSet.Bytes32Set",
+          "members": [
+            {
+              "label": "_inner",
+              "type": "t_struct(Set)27079_storage"
+            }
+          ]
+        },
+        "t_struct(Set)27079_storage": {
+          "label": "struct EnumerableSet.Set",
+          "members": [
+            {
+              "label": "_values",
+              "type": "t_array(t_bytes32)dyn_storage"
+            },
+            {
+              "label": "_positions",
+              "type": "t_mapping(t_bytes32,t_uint256)"
+            }
+          ]
+        },
         "t_array(t_bytes32)dyn_storage": {
           "label": "bytes32[]"
+        },
+        "t_mapping(t_bytes32,t_uint256)": {
+          "label": "mapping(bytes32 => uint256)"
         },
         "t_bytes32": {
           "label": "bytes32"
         },
-        "t_mapping(t_bytes32,t_struct(ACP)9920_storage)": {
+        "t_uint256": {
+          "label": "uint256"
+        },
+        "t_mapping(t_bytes32,t_struct(ACP)29269_storage)": {
           "label": "mapping(bytes32 => struct ACP)"
         },
-        "t_struct(ACP)9920_storage": {
+        "t_struct(ACP)29269_storage": {
           "label": "struct ACP",
           "members": [
             {
@@ -468,9 +496,6 @@
         "t_uint64": {
           "label": "uint64"
         },
-        "t_uint256": {
-          "label": "uint256"
-        },
         "t_uint8": {
           "label": "uint8"
         },
@@ -480,13 +505,10 @@
         "t_bytes_storage": {
           "label": "bytes"
         },
-        "t_mapping(t_bytes32,t_uint256)": {
-          "label": "mapping(bytes32 => uint256)"
-        },
-        "t_mapping(t_bytes32,t_struct(RoleData)783_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
-        "t_struct(RoleData)783_storage": {
+        "t_struct(RoleData)19325_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -511,27 +533,21 @@
           {
             "contract": "ACPShareRegistry",
             "label": "shareIdsFor",
-            "type": "t_mapping(t_address,t_array(t_bytes32)dyn_storage)",
-            "src": "contracts/ACPShareRegistry.sol:39"
+            "type": "t_mapping(t_address,t_struct(Bytes32Set)27273_storage)",
+            "src": "contracts/ACPShareRegistry.sol:42"
           },
           {
             "contract": "ACPShareRegistry",
             "label": "shares",
-            "type": "t_mapping(t_bytes32,t_struct(ACP)9920_storage)",
-            "src": "contracts/ACPShareRegistry.sol:41"
-          },
-          {
-            "contract": "ACPShareRegistry",
-            "label": "sharePos",
-            "type": "t_mapping(t_bytes32,t_uint256)",
-            "src": "contracts/ACPShareRegistry.sol:43"
+            "type": "t_mapping(t_bytes32,t_struct(ACP)29269_storage)",
+            "src": "contracts/ACPShareRegistry.sol:44"
           }
         ],
         "erc7201:openzeppelin.storage.AccessControl": [
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)783_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
