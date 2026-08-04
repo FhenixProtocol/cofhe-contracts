@@ -204,6 +204,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
     event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
     event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
+    event InputVerified(uint256 indexed ctHash, bytes32 commitment);
     event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
     event VerifierSignerChanged(address indexed oldSigner, address indexed newSigner);
     event AccessListEnabledSet(bool enabled);
@@ -784,6 +785,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         }
 
         uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
+
+        emit InputVerified(appendedHash, bytes32(input.ctHash));
 
         acl.allowTransient(appendedHash, msg.sender, address(this));
         return appendedHash;
