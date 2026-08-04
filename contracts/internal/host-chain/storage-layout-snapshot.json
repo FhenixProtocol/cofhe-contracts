@@ -48,7 +48,7 @@
           "label": "acl",
           "offset": 0,
           "slot": "3",
-          "type": "t_contract(ACL)9260",
+          "type": "t_contract(ACL)27434",
           "contract": "TaskManager",
           "src": "contracts/TaskManager.sol:229"
         },
@@ -72,7 +72,7 @@
           "label": "plaintextsStorage",
           "offset": 0,
           "slot": "5",
-          "type": "t_contract(PlaintextsStorage)10353",
+          "type": "t_contract(PlaintextsStorage)28051",
           "contract": "TaskManager",
           "src": "contracts/TaskManager.sol:236"
         },
@@ -126,11 +126,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_contract(ACL)9260": {
+        "t_contract(ACL)27434": {
           "label": "contract ACL",
           "numberOfBytes": "20"
         },
-        "t_contract(PlaintextsStorage)10353": {
+        "t_contract(PlaintextsStorage)28051": {
           "label": "contract PlaintextsStorage",
           "numberOfBytes": "20"
         },
@@ -231,25 +231,37 @@
             "contract": "ACL",
             "label": "globalHandles",
             "type": "t_mapping(t_uint256,t_bool)",
-            "src": "contracts/ACL.sol:44"
+            "src": "contracts/ACL.sol:54"
           },
           {
             "contract": "ACL",
             "label": "persistedAllowedPairs",
             "type": "t_mapping(t_uint256,t_mapping(t_address,t_bool))",
-            "src": "contracts/ACL.sol:45"
+            "src": "contracts/ACL.sol:55"
           },
           {
             "contract": "ACL",
             "label": "allowedForDecryption",
             "type": "t_mapping(t_uint256,t_bool)",
-            "src": "contracts/ACL.sol:46"
+            "src": "contracts/ACL.sol:56"
           },
           {
             "contract": "ACL",
             "label": "delegates",
             "type": "t_mapping(t_address,t_mapping(t_address,t_mapping(t_address,t_bool)))",
-            "src": "contracts/ACL.sol:47"
+            "src": "contracts/ACL.sol:57"
+          },
+          {
+            "contract": "ACL",
+            "label": "defaultRevokerContract",
+            "type": "t_address",
+            "src": "contracts/ACL.sol:59"
+          },
+          {
+            "contract": "ACL",
+            "label": "shareRegistry",
+            "type": "t_address",
+            "src": "contracts/ACL.sol:60"
           }
         ],
         "erc7201:openzeppelin.storage.EIP712": [
@@ -317,7 +329,7 @@
           "label": "plaintextResults",
           "offset": 0,
           "slot": "0",
-          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)10254_storage)",
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)27952_storage)",
           "contract": "PlaintextsStorage",
           "src": "contracts/PlaintextsStorage.sol:13"
         }
@@ -327,11 +339,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_mapping(t_uint256,t_struct(PlaintextResult)10254_storage)": {
+        "t_mapping(t_uint256,t_struct(PlaintextResult)27952_storage)": {
           "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
           "numberOfBytes": "32"
         },
-        "t_struct(PlaintextResult)10254_storage": {
+        "t_struct(PlaintextResult)27952_storage": {
           "label": "struct PlaintextsStorage.PlaintextResult",
           "members": [
             {
