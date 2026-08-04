@@ -362,7 +362,7 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     /// @dev Scopes narrow the issuer's existing access, never widen it.
     ///      Contract scope intersects the EXISTING allowances
     ///      (populated via FHE.allow/allowThis) — no new data structures.
-    function isAllowedWithACP(ACP memory acp, uint256 handle) public view withPermission(acp) returns (bool) {
+    function isAllowedWithPermission(ACP memory acp, uint256 handle) public view withPermission(acp) returns (bool) {
         // Scopes narrow the issuer's existing access, never widen it
         if (!isAllowed(handle, acp.issuer)) return false;
 

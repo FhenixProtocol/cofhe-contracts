@@ -50,7 +50,7 @@ uint8 constant SCOPE_HANDLES = 2;
  *
  * Scope: `scope` selects exactly one access mode (see SCOPE_* above). Scopes narrow the
  * issuer's existing ACL access, they never widen it. Scope semantics are enforced by the
- * ACL (`isAllowedWithACP`); this contract checks structure only.
+ * ACL (`isAllowedWithPermission`); this contract checks structure only.
  *
  *   ---
  *

@@ -901,6 +901,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
 
     /// @notice ACP scope-checked access, forwarded to the ACL.
     function isAllowedWithPermission(ACP memory acp, uint256 handle) public view returns (bool) {
-        return acl.isAllowedWithACP(acp, handle);
+        return acl.isAllowedWithPermission(acp, handle);
     }
 }
