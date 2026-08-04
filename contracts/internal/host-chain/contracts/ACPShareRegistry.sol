@@ -106,7 +106,8 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
         address recipient = acp.recipient;
         address issuer = acp.issuer;
 
-        $.shareIdsFor[recipient].remove(shareId);
+        // the id set and the payload map stay in sync — mirror share()'s add() handling
+        if (!$.shareIdsFor[recipient].remove(shareId)) revert UnknownShare();
         delete $.shares[shareId];
 
         emit ShareRemoved(recipient, issuer, shareId);
