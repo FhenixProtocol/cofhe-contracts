@@ -39,12 +39,25 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     /// @param contractAddress  Contract address.
     event NewDelegation(address indexed sender, address indexed delegatee, address indexed contractAddress);
 
+    /// @notice                 Emitted when the default revoker contract address is updated.
+    /// @param oldAddress       Previous address.
+    /// @param newAddress       New address (zero = unset).
+    event DefaultRevokerContractUpdated(address oldAddress, address newAddress);
+
+    /// @notice                 Emitted when the share registry address is updated.
+    /// @param oldAddress       Previous address.
+    /// @param newAddress       New address (zero = unset).
+    event ShareRegistryUpdated(address oldAddress, address newAddress);
+
     /// @custom:storage-location erc7201:cofhe.storage.ACL
     struct ACLStorage {
         mapping(uint256 handle => bool isGlobal) globalHandles;
         mapping(uint256 handle => mapping(address account => bool isAllowed)) persistedAllowedPairs;
         mapping(uint256 => bool) allowedForDecryption;
         mapping(address account => mapping(address delegatee => mapping(address contractAddress => bool isDelegate))) delegates;
+        // ACP infrastructure addresses served to SDKs (appended fields — do not reorder)
+        address defaultRevokerContract;
+        address shareRegistry;
     }
 
     /// @notice Name of the contract.
@@ -347,6 +360,34 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     // Structure validity (expiration / signatures / revocation) and the EIP-712
     // domain live on this contract, inherited from PermissionedUpgradeable —
     // `withPermission` and `checkPermissionValidity` are the entry points.
+
+    /// @notice         Default revoker contract for newly created ACPs, served to SDKs.
+    /// @return address The default revoker contract address (zero = unset).
+    function defaultRevokerContract() public view virtual returns (address) {
+        return _getACLStorage().defaultRevokerContract;
+    }
+
+    /// @notice         The ACPShareRegistry address, served to SDKs.
+    /// @return address The share registry address (zero = sharing not available on this chain).
+    function shareRegistry() public view virtual returns (address) {
+        return _getACLStorage().shareRegistry;
+    }
+
+    /// @notice             Sets the default revoker contract address.
+    /// @param newAddress   The new address (zero = unset).
+    function setDefaultRevokerContract(address newAddress) external virtual onlyOwner {
+        ACLStorage storage $ = _getACLStorage();
+        emit DefaultRevokerContractUpdated($.defaultRevokerContract, newAddress);
+        $.defaultRevokerContract = newAddress;
+    }
+
+    /// @notice             Sets the share registry address.
+    /// @param newAddress   The new address (zero = unset).
+    function setShareRegistry(address newAddress) external virtual onlyOwner {
+        ACLStorage storage $ = _getACLStorage();
+        emit ShareRegistryUpdated($.shareRegistry, newAddress);
+        $.shareRegistry = newAddress;
+    }
 
     /// @notice ACP access check — the scope table.
     ///
