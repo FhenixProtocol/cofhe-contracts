@@ -8,7 +8,7 @@ struct EncryptedInput {
     bytes signature;
 }
 
-struct BatchedEncryptedInput {
+struct UnsignedEncryptedInput {
     uint256 ctHash;
     uint8 securityZone;
     uint8 utype;
@@ -104,8 +104,8 @@ interface ITaskManager {
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedInputs, uint256[] memory extraInputs) external returns (uint256);
     function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external returns (uint256);
 
-    function verifyInput(EncryptedInput memory input, address sender, bytes memory signature) external returns (uint256);
-    function batchVerifyInputs(BatchedEncryptedInput[] memory inputs, address sender, bytes memory signature) external returns (uint256[] memory);
+    function verifyInput(EncryptedInput memory input, address sender) external returns (uint256);
+    function batchVerifyInputs(UnsignedEncryptedInput[] memory inputs, address sender, bytes memory signature) external returns (uint256[] memory);
 
     function allow(uint256 ctHash, address account) external;
     function isAllowed(uint256 ctHash, address account) external returns (bool);
@@ -253,8 +253,8 @@ library Utils {
         return v;
     }
 
-    function batchInputEntryFromBytes(bytes memory data, uint8 expected) internal pure returns (BatchedEncryptedInput memory) {
-        BatchedEncryptedInput memory v;
+    function batchInputEntryFromBytes(bytes memory data, uint8 expected) internal pure returns (UnsignedEncryptedInput memory) {
+        UnsignedEncryptedInput memory v;
         (
             v.ctHash,
             v.securityZone,
@@ -265,8 +265,8 @@ library Utils {
         return v;
     }
 
-    function batchInputsFromBytes(bytes[] memory data, uint8 expected) internal pure returns (BatchedEncryptedInput[] memory) {
-        BatchedEncryptedInput[] memory inputs = new BatchedEncryptedInput[](data.length);
+    function batchInputsFromBytes(bytes[] memory data, uint8 expected) internal pure returns (UnsignedEncryptedInput[] memory) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](data.length);
         for (uint256 i = 0; i < data.length; i++) {
             inputs[i] = batchInputEntryFromBytes(data[i], expected);
         }

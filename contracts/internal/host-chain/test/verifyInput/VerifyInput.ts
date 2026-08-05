@@ -1,5 +1,5 @@
 import type { Signers } from "../types";
-import { shouldBehaveLikeBatchVerifyInput } from "./VerifyInput.behavior";
+import { shouldBehaveLikeBatchVerifyInput, shouldBehaveLikeBatchConverters } from "./VerifyInput.behavior";
 import { deployDecryptResultFixture } from "../decryptResult/DecryptResult.fixture";
 import hre from "hardhat";
 
@@ -25,5 +25,6 @@ describe("VerifyInput Tests", function () {
 
   describe("BatchVerifyInput", function () {
     shouldBehaveLikeBatchVerifyInput();
+    shouldBehaveLikeBatchConverters();
   });
 });

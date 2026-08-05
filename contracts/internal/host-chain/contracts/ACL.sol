@@ -158,7 +158,47 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         if (!isAllowed(handle, requester) && requester != TASK_MANAGER_ADDRESS) {
             revert SenderNotAllowed(requester);
         }
-        
+
+        _allowTransient(handle, account);
+    }
+
+    /**
+     * @notice              Allows the use of every handle in `handles` by address `account` for this transaction.
+     * @dev                 Batch form of allowTransient(), so a caller verifying many handles pays for one
+     *                      call instead of one per handle.
+     * @dev                 The caller must be the Task Manager contract.
+     * @dev                 The requester must be allowed to use every handle for batchAllowTransient()
+     *                      to succeed. If not, batchAllowTransient() reverts.
+     * @param handles       List of handles.
+     * @param account       Address of the account.
+     * @param requester     Address of the requester.
+     */
+    function batchAllowTransient(uint256[] memory handles, address account, address requester) public virtual {
+        if (msg.sender != TASK_MANAGER_ADDRESS) {
+            revert DirectAllowForbidden(msg.sender);
+        }
+
+        // The Task Manager is exempt from the isAllowed() requirement (same as in
+        // allowTransient()), so hoist the comparison and skip the lookup entirely.
+        bool requesterIsTaskManager = requester == TASK_MANAGER_ADDRESS;
+        uint256 len = handles.length;
+
+        for (uint256 k = 0; k < len; k++) {
+            uint256 handle = handles[k];
+            if (!requesterIsTaskManager && !isAllowed(handle, requester)) {
+                revert SenderNotAllowed(requester);
+            }
+            _allowTransient(handle, account);
+        }
+    }
+
+    /**
+     * @dev                 Marks `handle` usable by `account` for this transaction and appends the key to
+     *                      the transient key list, whose length lives in transient slot 0.
+     * @param handle        Handle.
+     * @param account       Address of the account.
+     */
+    function _allowTransient(uint256 handle, address account) internal {
         bytes32 key = keccak256(abi.encodePacked(handle, account));
         assembly {
             tstore(key, 1)
