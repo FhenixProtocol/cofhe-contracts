@@ -168,6 +168,32 @@ export function shouldBehaveLikeBatchConverters(): void {
       }
     });
 
+    it("asEuint8 verifies a single input as a batch of one", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+      const owner = this.owner as { address: string };
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      const batchInputs = (await ethers
+        .getContractFactory("BatchInputsTest")
+        .then((f) => f.deploy())) as unknown as Contract;
+      await batchInputs.waitForDeployment();
+
+      const ctHash = 0xfeedn << 16n;
+      const inputs: Input[] = [{ ctHash, securityZone: 0, utype: EUINT8_TFHE, signature: "0x" }];
+
+      const directSignature = signBatch(testSigner, inputs, owner.address, chainId, owner.address);
+      const expected = await taskManager.batchVerifyInputs.staticCall(inputs, owner.address, directSignature);
+
+      // Single-input asEuint8 goes through batchVerifyInputs with one element, so
+      // the digest is keccak256(h_0) bound to BatchInputsTest as the consumer.
+      const signature = signBatch(testSigner, inputs, owner.address, chainId, await batchInputs.getAddress());
+      await batchInputs.singleAsEuint8(ethers.zeroPadValue(ethers.toBeHex(ctHash), 32), signature);
+
+      expect(await batchInputs.lastHandlesLength()).to.equal(1);
+      expect(BigInt(await batchInputs.lastHandles(0))).to.equal(expected[0]);
+    });
+
     it("asEbools returns the verified handles in input order for the bytes[] overload", async function () {
       const taskManager = this.taskManager as Contract;
       const testSigner = this.testSigner as Wallet;

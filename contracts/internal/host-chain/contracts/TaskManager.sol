@@ -8,7 +8,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {ITaskManager, FunctionId, Utils, EncryptedInput, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
+import {ITaskManager, FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
 
 
 error DecryptionResultNotReady(uint256 ctHash);
@@ -773,37 +773,14 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return result;
     }
 
-    function verifyInput(EncryptedInput memory input, address sender) external onlyAccessListed returns (uint256) {
-        int32 securityZone = int32(uint32(input.securityZone));
-
-        // When signer is set to 0 address we skip this logic to be able to support debug use cases.
-        // In debug use cases we assume that the verifier is not necessarily running.
-        if (verifierSigner != address(0)) {
-            if (!isValidSecurityZone(securityZone)) {
-                revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-            }
-
-            address signer = extractSigner(input, sender, msg.sender);
-            if (signer != verifierSigner) {
-                revert InvalidSigner(signer, verifierSigner);
-            }
-        }
-
-        uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
-
-        emit InputVerified(appendedHash, bytes32(input.ctHash));
-
-        acl.allowTransient(appendedHash, msg.sender, address(this));
-        return appendedHash;
-    }
-
     /// @notice Verify a batch of encrypted inputs that share a single signature.
-    /// @dev The verifier signs the whole batch with one signature over
-    ///      keccak256(h_0 || h_1 || ... || h_n), where each h_i is the same
-    ///      per-input message hash used by `verifyInput`:
+    /// @dev The only input-verification entry point: a single input is a batch of one.
+    ///      The verifier signs the whole batch with one signature over
+    ///      keccak256(h_0 || h_1 || ... || h_n), where each h_i is the per-input
+    ///      message hash
     ///      keccak256(ctHash || utype || securityZone || sender || chainid || contractAddress).
-    ///      Like `verifyInput`, the batch is bound to the consuming contract
-    ///      (`msg.sender`), so it cannot be replayed into a different contract.
+    ///      The batch is bound to the consuming contract (`msg.sender`), so it
+    ///      cannot be replayed into a different contract.
     ///      Inputs are processed in order; the returned hashes line up with `inputs`.
     /// @param inputs The encrypted inputs to verify (no per-input signature —
     ///        the batch is authenticated by the single `signature` argument).
@@ -870,11 +847,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return acl.globalAllowed(ctHash);
     }
 
-    /// @dev Per-input message hash, shared by single and batch verification:
+    /// @dev Per-input message hash folded into the batch digest:
     ///      keccak256(ctHash || utype || securityZone || sender || chainid || contractAddress).
-    ///      Takes scalars so both `EncryptedInput` and `UnsignedEncryptedInput`
-    ///      (which differ only by the per-input `signature` field) can reuse it
-    ///      without a struct-type conversion.
     function inputMessageHash(
         uint256 ctHash,
         uint8 utype,
@@ -892,21 +866,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
                 contractAddress
             )
         );
-    }
-
-    function extractSigner(
-        EncryptedInput memory input,
-        address sender,
-        address contractAddress
-    ) private view returns (address) {
-        bytes32 expectedHash = inputMessageHash(input.ctHash, input.utype, input.securityZone, sender, contractAddress);
-
-        address signer = ECDSA.recover(expectedHash, input.signature);
-        if (signer == address(0)) {
-            revert InvalidSignature();
-        }
-
-        return signer;
     }
 
     /// @dev Recover the signer of a batch from the single signature over

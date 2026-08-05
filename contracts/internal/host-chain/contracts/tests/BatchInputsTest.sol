@@ -26,6 +26,14 @@ contract BatchInputsTest {
         }
     }
 
+    // The single-input converter now rides batchVerifyInputs as a batch of one,
+    // so its signature must cover keccak256(h_0).
+    function singleAsEuint8(externalEuint8 value, bytes memory signature) public {
+        euint8 verified = FHE.asEuint8(value, signature);
+        delete lastHandles;
+        lastHandles.push(euint8.unwrap(verified));
+    }
+
     function lastHandlesLength() external view returns (uint256) {
         return lastHandles.length;
     }
