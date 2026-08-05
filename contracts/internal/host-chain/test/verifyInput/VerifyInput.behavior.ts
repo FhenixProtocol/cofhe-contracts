@@ -4,6 +4,7 @@ const { ethers } = hre;
 import { Contract, Wallet } from "ethers";
 
 // Encryption type constants (must match Utils library in ICofhe.sol)
+const EBOOL_TFHE = 0;
 const EUINT8_TFHE = 2;
 const EUINT32_TFHE = 4;
 const EUINT64_TFHE = 5;
@@ -124,6 +125,84 @@ export function shouldBehaveLikeBatchVerifyInput(): void {
 
       // Restore the signer so test ordering does not leak state.
       await (taskManager.connect(owner) as Contract).setVerifierSigner(testSigner.address);
+    });
+  });
+}
+
+export function shouldBehaveLikeBatchConverters(): void {
+  describe("FHE batch converters", function () {
+    it("asEuint8s returns the verified handles in input order", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+      const owner = this.owner as { address: string };
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      const batchInputs = (await ethers
+        .getContractFactory("BatchInputsTest")
+        .then((f) => f.deploy())) as unknown as Contract;
+      await batchInputs.waitForDeployment();
+
+      // asEuint8s pins securityZone to 0 and the utype to euint8.
+      const ctHashes = [0xaaaan << 16n, 0xbbbbn << 16n, 0xccccn << 16n];
+      const inputs: Input[] = ctHashes.map((ctHash) => ({
+        ctHash,
+        securityZone: 0,
+        utype: EUINT8_TFHE,
+        signature: "0x",
+      }));
+      // Expected handles come from TaskManager itself, called directly, so the
+      // digest for that call binds to the EOA as both sender and contract.
+      const directSignature = signBatch(testSigner, inputs, owner.address, chainId, owner.address);
+      const expected = await taskManager.batchVerifyInputs.staticCall(inputs, owner.address, directSignature);
+
+      // FHE.sol is inlined into the calling contract, so the digest for the real
+      // path binds sender to the EOA and contract to BatchInputsTest.
+      const signature = signBatch(testSigner, inputs, owner.address, chainId, await batchInputs.getAddress());
+
+      const handles = ctHashes.map((ctHash) => ethers.zeroPadValue(ethers.toBeHex(ctHash), 32));
+      await batchInputs.batchAsEuint8(handles, signature);
+
+      expect(await batchInputs.lastHandlesLength()).to.equal(ctHashes.length);
+      for (let i = 0; i < ctHashes.length; i++) {
+        expect(BigInt(await batchInputs.lastHandles(i))).to.equal(expected[i]);
+      }
+    });
+
+    it("asEbools returns the verified handles in input order for the bytes[] overload", async function () {
+      const taskManager = this.taskManager as Contract;
+      const testSigner = this.testSigner as Wallet;
+      const owner = this.owner as { address: string };
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      const batchInputs = (await ethers
+        .getContractFactory("BatchInputsTest")
+        .then((f) => f.deploy())) as unknown as Contract;
+      await batchInputs.waitForDeployment();
+
+      const ctHashes = [0xddddn << 16n, 0xeeeen << 16n];
+      const inputs: Input[] = ctHashes.map((ctHash) => ({
+        ctHash,
+        securityZone: 0,
+        utype: EBOOL_TFHE,
+        signature: "0x",
+      }));
+      const directSignature = signBatch(testSigner, inputs, owner.address, chainId, owner.address);
+      const expected = await taskManager.batchVerifyInputs.staticCall(inputs, owner.address, directSignature);
+
+      const signature = signBatch(testSigner, inputs, owner.address, chainId, await batchInputs.getAddress());
+
+      const encoded = inputs.map((input) =>
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["uint256", "uint8", "uint8"],
+          [input.ctHash, input.securityZone, input.utype]
+        )
+      );
+      await batchInputs.batchAsEbool(encoded, signature);
+
+      expect(await batchInputs.lastHandlesLength()).to.equal(ctHashes.length);
+      for (let i = 0; i < ctHashes.length; i++) {
+        expect(BigInt(await batchInputs.lastHandles(i))).to.equal(expected[i]);
+      }
     });
   });
 }
