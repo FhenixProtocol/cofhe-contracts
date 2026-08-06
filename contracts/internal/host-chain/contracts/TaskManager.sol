@@ -546,10 +546,15 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
             seed = _generateSeed(securityZone);
         }
 
-        // seed is directly used as preCtHash for encrypted randoms
-        uint256 ctHash = TMCommon.appendMetadata(seed, securityZone, returnType, false);
+        /// @dev msg.sender is part of the preimage so the same seed from different
+        /// callers yields different handles.
+        uint256[] memory inputs = new uint256[](2);
+        inputs[0] = seed;
+        inputs[1] = uint256(uint160(msg.sender));
+
+        uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, FunctionId.random);
         acl.allowTransient(ctHash, msg.sender, address(this));
-        emit TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), 0);
+        emit TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), inputs[1]);
         return ctHash;
     }
 
