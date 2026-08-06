@@ -816,6 +816,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
                 TMCommon.appendMetadata(inputs[i].ctHash, securityZone, inputs[i].utype, false);
         }
 
+        // TODO: emit InputVerified event for the entire batch
+
         acl.batchAllowTransient(appendedHashes, msg.sender, address(this));
 
         return appendedHashes;
