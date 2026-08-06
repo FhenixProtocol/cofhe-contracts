@@ -105,5 +105,13 @@ task("task:upgradeTM")
 
     if (!taskArguments.onlyvalidate) {
         await upgradeTM(ethers, upgrades, TMProxyContract, TMFactory, signer);
+
+        // The ABI artifact the off-chain services read is a separate object in GCS;
+        // upgrading the proxy does not touch it. Fired unconditionally — checking
+        // whether the ABI actually moved would need bucket access in this task.
+        console.log(chalk.yellow("The published TaskManager ABI artifact has NOT been updated."));
+        console.log(chalk.yellow("Services read it from GCS and will keep using the old ABI until you run:"));
+        console.log(chalk.yellow(`  pnpm run publish:tm-abi -- --network ${hre.network.name} --bucket <bucket>`));
+        console.log(chalk.yellow("Omit --bucket to list the known environment buckets."));
     }
   });
