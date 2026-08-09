@@ -97,6 +97,14 @@ task("task:publishTMAbi")
       throw new Error("--network is required");
     }
 
+    // An unset REMOTE_RPC_URL leaves the 'remote' network with an empty url, which
+    // fails deep inside the provider. Say what's actually wrong instead.
+    if (hre.network.name === "remote" && !process.env.REMOTE_RPC_URL) {
+      throw new Error(
+        "--network remote requires REMOTE_RPC_URL (e.g. http://127.0.0.1:18547 pointing at a port-forward).",
+      );
+    }
+
     if (!taskArguments.bucket) {
       console.log(chalk.red("--bucket is required."));
       console.log("Known environment buckets:");

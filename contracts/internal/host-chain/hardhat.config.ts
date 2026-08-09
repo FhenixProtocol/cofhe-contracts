@@ -75,6 +75,21 @@ const localfhenixk8sconfig: HttpNetworkUserConfig  = {
   accounts: [process.env.KEY as string, process.env.KEY2 as string, process.env.AGGREGATOR_KEY as string],
 };
 
+// For reaching a remote host chain (staging, testnet-v2, devnet) over a port-forward.
+// Deliberately NOT reusing localfhenix: that points at 127.0.0.1:42069, which is where
+// the local docker chain listens, and the local chain shares staging's chain id (420105).
+// Aliasing the two means a dead port-forward silently publishes local artifacts to a
+// remote bucket with nothing to catch it. REMOTE_RPC_URL must be set explicitly.
+const remoteconfig: HttpNetworkUserConfig = {
+  gas: "auto",
+  gasMultiplier: 1.2,
+  gasPrice: 100_000_000_000,
+  timeout: 10_000,
+  httpHeaders: {},
+  url: process.env.REMOTE_RPC_URL ?? "",
+  accounts: [process.env.KEY as string, process.env.KEY2 as string, process.env.AGGREGATOR_KEY as string],
+};
+
 function insertAccounts(config: any) {
   const keys = process.env.KEY;
   if (!keys) {
@@ -124,6 +139,7 @@ const config: HardhatUserConfig = {
     baseSepolia: baseSepoliaConfig as HttpNetworkUserConfig,
     localfhenix: localfhenixconfig,
     localfhenixk8s: localfhenixk8sconfig,
+    remote: remoteconfig,
   },
   typechain: {
     outDir: "types",
