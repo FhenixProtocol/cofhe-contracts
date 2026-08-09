@@ -11,6 +11,7 @@ import "hardhat-deploy";
 import {HardhatUserConfig} from "hardhat/config";
 import {resolve} from "path";
 import {HttpNetworkUserConfig} from "hardhat/types";
+import "@nomicfoundation/hardhat-verify";
 import "@openzeppelin/hardhat-upgrades";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
@@ -133,6 +134,13 @@ const config: HardhatUserConfig = {
     enabled: process.env.REPORT_GAS === "true",
     outputFile: process.env.GAS_REPORT_FILE || undefined,
     noColors: !!process.env.GAS_REPORT_FILE,
+  },
+  // Single Etherscan V2 multichain API key; covers sepolia, arbitrumSepolia and baseSepolia.
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY ?? "",
+  },
+  sourcify: {
+    enabled: false,
   },
 };
 

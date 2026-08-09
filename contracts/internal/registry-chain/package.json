@@ -7,6 +7,7 @@
     "test:gas": "REPORT_GAS=true hardhat test --network hardhat",
     "compile": "hardhat compile",
     "task:deploy": "hardhat run scripts/deploy.ts",
+    "task:verify": "hardhat run scripts/verify.ts",
     "clean": "rimraf ./artifacts ./cache ./types ./.openzeppelin/*"
   },
   "author": "Fhenix",
@@ -16,6 +17,7 @@
     "@nomicfoundation/hardhat-ethers": "^3.1.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.3",
     "@openzeppelin/contracts": "5.2.0",
     "@openzeppelin/contracts-upgradeable": "5.2.0",
     "@openzeppelin/hardhat-upgrades": "^3.9.1",

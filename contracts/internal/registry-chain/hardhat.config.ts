@@ -1,4 +1,5 @@
 import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-verify";
 import "@openzeppelin/hardhat-upgrades";
 import { config as dotenvConfig } from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
@@ -38,6 +39,13 @@ const config: HardhatUserConfig = {
     enabled: process.env.REPORT_GAS === "true",
     outputFile: process.env.GAS_REPORT_FILE || undefined,
     noColors: !!process.env.GAS_REPORT_FILE,
+  },
+  // Single Etherscan V2 multichain API key; covers arbitrumSepolia.
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY ?? "",
+  },
+  sourcify: {
+    enabled: false,
   },
 };
 

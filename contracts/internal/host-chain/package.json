@@ -14,6 +14,7 @@
     "task:deploy": "hardhat deploy",
     "deploy:deterministicTM": "hardhat compile && hardhat task:deployDeterministicTM",
     "task:upgradeTM": "hardhat task:upgradeTM",
+    "task:verifyDeployment": "hardhat task:verifyDeployment",
     "deploy:sepolia": "hardhat deploy --network sepolia",
     "storage-layout:generate": "hardhat task:storage-layout --network hardhat",
     "storage-layout:check": "hardhat task:storage-layout --network hardhat --check",
