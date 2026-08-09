@@ -15,17 +15,6 @@ const ENVIRONMENTS_DIR = path.join(
   "../../../../../deployments/generator/environments",
 );
 
-type AbiEntry = {
-  type?: string;
-  name?: string;
-  inputs?: { type?: string }[];
-};
-
-function abiSignature(entry: AbiEntry): string {
-  const inputs = (entry.inputs ?? []).map((i) => i.type ?? "?").join(",");
-  return `${entry.type ?? "?"} ${entry.name ?? ""}(${inputs})`;
-}
-
 function listNetworks(hre: HardhatRuntimeEnvironment): string[] {
   return Object.keys(hre.config.networks).filter((n) => n !== "hardhat");
 }
@@ -84,31 +73,6 @@ function readRemoteJson(uri: string): Record<string, unknown> | null {
   }
 }
 
-function reportAbiDelta(previous: AbiEntry[] | undefined, next: AbiEntry[]) {
-  if (!previous) {
-    console.log(chalk.yellow("No published artifact to compare against — this will be the first."));
-    return;
-  }
-
-  const before = new Set(previous.map(abiSignature));
-  const after = new Set(next.map(abiSignature));
-
-  const added = [...after].filter((s) => !before.has(s));
-  const removed = [...before].filter((s) => !after.has(s));
-
-  if (added.length === 0 && removed.length === 0) {
-    console.log(chalk.green("ABI is unchanged from what is already published."));
-    return;
-  }
-
-  for (const s of added) {
-    console.log(chalk.green(`  + ${s}`));
-  }
-  for (const s of removed) {
-    console.log(chalk.red(`  - ${s}`));
-  }
-}
-
 task("task:publishTMAbi")
   .addOptionalParam("bucket", "GCS bucket to publish the artifact to", "")
   .addFlag("dryRun", "Report what would be published without writing anything")
@@ -158,18 +122,29 @@ task("task:publishTMAbi")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const uri = `gs://${taskArguments.bucket}/deployments/${chainId}/TaskManager.json`;
 
+    const contract = new ethers.Contract(TM_PROXY_ADDRESS, artifact.abi, ethers.provider);
+    const version = Number(await contract.getVersion());
+
     console.log(chalk.green(`Network:  ${hre.network.name} (chain ${chainId})`));
     console.log(chalk.green(`Proxy:    ${TM_PROXY_ADDRESS}`));
+    console.log(chalk.green(`Version:  ${version}`));
     console.log(chalk.green(`Target:   ${uri}`));
 
     const existing = readRemoteJson(uri);
-    reportAbiDelta(existing?.abi as AbiEntry[] | undefined, artifact.abi as AbiEntry[]);
+
+    // Named from the version recorded in the artifact being replaced, not from the
+    // live chain: task:upgradeTM calls incVersion() before this runs, so the chain
+    // already reports the new version while the published artifact is still the old
+    // one. Artifacts predating this task carry no version, hence "unknown".
+    const previousVersion = existing?.version ?? "unknown";
+    const backupUri = `gs://${taskArguments.bucket}/deployments/${chainId}/TaskManager_v${previousVersion}_bak.json`;
 
     // Merge rather than replace so any other top-level keys on the published
     // artifact survive a republish.
     const merged = {
       ...(existing ?? {}),
       address: TM_PROXY_ADDRESS,
+      version,
       abi: artifact.abi,
     };
 
@@ -179,20 +154,23 @@ task("task:publishTMAbi")
     fs.writeFileSync(localPath, JSON.stringify(merged, null, 2), "utf8");
 
     if (taskArguments.dryRun) {
+      console.log(
+        existing
+          ? chalk.yellow(`Would back up the current artifact (v${previousVersion}) to ${backupUri}`)
+          : chalk.yellow("No published artifact at the target — this would be the first."),
+      );
       console.log(chalk.yellow(`Dry run — nothing written. Staged locally at ${localPath}`));
       return;
     }
 
     try {
       if (existing) {
-        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const backupUri = `gs://${taskArguments.bucket}/deployments/${chainId}/TaskManager.json.bak-${stamp}`;
         gcloud(["storage", "cp", uri, backupUri]);
-        console.log(chalk.green(`Backed up previous artifact to ${backupUri}`));
+        console.log(chalk.green(`Backed up previous artifact (v${previousVersion}) to ${backupUri}`));
       }
 
       gcloud(["storage", "cp", localPath, uri]);
-      console.log(chalk.green(`Published ${uri}`));
+      console.log(chalk.green(`Published ${uri} at version ${version}`));
     } catch (error: any) {
       console.log(chalk.red("Upload failed — the generated artifact was kept locally."));
       console.log(chalk.red(`  ${localPath}`));
