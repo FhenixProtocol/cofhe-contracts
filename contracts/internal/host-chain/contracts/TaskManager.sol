@@ -8,7 +8,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {ITaskManager, FunctionId, Utils, EncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
+import {ITaskManager, FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
 
 
 error DecryptionResultNotReady(uint256 ctHash);
@@ -773,28 +773,54 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return result;
     }
 
-    function verifyInput(EncryptedInput memory input, address sender) external onlyAccessListed returns (uint256) {
-        int32 securityZone = int32(uint32(input.securityZone));
-
+    /// @notice Verify a batch of encrypted inputs that share a single signature.
+    /// @dev The only input-verification entry point: a single input is a batch of one.
+    ///      The verifier signs the whole batch with one signature over
+    ///      keccak256(h_0 || h_1 || ... || h_n), where each h_i is the per-input
+    ///      message hash
+    ///      keccak256(ctHash || utype || securityZone || sender || chainid || contractAddress).
+    ///      The batch is bound to the consuming contract (`msg.sender`), so it
+    ///      cannot be replayed into a different contract.
+    ///      Inputs are processed in order; the returned hashes line up with `inputs`.
+    /// @param inputs The encrypted inputs to verify (no per-input signature —
+    ///        the batch is authenticated by the single `signature` argument).
+    /// @param sender The account the inputs are bound to.
+    /// @param signature The single ECDSA signature covering the whole batch.
+    /// @return appendedHashes The metadata-appended ct hashes, in input order.
+    function batchVerifyInputs(
+        UnsignedEncryptedInput[] memory inputs,
+        address sender,
+        bytes memory signature
+    ) external onlyAccessListed returns (uint256[] memory) {
+        uint256 len = inputs.length;
         // When signer is set to 0 address we skip this logic to be able to support debug use cases.
         // In debug use cases we assume that the verifier is not necessarily running.
         if (verifierSigner != address(0)) {
-            if (!isValidSecurityZone(securityZone)) {
-                revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
+            for (uint256 i = 0; i < len; i++) {
+                int32 securityZone = int32(uint32(inputs[i].securityZone));
+                if (!isValidSecurityZone(securityZone)) {
+                    revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
+                }
             }
 
-            address signer = extractSigner(input, sender, msg.sender);
+            address signer = extractBatchSigner(inputs, sender, msg.sender, signature);
             if (signer != verifierSigner) {
                 revert InvalidSigner(signer, verifierSigner);
             }
         }
 
-        uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
+        uint256[] memory appendedHashes = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            int32 securityZone = int32(uint32(inputs[i].securityZone));
+            appendedHashes[i] =
+                TMCommon.appendMetadata(inputs[i].ctHash, securityZone, inputs[i].utype, false);
+        }
 
-        emit InputVerified(appendedHash, bytes32(input.ctHash));
+        // TODO: emit InputVerified event for the entire batch
 
-        acl.allowTransient(appendedHash, msg.sender, address(this));
-        return appendedHash;
+        acl.batchAllowTransient(appendedHashes, msg.sender, address(this));
+
+        return appendedHashes;
     }
 
     function allow(uint256 ctHash, address account) external {
@@ -823,23 +849,49 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return acl.globalAllowed(ctHash);
     }
 
-    function extractSigner(
-        EncryptedInput memory input,
+    /// @dev Per-input message hash folded into the batch digest:
+    ///      keccak256(ctHash || utype || securityZone || sender || chainid || contractAddress).
+    function inputMessageHash(
+        uint256 ctHash,
+        uint8 utype,
+        uint8 securityZone,
         address sender,
         address contractAddress
-    ) private view returns (address) {
-        bytes memory combined = abi.encodePacked(
-            input.ctHash,
-            input.utype,
-            input.securityZone,
-            sender,
-            block.chainid,
-            contractAddress
+    ) private view returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                ctHash,
+                utype,
+                securityZone,
+                sender,
+                block.chainid,
+                contractAddress
+            )
         );
+    }
 
-        bytes32 expectedHash = keccak256(combined);
+    /// @dev Recover the signer of a batch from the single signature over
+    ///      keccak256(h_0 || h_1 || ... || h_n), where each h_i is `inputMessageHash`.
+    function extractBatchSigner(
+        UnsignedEncryptedInput[] memory inputs,
+        address sender,
+        address contractAddress,
+        bytes memory signature
+    ) private view returns (address) {
+        uint256 len = inputs.length;
+        // One allocation of 32*len bytes, each hash written in place, so the
+        // buffer is not reallocated and recopied once per input.
+        bytes memory concatenatedHashes = new bytes(len * 32);
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 h = inputMessageHash(inputs[i].ctHash, inputs[i].utype, inputs[i].securityZone, sender, contractAddress);
+            assembly ("memory-safe") {
+                mstore(add(add(concatenatedHashes, 32), mul(i, 32)), h)
+            }
+        }
 
-        address signer = ECDSA.recover(expectedHash, input.signature);
+        bytes32 batchHash = keccak256(concatenatedHashes);
+
+        address signer = ECDSA.recover(batchHash, signature);
         if (signer == address(0)) {
             revert InvalidSignature();
         }
