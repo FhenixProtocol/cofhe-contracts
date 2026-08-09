@@ -26,8 +26,8 @@
 | ID | Severity | Contract | Title |
 |---|---|---|---|
 | H-1 | **High** (Critical impact) | TaskManager | `verifyInput` signature is replayable and not bound to the consuming caller |
-| M-1 | Medium | TaskManager | `handleDecryptResult` bypasses signatures and the kill switch, and overwrites signed results |
-| M-2 | Medium | FHE.sol | Hardcoded `TASK_MANAGER_ADDRESS` with a "CHANGE ME" banner; a stale value silently misroutes ops |
+| M-1 | Low (revised from Medium) | TaskManager | `handleDecryptResult` bypasses signatures and the kill switch, and overwrites signed results |
+| M-2 | Informational (revised from Medium) | FHE.sol | Hardcoded `TASK_MANAGER_ADDRESS` with a "CHANGE ME" banner; a stale value silently misroutes ops |
 | L-1 | Low | TaskManager | Signed messages omit `address(this)`; no nonce/expiry |
 | L-2 | Low | TaskManager | Security-zone signed/unsigned inconsistency in `verifyInput` |
 | L-3 | Low | CommitmentRegistry | `getCommitment` ignores version status |
@@ -41,9 +41,9 @@
 | L-11 | Low | ICofhe.sol | `isAllowed` declared non-`view`, unusable from consumer view functions |
 | I-* | Informational | various | See the Informational section |
 
-**Counts:** 1 High, 2 Medium, 11 Low, plus Informational items.
+**Counts:** 1 High, 12 Low, plus Informational items. (The two items originally rated Medium — M-1 and M-2 — were revised down after reviewing their runtime usage; see the notes in each.)
 
-The two most impactful items are **H-1** (a confidentiality break of arbitrary users' encrypted inputs, verified end-to-end) and **M-2** (deployment-configuration risk in the inlined library). Findings apply to the deployed contracts; per the engagement this report does not patch them — see the follow-up note at the end.
+The most impactful item is **H-1** (a confidentiality break of arbitrary users' encrypted inputs, verified end-to-end). Findings apply to the deployed contracts; per the engagement this report does not patch them — see the follow-up note at the end.
 
 ---
 
@@ -103,9 +103,11 @@ The same pattern exists in `detereministic-tm/DeterministicTM.sol` and warrants 
 
 ## M-1 — `handleDecryptResult` bypasses signatures and the kill switch, and overwrites signed results
 
-**Severity:** Medium (trusted aggregator role required, but broad authority + missing guardrails)
+**Severity:** Low (revised down from Medium — see note)
 **Location:** `TaskManager.sol` `handleDecryptResult` (~605-610) vs `publishDecryptResult` (~617-625); `PlaintextsStorage.storeResult` (24-31).
-**Status:** Confirmed; this is the **live** path (`src/services/result-processor/app.ts` calls `handleDecryptResult`, not `publishDecryptResult`).
+**Status:** Confirmed at the contract level.
+
+> **Severity note (revised).** The on-chain result path is being sunset. `handleDecryptResult` is called from a single site — `src/services/result-processor/app.ts:139` (`sendDecryptResult`) — and is fully gated by `enableTxSender`: when `ENABLE_TX_SENDER=false` the TaskManager contract and wallet are never initialized (`app.ts:340,365`), so the path is unreachable. testnet-v2 already runs with it off, and decrypt-result consumers have moved to the Dispatcher gRPC (PRO-301). Real-world exposure is therefore limited to environments still running the legacy TxSender (e.g. devnet). The function remains on the deployed contract, so the finding stands at contract level; the recommendation shifts to **removing** `handleDecryptResult` once TxSender is fully retired (or gating + signing it if it must remain). Downgraded to Low.
 
 ### Description
 
@@ -123,8 +125,10 @@ Add `onlyIfEnabled`. If this path is still required alongside `publishDecryptRes
 
 ## M-2 — Hardcoded `TASK_MANAGER_ADDRESS` with a "CHANGE ME" banner
 
-**Severity:** Medium (operational / deployment-configuration risk)
+**Severity:** Informational (revised down from Medium — see note)
 **Location:** `FHE.sol:25-31` (used at ~60 call sites), mirrored by `internal/host-chain/contracts/addresses/TaskManagerAddress.sol`.
+
+> **Severity note (revised).** This is largely by-design. `internal/host-chain/utils/updateTaskManagerAddress.ts` rewrites the constant in both `FHE.sol` and `addresses/TaskManagerAddress.sol` during dev deploys and states "Only needed for development purposes, in production the address is constant." Combined with the deterministic CREATE2 proxy address (identical on every chain), the "CHANGE ME" banner is the dev-deploy hook, not a latent misconfiguration. The residual is cosmetic/process only: a stale TODO comment shipping in the published library, and the absence of a CI assertion that the constant equals the deterministic address. Downgraded to Informational.
 
 ### Description
 
@@ -206,6 +210,7 @@ Remove the TODO banner before publishing; document per-chain address guarantees;
 
 Per the engagement, this PR records findings only and does not modify the contracts. Recommended follow-up (track in Jira, linked from PRO-425):
 
-- **H-1** — urgent; a confidentiality break on deployed TaskManager instances. Prioritize the caller-binding + anti-replay fix.
-- **M-1**, **M-2** — schedule fixes.
+- **H-1** — urgent; a confidentiality break on deployed TaskManager instances. Prioritize the caller-binding + anti-replay fix. (Already tracked as an in-progress ticket in the team's backlog.)
+- **M-1** (Low) — remove the legacy `handleDecryptResult` path once TxSender is fully retired.
+- **M-2** (Informational) — clear the stale TODO banner; optionally add a CI assertion that the constant matches the deterministic address.
 - Low/Informational — batch into contract-hardening and a CommitmentRegistry README rewrite.
