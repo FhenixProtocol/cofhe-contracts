@@ -132,12 +132,12 @@ task("task:publishTMAbi")
 
     const existing = readRemoteJson(uri);
 
-    // Named from the version recorded in the artifact being replaced, not from the
-    // live chain: task:upgradeTM calls incVersion() before this runs, so the chain
-    // already reports the new version while the published artifact is still the old
-    // one. Artifacts predating this task carry no version, hence "unknown".
-    const previousVersion = existing?.version ?? "unknown";
-    const backupUri = `gs://${taskArguments.bucket}/deployments/${chainId}/TaskManager_v${previousVersion}_bak.json`;
+    // Timestamped rather than version-stamped: this task runs after
+    // task:upgradeTM has already called incVersion(), so the chain reports the new
+    // version while the artifact being replaced is still the old one. A timestamp
+    // needs no such correspondence and cannot collide across repeat publishes.
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupUri = `gs://${taskArguments.bucket}/deployments/${chainId}/TaskManager_${stamp}_bak.json`;
 
     // Merge rather than replace so any other top-level keys on the published
     // artifact survive a republish.
@@ -156,7 +156,7 @@ task("task:publishTMAbi")
     if (taskArguments.dryRun) {
       console.log(
         existing
-          ? chalk.yellow(`Would back up the current artifact (v${previousVersion}) to ${backupUri}`)
+          ? chalk.yellow(`Would back up the current artifact to ${backupUri}`)
           : chalk.yellow("No published artifact at the target — this would be the first."),
       );
       console.log(chalk.yellow(`Dry run — nothing written. Staged locally at ${localPath}`));
@@ -166,7 +166,7 @@ task("task:publishTMAbi")
     try {
       if (existing) {
         gcloud(["storage", "cp", uri, backupUri]);
-        console.log(chalk.green(`Backed up previous artifact (v${previousVersion}) to ${backupUri}`));
+        console.log(chalk.green(`Backed up previous artifact to ${backupUri}`));
       }
 
       gcloud(["storage", "cp", localPath, uri]);
