@@ -783,7 +783,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
                 revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
             }
 
-            address signer = extractSigner(input, sender);
+            address signer = extractSigner(input, sender, msg.sender);
             if (signer != verifierSigner) {
                 revert InvalidSigner(signer, verifierSigner);
             }
@@ -823,13 +823,18 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         return acl.globalAllowed(ctHash);
     }
 
-    function extractSigner(EncryptedInput memory input, address sender) private view returns (address) {
+    function extractSigner(
+        EncryptedInput memory input,
+        address sender,
+        address contractAddress
+    ) private view returns (address) {
         bytes memory combined = abi.encodePacked(
             input.ctHash,
             input.utype,
             input.securityZone,
             sender,
-            block.chainid
+            block.chainid,
+            contractAddress
         );
 
         bytes32 expectedHash = keccak256(combined);
