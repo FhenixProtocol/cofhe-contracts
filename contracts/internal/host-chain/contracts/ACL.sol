@@ -5,7 +5,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
-import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
+import {PermissionedUpgradeable, ACP, SCOPE_GLOBAL, SCOPE_CONTRACT, SCOPE_HANDLES} from "./Permissioned.sol";
 
 /**
  * @title  ACL
@@ -39,12 +39,25 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     /// @param contractAddress  Contract address.
     event NewDelegation(address indexed sender, address indexed delegatee, address indexed contractAddress);
 
+    /// @notice                 Emitted when the default revoker contract address is updated.
+    /// @param oldAddress       Previous address.
+    /// @param newAddress       New address (zero = unset).
+    event DefaultRevokerContractUpdated(address oldAddress, address newAddress);
+
+    /// @notice                 Emitted when the share registry address is updated.
+    /// @param oldAddress       Previous address.
+    /// @param newAddress       New address (zero = unset).
+    event ShareRegistryUpdated(address oldAddress, address newAddress);
+
     /// @custom:storage-location erc7201:cofhe.storage.ACL
     struct ACLStorage {
         mapping(uint256 handle => bool isGlobal) globalHandles;
         mapping(uint256 handle => mapping(address account => bool isAllowed)) persistedAllowedPairs;
         mapping(uint256 => bool) allowedForDecryption;
         mapping(address account => mapping(address delegatee => mapping(address contractAddress => bool isDelegate))) delegates;
+        // ACP infrastructure addresses served to SDKs (appended fields — do not reorder)
+        address defaultRevokerContract;
+        address shareRegistry;
     }
 
     /// @notice Name of the contract.
@@ -340,11 +353,76 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         }
     }
 
-    function isAllowedWithPermission(Permission memory permission, uint256 handle) public view withPermission(permission) returns (bool) {
-        return isAllowed(handle, permission.issuer);
+    // ---------------------------------------------------------------------------
+    // ACP (Permit V3) — scope-checked access
+    // ---------------------------------------------------------------------------
+    //
+    // Structure validity (expiration / signatures / revocation) and the EIP-712
+    // domain live on this contract, inherited from PermissionedUpgradeable —
+    // `withPermission` and `checkPermissionValidity` are the entry points.
+
+    /// @notice         Default revoker contract for newly created ACPs, served to SDKs.
+    /// @return address The default revoker contract address (zero = unset).
+    function defaultRevokerContract() public view virtual returns (address) {
+        return _getACLStorage().defaultRevokerContract;
     }
 
-    function checkPermitValidity(Permission memory permission) public view withPermission(permission) returns (bool) {
-        return true;
+    /// @notice         The ACPShareRegistry address, served to SDKs.
+    /// @return address The share registry address (zero = sharing not available on this chain).
+    function shareRegistry() public view virtual returns (address) {
+        return _getACLStorage().shareRegistry;
+    }
+
+    /// @notice             Sets the default revoker contract address.
+    /// @param newAddress   The new address (zero = unset).
+    function setDefaultRevokerContract(address newAddress) external virtual onlyOwner {
+        ACLStorage storage $ = _getACLStorage();
+        emit DefaultRevokerContractUpdated($.defaultRevokerContract, newAddress);
+        $.defaultRevokerContract = newAddress;
+    }
+
+    /// @notice             Sets the share registry address.
+    /// @param newAddress   The new address (zero = unset).
+    function setShareRegistry(address newAddress) external virtual onlyOwner {
+        ACLStorage storage $ = _getACLStorage();
+        emit ShareRegistryUpdated($.shareRegistry, newAddress);
+        $.shareRegistry = newAddress;
+    }
+
+    /// @notice ACP access check — the scope table.
+    ///
+    ///         | condition                                          | result |
+    ///         |----------------------------------------------------|--------|
+    ///         | permission structure invalid (expired/sig/revoked) | REVERT |
+    ///         | issuer does NOT have access to handle              | false  |
+    ///         | scope == SCOPE_GLOBAL                              | true   |
+    ///         | scope == SCOPE_CONTRACT, a contract may read handle| true   |
+    ///         | scope == SCOPE_HANDLES, handles contains handle    | true   |
+    ///         | otherwise                                          | false  |
+    ///
+    /// @dev Scopes narrow the issuer's existing access, never widen it.
+    ///      Contract scope intersects the EXISTING allowances
+    ///      (populated via FHE.allow/allowThis) — no new data structures.
+    function isAllowedWithPermission(ACP memory acp, uint256 handle) public view withPermission(acp) returns (bool) {
+        // Scopes narrow the issuer's existing access, never widen it
+        if (!isAllowed(handle, acp.issuer)) return false;
+
+        if (acp.scope == SCOPE_GLOBAL) return true;
+
+        if (acp.scope == SCOPE_CONTRACT) {
+            for (uint256 i = 0; i < acp.contracts.length; i++) {
+                if (isAllowed(handle, acp.contracts[i])) return true;
+            }
+            return false;
+        }
+
+        if (acp.scope == SCOPE_HANDLES) {
+            for (uint256 i = 0; i < acp.handles.length; i++) {
+                if (acp.handles[i] == bytes32(handle)) return true;
+            }
+            return false;
+        }
+
+        return false;
     }
 }

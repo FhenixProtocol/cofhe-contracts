@@ -188,6 +188,35 @@ async function ACLSetup(
 }
 
 /**
+ * Deploys the ACP infrastructure contracts and registers their addresses in the ACL
+ * @param aclContract The ACL proxy contract
+ * @param ownerSigner The ACL owner (allowed to call the address setters)
+ */
+async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any) {
+  try {
+    const revokerFactory = await ethers.getContractFactory("ACPTimestampRevoker");
+    const revoker = await revokerFactory.deploy();
+    await revoker.waitForDeployment();
+    const revokerAddress = await revoker.getAddress();
+    console.log(
+      chalk.green("Successfully deployed ACPTimestampRevoker to:", revokerAddress),
+    );
+
+    const tx = await aclContract
+      .connect(ownerSigner)
+      .setDefaultRevokerContract(revokerAddress);
+    await tx.wait();
+    console.log(
+      chalk.green("Successfully set default revoker contract in ACL"),
+    );
+  } catch (e) {
+    console.error(chalk.red(`Failed ACP infrastructure setup: ${e}`));
+    return e;
+  }
+  console.log("\n");
+}
+
+/**
  * Deploys an Example contract
  * @param deploy The deploy function from hardhat-deploy
  * @param deployer The address that will deploy the contract
@@ -367,6 +396,9 @@ const func: DeployFunction = async function () {
   // Deploy and upgrade ACL contract
   const {ProxyContract: aclContract} = await getProxyContract(aggregatorSigners[0].address, "ACL");
   await ACLSetup(TMProxyContract, aggregatorSigners[0], aclContract);
+
+  console.log(chalk.bold.blue("----------------------ACP infrastructure--------------------"));
+  await ACPInfrastructureSetup(aclContract, aggregatorSigners[0]);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
