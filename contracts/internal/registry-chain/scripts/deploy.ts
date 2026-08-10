@@ -1,5 +1,9 @@
 import hre from "hardhat";
-import { deployUUPSProxy } from "../utils/deploy";
+import { deployUUPSProxy, grantAllRoles } from "../utils/deploy";
+
+// Delay enforced on default-admin handover, matching the host-chain deployment. 0 makes transfers
+// take effect immediately, which suits dev/test; production should deploy with a non-zero delay.
+const DEFAULT_ADMIN_DELAY = 0;
 
 // OZ Relayer signer address (deterministic from dev keystore)
 const DEFAULT_POSTER_ADDRESS = "0x53118C97bD4b7FdDb68244D788Ce7b2946ECd327";
@@ -17,11 +21,15 @@ async function main() {
 
   const { proxy: registry, address: proxyAddress } = await deployUUPSProxy(
     "CommitmentRegistry",
-    [deployer.address, OZ_RELAYER_ADDRESS],
+    [deployer.address, DEFAULT_ADMIN_DELAY, OZ_RELAYER_ADDRESS],
   );
 
-  console.log("Owner:", deployer.address);
+  console.log("Default admin:", deployer.address);
   console.log("Poster:", OZ_RELAYER_ADDRESS);
+
+  // `initialize` only grants DEFAULT_ADMIN_ROLE. The deployer needs VERSION_MANAGER_ROLE for
+  // the activation below, and UPGRADER_ROLE / POSTER_MANAGER_ROLE to operate the registry.
+  await grantAllRoles(registry, deployer);
 
   // Activate initial version
   const tx = await registry.setVersionStatus(INITIAL_VERSION, 1); // 1 = Active

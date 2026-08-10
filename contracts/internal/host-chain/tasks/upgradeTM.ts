@@ -4,6 +4,8 @@ import type { TaskArguments } from "hardhat/types";
 import { Contract, Wallet } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
+import { getDefaultAdmin, grantAllRoles } from "../utils/roles";
+
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
     "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -46,7 +48,8 @@ async function validateUpgrade(upgrades: any, TMProxyContract: any, TMFactory: a
 
 async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any, adminSigner: any) {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
-    console.log(chalk.green("TMProxyContract owner:", await TMProxyContract.defaultAdmin()));
+    const currentDefaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
+    console.log(chalk.green("TMProxyContract default admin:", currentDefaultAdmin ?? "none (pre-roles implementation)"));
     const oldImplementationAddress = await getImplementationAddress(ethers, connectedImplementation);
     console.log(chalk.green("Old implementation address:", oldImplementationAddress));
 
@@ -54,9 +57,21 @@ async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFac
     await newIplDeployment.waitForDeployment();
     const newIplAddress = await newIplDeployment.getAddress();
     console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
-    const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, "0x");
+
+    // A proxy still on the pre-roles (Ownable) implementation has no AccessControl storage.
+    // Seed it via initializeV2 atomically with the upgrade: initializeV2 is unauthenticated,
+    // so any gap between the two calls would let anyone claim DEFAULT_ADMIN_ROLE.
+    const migrationData =
+      currentDefaultAdmin === null
+        ? TMFactory.interface.encodeFunctionData("initializeV2", [0, adminSigner.address])
+        : "0x";
+    const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, migrationData);
     await tx.wait();
     console.log(chalk.green("Successfully upgraded TaskManager contract"));
+
+    // initialize/initializeV2 only grant DEFAULT_ADMIN_ROLE; incVersion needs CONFIG_MANAGER_ROLE.
+    await grantAllRoles(TMProxyContract, adminSigner);
+
     const incTx = await connectedImplementation.incVersion();
     await incTx.wait();
     const newImplementationAddress = await getImplementationAddress(ethers, connectedImplementation);

@@ -162,6 +162,19 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     bytes32 public constant DECRYPT_SIGNER_MANAGER_ROLE = keccak256("DECRYPT_SIGNER_MANAGER_ROLE");
     bytes32 public constant CONFIG_MANAGER_ROLE = keccak256("CONFIG_MANAGER_ROLE");
 
+    /// @dev Reserves the namespaces this contract used while it inherited Ownable2StepUpgradeable.
+    ///      Already-deployed proxies still hold an owner there; keeping the declarations marks
+    ///      that storage as taken so a later upgrade cannot silently reuse it.
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
+    struct OwnableStorage {
+        address _owner;
+    }
+
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable2Step
+    struct Ownable2StepStorage {
+        address _pendingOwner;
+    }
+
     bool private initialized;
 
     /// @custom:oz-upgrades-unsafe-allow constructor

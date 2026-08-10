@@ -21,8 +21,21 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
   // ── Initialization ──────────────────────────────────────────────────
 
   describe("Initialization", function () {
-    it("should set the correct owner", async function () {
-      expect(await this.registry.owner()).to.equal(this.owner.address);
+    it("should set the correct default admin", async function () {
+      expect(await this.registry.defaultAdmin()).to.equal(this.admin.address);
+    });
+
+    it("should grant every declared role to the admin", async function () {
+      for (const roleName of ["UPGRADER_ROLE", "POSTER_MANAGER_ROLE", "VERSION_MANAGER_ROLE"]) {
+        const role = await this.registry[roleName]();
+        expect(await this.registry.hasRole(role, this.admin.address), roleName).to.equal(true);
+      }
+    });
+
+    it("should not grant operational roles to anyone else", async function () {
+      const role = await this.registry.POSTER_MANAGER_ROLE();
+      expect(await this.registry.hasRole(role, this.poster.address)).to.equal(false);
+      expect(await this.registry.hasRole(role, this.otherAccount.address)).to.equal(false);
     });
 
     it("should set the initial poster", async function () {
@@ -35,7 +48,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
 
     it("should not be re-initializable", async function () {
       await expect(
-        this.registry.initialize(this.owner.address, this.poster.address)
+        this.registry.initialize(this.admin.address, 0, this.poster.address)
       ).to.be.reverted;
     });
 
@@ -45,16 +58,16 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       await impl.waitForDeployment();
 
       await expect(
-        impl.initialize(this.owner.address, this.poster.address)
+        impl.initialize(this.admin.address, 0, this.poster.address)
       ).to.be.reverted;
     });
 
-    it("should revert when initializing with zero owner", async function () {
+    it("should revert when initializing with zero admin", async function () {
       const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
       await expect(
         upgrades.deployProxy(
           CommitmentRegistry,
-          [ethers.ZeroAddress, this.poster.address],
+          [ethers.ZeroAddress, 0, this.poster.address],
           { kind: "uups", initializer: "initialize" },
         )
       ).to.be.reverted;
@@ -65,10 +78,17 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       await expect(
         upgrades.deployProxy(
           CommitmentRegistry,
-          [this.owner.address, ethers.ZeroAddress],
+          [this.admin.address, 0, ethers.ZeroAddress],
           { kind: "uups", initializer: "initialize" },
         )
       ).to.be.reverted;
+    });
+
+    it("should not let anyone re-seed the admin through initializeV2", async function () {
+      const registryAsOther = this.registry.connect(this.otherAccount);
+      await expect(
+        registryAsOther.initializeV2(0, this.otherAccount.address)
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlEnforcedDefaultAdminRules");
     });
   });
 
@@ -167,25 +187,26 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
         .withArgs(VERSION_1, VersionStatus.Active, VersionStatus.Active);
     });
 
-    it("should revert when non-owner sets version status", async function () {
+    it("should revert when a non-VERSION_MANAGER sets version status", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
         registryAsPoster.setVersionStatus(VERSION_1, VersionStatus.Active)
-      ).to.be.revertedWithCustomError(this.registry, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount")
+        .withArgs(this.poster.address, await this.registry.VERSION_MANAGER_ROLE());
     });
   });
 
   // ── Poster Management ──────────────────────────────────────────────
 
   describe("Poster Management", function () {
-    it("should allow owner to add a poster", async function () {
+    it("should allow a POSTER_MANAGER to add a poster", async function () {
       await expect(this.registry.addPoster(this.otherAccount.address))
         .to.emit(this.registry, "PosterAdded")
         .withArgs(this.otherAccount.address);
       expect(await this.registry.isPoster(this.otherAccount.address)).to.equal(true);
     });
 
-    it("should allow owner to remove a poster", async function () {
+    it("should allow a POSTER_MANAGER to remove a poster", async function () {
       await expect(this.registry.removePoster(this.poster.address))
         .to.emit(this.registry, "PosterRemoved")
         .withArgs(this.poster.address);
@@ -246,18 +267,20 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       ).to.be.revertedWithCustomError(this.registry, "InvalidAddress");
     });
 
-    it("should revert when non-owner adds poster", async function () {
+    it("should revert when a non-POSTER_MANAGER adds poster", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
         registryAsPoster.addPoster(this.otherAccount.address)
-      ).to.be.revertedWithCustomError(this.registry, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount")
+        .withArgs(this.poster.address, await this.registry.POSTER_MANAGER_ROLE());
     });
 
-    it("should revert when non-owner removes poster", async function () {
+    it("should revert when a non-POSTER_MANAGER removes poster", async function () {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
         registryAsPoster.removePoster(this.poster.address)
-      ).to.be.revertedWithCustomError(this.registry, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount")
+        .withArgs(this.poster.address, await this.registry.POSTER_MANAGER_ROLE());
     });
 
     it("should allow re-adding a previously removed poster", async function () {
@@ -279,29 +302,75 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     });
   });
 
-  // ── Ownership Transfer (Two-Step) ──────────────────────────────────
+  // ── Default Admin Transfer (Two-Step) ──────────────────────────────
 
-  describe("Ownership Transfer", function () {
-    it("should not change owner immediately on transferOwnership", async function () {
-      await this.registry.transferOwnership(this.otherAccount.address);
-      expect(await this.registry.owner()).to.equal(this.owner.address);
+  describe("Default Admin Transfer", function () {
+    it("should not change the default admin immediately on begin", async function () {
+      await this.registry.beginDefaultAdminTransfer(this.otherAccount.address);
+      expect(await this.registry.defaultAdmin()).to.equal(this.admin.address);
     });
 
-    it("should change owner after acceptOwnership", async function () {
-      await this.registry.transferOwnership(this.otherAccount.address);
+    it("should change the default admin after accept", async function () {
+      await this.registry.beginDefaultAdminTransfer(this.otherAccount.address);
       const registryAsOther = this.registry.connect(this.otherAccount);
-      await registryAsOther.acceptOwnership();
-      expect(await this.registry.owner()).to.equal(this.otherAccount.address);
+      await registryAsOther.acceptDefaultAdminTransfer();
+      expect(await this.registry.defaultAdmin()).to.equal(this.otherAccount.address);
     });
 
-    it("should allow new owner to call protected functions", async function () {
-      await this.registry.transferOwnership(this.otherAccount.address);
+    it("should revert when someone other than the pending admin accepts", async function () {
+      await this.registry.beginDefaultAdminTransfer(this.otherAccount.address);
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.acceptDefaultAdminTransfer()
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlInvalidDefaultAdmin");
+    });
+
+    it("should revert when a non-admin begins a transfer", async function () {
+      const registryAsPoster = this.registry.connect(this.poster);
+      await expect(
+        registryAsPoster.beginDefaultAdminTransfer(this.poster.address)
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount");
+    });
+
+    // Operational roles are held independently of DEFAULT_ADMIN_ROLE, so handing over the
+    // admin does not hand over the ability to operate the registry - the new admin has to
+    // grant itself the roles it wants.
+    it("should not carry operational roles over to the new default admin", async function () {
+      await this.registry.beginDefaultAdminTransfer(this.otherAccount.address);
       const registryAsOther = this.registry.connect(this.otherAccount);
-      await registryAsOther.acceptOwnership();
+      await registryAsOther.acceptDefaultAdminTransfer();
+
+      await expect(
+        registryAsOther.setVersionStatus(VERSION_1, VersionStatus.Active)
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount")
+        .withArgs(this.otherAccount.address, await this.registry.VERSION_MANAGER_ROLE());
+    });
+
+    it("should let the new default admin grant itself the operational roles", async function () {
+      await this.registry.beginDefaultAdminTransfer(this.otherAccount.address);
+      const registryAsOther = this.registry.connect(this.otherAccount);
+      await registryAsOther.acceptDefaultAdminTransfer();
+
+      const versionManagerRole = await this.registry.VERSION_MANAGER_ROLE();
+      await registryAsOther.grantRole(versionManagerRole, this.otherAccount.address);
 
       await expect(
         registryAsOther.setVersionStatus(VERSION_1, VersionStatus.Active)
       ).to.not.be.reverted;
+    });
+
+    it("should let the new default admin revoke the previous admin's roles", async function () {
+      await this.registry.beginDefaultAdminTransfer(this.otherAccount.address);
+      const registryAsOther = this.registry.connect(this.otherAccount);
+      await registryAsOther.acceptDefaultAdminTransfer();
+
+      const posterManagerRole = await this.registry.POSTER_MANAGER_ROLE();
+      await registryAsOther.revokeRole(posterManagerRole, this.admin.address);
+
+      await expect(
+        this.registry.addPoster(this.otherAccount.address)
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount")
+        .withArgs(this.admin.address, posterManagerRole);
     });
   });
 
@@ -621,7 +690,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
         .withArgs(this.otherAccount.address);
     });
 
-    it("should revert when owner (non-poster) posts commitments", async function () {
+    it("should revert when the admin (non-poster) posts commitments", async function () {
       await expect(
         this.registry.postCommitments(VERSION_1, [randomBytes32()], [randomBytes32()])
       ).to.be.revertedWithCustomError(this.registry, "OnlyPosterAllowed");
@@ -912,7 +981,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
   // ── Upgrade ────────────────────────────────────────────────────────
 
   describe("Upgrade", function () {
-    it("should allow owner to upgrade", async function () {
+    it("should allow an UPGRADER to upgrade", async function () {
       const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
       const newImpl = await CommitmentRegistry.deploy();
       await newImpl.waitForDeployment();
@@ -922,7 +991,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       ).to.not.be.reverted;
     });
 
-    it("should revert when non-owner upgrades", async function () {
+    it("should revert when a non-UPGRADER upgrades", async function () {
       const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
       const newImpl = await CommitmentRegistry.deploy();
       await newImpl.waitForDeployment();
@@ -930,7 +999,23 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       const registryAsPoster = this.registry.connect(this.poster);
       await expect(
         registryAsPoster.upgradeToAndCall(await newImpl.getAddress(), "0x")
-      ).to.be.revertedWithCustomError(this.registry, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount")
+        .withArgs(this.poster.address, await this.registry.UPGRADER_ROLE());
+    });
+
+    // DEFAULT_ADMIN_ROLE on its own does not authorize an upgrade; UPGRADER_ROLE does.
+    it("should revert when the default admin upgrades without UPGRADER_ROLE", async function () {
+      const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
+      const newImpl = await CommitmentRegistry.deploy();
+      await newImpl.waitForDeployment();
+
+      const upgraderRole = await this.registry.UPGRADER_ROLE();
+      await this.registry.revokeRole(upgraderRole, this.admin.address);
+
+      await expect(
+        this.registry.upgradeToAndCall(await newImpl.getAddress(), "0x")
+      ).to.be.revertedWithCustomError(this.registry, "AccessControlUnauthorizedAccount")
+        .withArgs(this.admin.address, upgraderRole);
     });
 
     it("should preserve state after upgrade", async function () {

@@ -21,3 +21,44 @@ export async function deployUUPSProxy(
   console.log(`Deployed ${contractName} proxy to: ${address}`);
   return { proxy, address };
 }
+
+/**
+ * Grants every role a contract declares (any `*_ROLE` public constant in its ABI) to `account`.
+ *
+ * Discovering the roles from the ABI rather than listing them keeps the deployment in sync
+ * with the contracts: a role added to a contract is granted here without touching this file.
+ *
+ * DEFAULT_ADMIN_ROLE is skipped on purpose - AccessControlDefaultAdminRules reverts on granting
+ * it directly, and the initial admin already holds it from `initialize`.
+ *
+ * @param contract    An AccessControl contract instance.
+ * @param adminSigner Signer holding DEFAULT_ADMIN_ROLE; also the grantee unless `account` is set.
+ * @param account     Optional grantee, defaults to `adminSigner.address`.
+ */
+export async function grantAllRoles(contract: any, adminSigner: any, account?: string) {
+  const grantee = account ?? adminSigner.address;
+  const connectedContract = contract.connect(adminSigner);
+  const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
+
+  const roleNames: string[] = contract.interface.fragments
+    .filter(
+      (fragment: any) =>
+        fragment.type === "function" &&
+        fragment.inputs.length === 0 &&
+        /^[A-Z0-9_]+_ROLE$/.test(fragment.name),
+    )
+    .map((fragment: any) => fragment.name);
+
+  for (const roleName of roleNames) {
+    const role = await contract[roleName]();
+    if (role === defaultAdminRole) {
+      continue;
+    }
+    if (await contract.hasRole(role, grantee)) {
+      continue;
+    }
+    const tx = await connectedContract.grantRole(role, grantee);
+    await tx.wait();
+    console.log(`Granted ${roleName} to ${grantee}`);
+  }
+}

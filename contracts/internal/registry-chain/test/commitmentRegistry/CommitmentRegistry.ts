@@ -6,7 +6,7 @@ describe("CommitmentRegistry Tests", function () {
   beforeEach(async function () {
     const fixture = await loadFixture(deployCommitmentRegistryFixture);
     this.registry = fixture.registry;
-    this.owner = fixture.owner;
+    this.admin = fixture.admin;
     this.poster = fixture.poster;
     this.otherAccount = fixture.otherAccount;
   });

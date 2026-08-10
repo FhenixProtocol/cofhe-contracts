@@ -2,6 +2,8 @@ import type { OnChain, OnChain2 } from "../../types";
 import hre from "hardhat";
 const { ethers } = hre;
 
+import { grantAllRoles } from "../../utils/roles";
+
 // The hardcoded TaskManager address that ACL and PlaintextsStorage expect
 const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
@@ -83,18 +85,11 @@ export async function deployOnChainFixture(): Promise<{
   const psProxy = await ERC1967Proxy.deploy(await psImpl.getAddress(), psInitData);
   await psProxy.waitForDeployment();
 
-  // Owner holds DEFAULT_ADMIN_ROLE from init; grant the operational roles it exercises.
-  for (const role of [
-    await taskManager.CONFIG_MANAGER_ROLE(),
-    await taskManager.SECURITY_ZONE_MANAGER_ROLE(),
-    await taskManager.PAUSER_ROLE(),
-    await taskManager.ACCESS_LIST_MANAGER_ROLE(),
-    await taskManager.AGGREGATOR_MANAGER_ROLE(),
-    await taskManager.VERIFIER_SIGNER_MANAGER_ROLE(),
-    await taskManager.DECRYPT_SIGNER_MANAGER_ROLE(),
-  ]) {
-    await taskManager.grantRole(role, owner.address);
-  }
+  // `initialize` only grants DEFAULT_ADMIN_ROLE; mirror the deploy script and give the admin
+  // every role, so the fixture stays correct when a contract gains a new one.
+  await grantAllRoles(taskManager, owner, false);
+  await grantAllRoles(ACL.attach(await aclProxy.getAddress()), owner, false);
+  await grantAllRoles(PlaintextsStorage.attach(await psProxy.getAddress()), owner, false);
 
   // Configure TaskManager
   await taskManager.setACLContract(await aclProxy.getAddress());

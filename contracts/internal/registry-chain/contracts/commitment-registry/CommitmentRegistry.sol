@@ -2,9 +2,12 @@
 pragma solidity >=0.8.25 <0.9.0;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 
-contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
+contract CommitmentRegistry is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant POSTER_MANAGER_ROLE = keccak256("POSTER_MANAGER_ROLE");
+    bytes32 public constant VERSION_MANAGER_ROLE = keccak256("VERSION_MANAGER_ROLE");
 
     enum VersionStatus { Unset, Active, Deprecated, Revoked }
 
@@ -72,15 +75,23 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address initialOwner, address initialPoster) public initializer {
-        if (initialOwner == address(0) || initialPoster == address(0)) {
+    function initialize(address initialAdmin, uint48 initialDelay, address initialPoster) public initializer {
+        if (initialAdmin == address(0) || initialPoster == address(0)) {
             revert InvalidAddress();
         }
-        __Ownable_init(initialOwner);
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __UUPSUpgradeable_init();
         CommitmentRegistryStorage storage $ = _getStorage();
         $.posters[initialPoster] = true;
         emit PosterAdded(initialPoster);
+    }
+
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
+    ///      implementation. Reverts with AccessControlEnforcedDefaultAdminRules if the
+    ///      proxy already has a default admin, so it is safe against accidental reuse.
+    /// @custom:oz-upgrades-validate-as-initializer
+    function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
     }
 
     function postCommitments(
@@ -155,7 +166,7 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         emit CommitmentsPostedSafe(version, newlyPosted, len - newlyPosted);
     }
 
-    function addPoster(address poster) external onlyOwner {
+    function addPoster(address poster) external onlyRole(POSTER_MANAGER_ROLE) {
         if (poster == address(0)) revert InvalidAddress();
         CommitmentRegistryStorage storage $ = _getStorage();
         if ($.posters[poster]) revert PosterAlreadyExists(poster);
@@ -163,7 +174,7 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         emit PosterAdded(poster);
     }
 
-    function removePoster(address poster) external onlyOwner {
+    function removePoster(address poster) external onlyRole(POSTER_MANAGER_ROLE) {
         if (poster == address(0)) revert InvalidAddress();
         CommitmentRegistryStorage storage $ = _getStorage();
         if (!$.posters[poster]) revert PosterNotFound(poster);
@@ -171,7 +182,7 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         emit PosterRemoved(poster);
     }
 
-    function setVersionStatus(bytes32 version, VersionStatus newStatus) external onlyOwner {
+    function setVersionStatus(bytes32 version, VersionStatus newStatus) external onlyRole(VERSION_MANAGER_ROLE) {
         CommitmentRegistryStorage storage $ = _getStorage();
         VersionStatus current = $.versionStatus[version];
 
@@ -229,7 +240,7 @@ contract CommitmentRegistry is UUPSUpgradeable, Ownable2StepUpgradeable {
         return _getStorage().posters[account];
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 
     function _getStorage() private pure returns (CommitmentRegistryStorage storage $) {
         bytes32 slot = STORAGE_SLOT;

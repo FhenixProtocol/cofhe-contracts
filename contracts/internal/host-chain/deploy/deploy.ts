@@ -8,6 +8,7 @@ import fs from "fs";
 
 import { deployCreateX } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
+import { getDefaultAdmin, grantAllRoles } from "../utils/roles";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -15,15 +16,15 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
 /**
  * Deploys a proxy contract for a given contract name
- * @param adminAddress The address of the admin account
+ * @param adminSigner The admin account, which becomes the default admin and holds every role
  * @param contractName The name of the contract to deploy
  * @returns The proxy contract and its address
  */
-async function getProxyContract(adminAddress: string, contractName: string) {
+async function getProxyContract(adminSigner: any, contractName: string) {
   const TaskManager = await ethers.getContractFactory(contractName);
   const ProxyContract = await upgrades.deployProxy(
     TaskManager,
-    [adminAddress, 0],
+    [adminSigner.address, 0],
     { kind: "uups", initializer: "initialize" },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
@@ -36,6 +37,9 @@ async function getProxyContract(adminAddress: string, contractName: string) {
       ProxyAddress,
     ),
   );
+  // `initialize` only grants DEFAULT_ADMIN_ROLE; without this the admin could not even
+  // upgrade the contract it just deployed.
+  await grantAllRoles(ProxyContract, adminSigner);
   return { ProxyContract, ProxyAddress };
 }
 
@@ -63,25 +67,6 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
     );
   } catch (e) {
     console.error(chalk.red(`Failed isInitialized transaction: ${e}`));
-    return e;
-  }
-
-  // Grant the setup signer the operational roles it needs before using them.
-  try {
-    const admin = aggregatorSigners[0];
-    const tm = TMProxyContract.connect(admin);
-    for (const role of [
-      await TMProxyContract.AGGREGATOR_MANAGER_ROLE(),
-      await TMProxyContract.PAUSER_ROLE(),
-      await TMProxyContract.SECURITY_ZONE_MANAGER_ROLE(),
-      await TMProxyContract.VERIFIER_SIGNER_MANAGER_ROLE(),
-      await TMProxyContract.DECRYPT_SIGNER_MANAGER_ROLE(),
-      await TMProxyContract.CONFIG_MANAGER_ROLE(),
-    ]) {
-      await (await tm.grantRole(role, admin.address)).wait();
-    }
-  } catch (e) {
-    console.error(chalk.red(`Failed granting setup roles: ${e}`));
     return e;
   }
 
@@ -304,7 +289,8 @@ async function getImplementationAddress(proxy: any) {
 async function upgradeTM(TMProxyContract: any, TMFactory: any, aggregatorSigner: any) {
   console.log(chalk.bold.blue("-----------------------Upgrading TaskManager--------------------------"));
   console.log(chalk.green("Aggregator signer:", aggregatorSigner.address));
-  console.log(chalk.green("owner:", await TMProxyContract.defaultAdmin()));
+  const currentDefaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
+  console.log(chalk.green("Default admin before upgrade:", currentDefaultAdmin ?? "none (pre-roles implementation)"));
   const connectedImplementation = TMProxyContract.connect(aggregatorSigner);
   const oldImplementationAddress = await getImplementationAddress(connectedImplementation);
   console.log(chalk.green("Old implementation address:", oldImplementationAddress));
@@ -313,9 +299,24 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, aggregatorSigner:
   await newIplDeployment.waitForDeployment();
   const newIplAddress = await newIplDeployment.getAddress();
   console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
-  const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, "0x");
+
+  // The deterministic bootstrap implementation behind this proxy is Ownable, so the
+  // AccessControl storage is still empty. Seed it via initializeV2 in the *same*
+  // transaction as the upgrade: initializeV2 is unauthenticated, so any gap between the
+  // two calls would let anyone claim DEFAULT_ADMIN_ROLE.
+  const migrationData =
+    currentDefaultAdmin === null
+      ? TMFactory.interface.encodeFunctionData("initializeV2", [0, aggregatorSigner.address])
+      : "0x";
+  const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, migrationData);
   await tx.wait();
   console.log(chalk.green("Successfully upgraded TaskManager contract"));
+  console.log(chalk.green("Default admin after upgrade:", await TMProxyContract.defaultAdmin()));
+
+  // initialize/initializeV2 only grant DEFAULT_ADMIN_ROLE; incVersion below and the whole
+  // of TaskManagerSetup need the operational roles.
+  await grantAllRoles(TMProxyContract, aggregatorSigner);
+
   const incTx = await connectedImplementation.incVersion();
   await incTx.wait();
   const newImplementationAddress = await getImplementationAddress(connectedImplementation);
@@ -384,12 +385,12 @@ const func: DeployFunction = async function () {
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));
   // Deploy and upgrade ACL contract
-  const {ProxyContract: aclContract} = await getProxyContract(aggregatorSigners[0].address, "ACL");
+  const {ProxyContract: aclContract} = await getProxyContract(aggregatorSigners[0], "ACL");
   await ACLSetup(TMProxyContract, aggregatorSigners[0], aclContract);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
-  const {ProxyAddress: ptStorageAddress} = await getProxyContract(aggregatorSigners[0].address, "PlaintextsStorage");
+  const {ProxyAddress: ptStorageAddress} = await getProxyContract(aggregatorSigners[0], "PlaintextsStorage");
   await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, aggregatorSigners[0]);
 };
 

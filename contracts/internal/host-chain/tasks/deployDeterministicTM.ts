@@ -65,7 +65,15 @@ async function getDeterministicProxyContract(
   // using the ERC1967ProxyModule, in the constructor we pass the implementation address and the data
   // where the data is the initialization data for the implementation contract
   const proxyAddress = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
-  const proxyInitData = factory.interface.encodeFunctionData("initialize", [admin]);
+  // The proxy is deployed with CREATE2, so its address depends on its constructor args -
+  // implementation and init data included. The init data must therefore stay byte-identical
+  // to keep the proxy at `proxyAddress`, which is compiled into FHE.sol and into ACL /
+  // PlaintextsStorage as a constant. It has to encode DeterministicTM's `initialize(address)`,
+  // the implementation actually behind the proxy at this point, and not TaskManager's
+  // role-based `initialize(address,uint48)`. deploy.ts later upgrades this proxy to
+  // TaskManager and migrates it to AccessControl via initializeV2.
+  const deterministicFactory = await hre.ethers.getContractFactory("DeterministicTM");
+  const proxyInitData = deterministicFactory.interface.encodeFunctionData("initialize", [admin]);
   const dummyAddress = await getDeterministicDummyContract(admin, hre);
   const deployedAddress = await deployDeterministic(
     hre,

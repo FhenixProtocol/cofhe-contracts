@@ -7,6 +7,14 @@ import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts
 contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
+    /// @dev Reserves the namespace this contract used while it inherited OwnableUpgradeable.
+    ///      Already-deployed proxies still hold an owner there; keeping the declaration marks
+    ///      that storage as taken so a later upgrade cannot silently reuse it.
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
+    struct OwnableStorage {
+        address _owner;
+    }
+
     struct PlaintextResult {
         bool existenceIndicator;
         uint256 result;
