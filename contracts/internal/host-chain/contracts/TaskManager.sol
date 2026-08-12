@@ -835,6 +835,14 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         acl.allowTransient(ctHash, account, msg.sender);
     }
 
+    function shareCtHash(uint256 ctHash, address receiver) external {
+        acl.shareCtHash(ctHash, msg.sender, receiver);
+    }
+
+    function receiveCtHash(uint256 ctHash, address expectedSharer) external {
+        acl.receiveCtHash(ctHash, expectedSharer, msg.sender);
+    }
+
     function allowForDecryption(uint256 ctHash) external {
         uint256[] memory hashes = new uint256[](1);
         hashes[0] = ctHash;
