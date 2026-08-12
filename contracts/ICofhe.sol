@@ -101,7 +101,7 @@ interface ITaskManager {
     function verifyInput(EncryptedInput memory input, address sender) external returns (uint256);
 
     function allow(uint256 ctHash, address account) external;
-    function isAllowed(uint256 ctHash, address account) external returns (bool);
+    function isAllowed(uint256 ctHash, address account) external view returns (bool);
     function isPubliclyAllowed(uint256 ctHash) external view returns (bool);
     function allowGlobal(uint256 ctHash) external;
     function allowTransient(uint256 ctHash, address account) external;
