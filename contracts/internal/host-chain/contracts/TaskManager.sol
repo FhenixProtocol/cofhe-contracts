@@ -782,6 +782,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
     ///      The batch is bound to the consuming contract (`msg.sender`), so it
     ///      cannot be replayed into a different contract.
     ///      Inputs are processed in order; the returned hashes line up with `inputs`.
+    ///      Emits one `InputVerified` per input, in input order — the same event
+    ///      the single-input flow emitted, so the commitment relay reads a batch
+    ///      as N independent verified inputs and needs no batch-aware decoding.
     /// @param inputs The encrypted inputs to verify (no per-input signature —
     ///        the batch is authenticated by the single `signature` argument).
     /// @param sender The account the inputs are bound to.
@@ -814,9 +817,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
             int32 securityZone = int32(uint32(inputs[i].securityZone));
             appendedHashes[i] =
                 TMCommon.appendMetadata(inputs[i].ctHash, securityZone, inputs[i].utype, false);
+            emit InputVerified(appendedHashes[i], bytes32(inputs[i].ctHash));
         }
-
-        // TODO: emit InputVerified event for the entire batch
 
         acl.batchAllowTransient(appendedHashes, msg.sender, address(this));
 
