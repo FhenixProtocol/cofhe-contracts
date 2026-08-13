@@ -234,8 +234,11 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
      * @dev                 Writes `value` to transient slot `key` and appends `key` to the transient key
      *                      list, whose length lives in transient slot 0. Every transient write must go
      *                      through here so cleanTransientStorage() clears allowances and share slots
-     *                      together — receiveCtHash() relies on "a live share slot implies a live
-     *                      transient allowance", which only holds while both ride the same cleanup path.
+     *                      together. receiveCtHash() does not re-check the receiver's own grant, so it
+     *                      relies on "a live share slot implies a live allowance for the receiver" —
+     *                      which only holds while both ride the same cleanup path. Clearing one without
+     *                      the other hands back an unusable handle, surfacing later as an opaque
+     *                      ACLNotAllowed rather than a share-related error.
      * @param key           Transient slot to write.
      * @param value         Value to store.
      */
@@ -290,10 +293,6 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
      * @dev                     The slot is cleared before the checks run. A reverting claim rolls the
      *                          clear back with its own frame, so a failed claim leaves the share
      *                          available to its intended receiver.
-     * @dev                     Custody is re-asserted on claim: cleanTransientStorage() can lapse the
-     *                          sharer's own grant mid-transaction (e.g. between the share and the
-     *                          receive when bundling UserOps), and a lapsed sharer means the recorded
-     *                          provenance is no longer backed by anything real.
      * @param handle            Handle.
      * @param expectedSharer    Sharer the receiver names. Required, so a share cannot be consumed
      *                          without naming who it came from.
@@ -319,6 +318,9 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
             revert UnexpectedSharer(expectedSharer, sharer);
         }
 
+        // Unreachable today — a live slot implies a live sharer grant, since allowances are never
+        // revoked and cleanTransientStorage() drops slots and allowances together, so NotShared fires
+        // first. Kept so decoupling those cannot silently return provenance without real access.
         if (!isAllowed(handle, sharer)) {
             revert SenderNotAllowed(sharer);
         }
