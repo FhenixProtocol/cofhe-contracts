@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v0.1.5 - 2026-08-16
+
 ### Added
 - **`InputVerified` event** — `TaskManager.verifyInput` now emits `InputVerified(uint256 indexed ctHash, bytes32 commitment)`: the appended handle plus the raw verifier-signature-checked `ctHash` (`keccak256` of the ciphertext bytes) as the commitment; the security zone is bound by the handle's last byte, not the value. Off-chain services relay the commitment verbatim to the CommitmentRegistry so the TEE decryptor can verify user inputs before decrypting. Emitted in debug mode (`verifierSigner == address(0)`) too, so local stacks exercise the flow. Adds ~1.5k gas to `verifyInput` (event emission only).
 - **TaskManager access list** — optional, owner-controlled allowlist that gates task intake (`createTask`, `createRandomTask`, `verifyInput`) to approved callers. Off by default, so behavior is unchanged on upgrade; the owner turns it on with `enableAccessList()` / off with `disableAccessList()`, and manages members via batch `addToAccessList` / `removeFromAccessList`. Intended for controlled early-mainnet rollout. ACL `allow*` and decrypt-result publishing are intentionally not gated (ACL is reachable only through gated intake, and decrypt publishing is signature-gated). New storage is appended (the toggle packs into an existing slot, the mapping takes the next), keeping UUPS upgrades storage-layout-compatible.
