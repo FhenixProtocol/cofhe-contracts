@@ -37,6 +37,7 @@ error NotOnAccessList(address caller);
 
 // Operation-specific errors
 error RandomFunctionNotSupported();
+error DecryptFunctionNotSupported();
 
 library TMCommon {
     uint256 private constant HASH_MASK_FOR_METADATA  = type(uint256).max - type(uint16).max; // 2 bytes reserved for metadata
@@ -234,6 +235,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
     event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
     event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
+    event InputVerified(uint256 indexed ctHash, bytes32 commitment);
     event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
     event VerifierSignerChanged(address indexed oldSigner, address indexed newSigner);
     event AccessListEnabledSet(bool enabled);
@@ -575,10 +577,15 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
             seed = _generateSeed(securityZone);
         }
 
-        // seed is directly used as preCtHash for encrypted randoms
-        uint256 ctHash = TMCommon.appendMetadata(seed, securityZone, returnType, false);
+        /// @dev msg.sender is part of the preimage so the same seed from different
+        /// callers yields different handles.
+        uint256[] memory inputs = new uint256[](2);
+        inputs[0] = seed;
+        inputs[1] = uint256(uint160(msg.sender));
+
+        uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, FunctionId.random);
         acl.allowTransient(ctHash, msg.sender, address(this));
-        emit TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), 0);
+        emit TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), inputs[1]);
         return ctHash;
     }
 
@@ -595,6 +602,10 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external onlyAccessListed returns (uint256) {
         if (funcId == FunctionId.random) {
             revert RandomFunctionNotSupported();
+        }
+
+        if (funcId == FunctionId.decrypt) {
+            revert DecryptFunctionNotSupported();
         }
 
         if (!isValidType(returnType)) {
@@ -810,6 +821,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         }
 
         uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
+
+        emit InputVerified(appendedHash, bytes32(input.ctHash));
 
         acl.allowTransient(appendedHash, msg.sender, address(this));
         return appendedHash;

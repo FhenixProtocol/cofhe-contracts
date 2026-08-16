@@ -5,7 +5,7 @@ const { ethers } = hre;
 import { grantAllRoles } from "../../utils/roles";
 
 // The hardcoded TaskManager address that ACL and PlaintextsStorage expect
-const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+export const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
 /**
  * Install a UUPS proxy's runtime bytecode at a fixed address and initialize it
