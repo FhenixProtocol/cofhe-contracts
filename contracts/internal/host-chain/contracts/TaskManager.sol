@@ -30,7 +30,6 @@ error LengthMismatch();
 // Access control errors
 error InvalidAddress();
 error OnlyOwnerAllowed(address caller);
-error OnlyAggregatorAllowed(address caller);
 error CofheIsUnavailable();
 error NotOnAccessList(address caller);
 
@@ -157,7 +156,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant SECURITY_ZONE_MANAGER_ROLE = keccak256("SECURITY_ZONE_MANAGER_ROLE");
-    bytes32 public constant AGGREGATOR_MANAGER_ROLE = keccak256("AGGREGATOR_MANAGER_ROLE");
     bytes32 public constant ACCESS_LIST_MANAGER_ROLE = keccak256("ACCESS_LIST_MANAGER_ROLE");
     bytes32 public constant VERIFIER_SIGNER_MANAGER_ROLE = keccak256("VERIFIER_SIGNER_MANAGER_ROLE");
     bytes32 public constant DECRYPT_SIGNER_MANAGER_ROLE = keccak256("DECRYPT_SIGNER_MANAGER_ROLE");
@@ -219,7 +217,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         return version;
     }
 
-    function incVersion() public onlyRole(CONFIG_MANAGER_ROLE) {
+    function incVersion() public onlyRole(UPGRADER_ROLE) {
         version++;
     }
 
@@ -255,7 +253,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // Random counter
     uint256 private randomCounter;
 
-    address private unusedAggregator; // Should never be used / deleted present only for storage layout
+    // Deprecated: this address is no longer used
+    address private _aggregator;
 
     // Access-Control contract
     ACL public acl;
@@ -267,7 +266,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // Storage contract for plaintext results of decrypt operations
     PlaintextsStorage public plaintextsStorage;
 
-    mapping(address aggregator => bool isActiveAggregator) public aggregators;
+    // Deprecated: this mapping is no longer used
+    mapping(address aggregator => bool isActiveAggregator) public _aggregators;
 
     // Master kill-switch for coprocessor intake.
     // When disabled, task creation (createTask, createRandomTask) and
@@ -281,13 +281,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // Optional, owner-controlled access list, off by default (no behavior change until enabled).
     bool public accessListEnabled;
     mapping(address account => bool isAllowed) public accessList;
-
-    modifier onlyAggregator() {
-        if (!aggregators[msg.sender]) {
-            revert OnlyAggregatorAllowed(msg.sender);
-        }
-        _;
-    }
 
     modifier onlyIfEnabled() {
         if (!isEnabled) {
@@ -633,13 +626,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         return ctHash;
     }
 
-    function handleDecryptResult(uint256 ctHash, uint256 result, address[] calldata requestors) external onlyAggregator {
-        plaintextsStorage.storeResult(ctHash, result);
-        for (uint8 i = 0; i < requestors.length; i++) {
-            emit DecryptionResult(ctHash, result, requestors[i]);
-        }
-    }
-
     /// @notice Publish a signed decrypt result to the chain
     /// @dev Anyone with a valid signature from the decrypt network can call this
     /// @param ctHash The ciphertext hash
@@ -787,10 +773,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         }
     }
 
-    function handleError(uint256 ctHash, string memory operation, string memory errorMessage) external onlyAggregator {
-        emit ProtocolNotification(ctHash, operation, errorMessage);
-    }
-
     // slither-disable-next-line unused-return
     function getDecryptResultSafe(uint256 ctHash) external view returns (uint256, bool) {
         return plaintextsStorage.getResult(ctHash);
@@ -913,21 +895,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
             revert InvalidAddress();
         }
         plaintextsStorage = PlaintextsStorage(_plaintextsStorageAddress);
-    }
-
-    function addAggregator(address _aggregatorAddress) external onlyRole(AGGREGATOR_MANAGER_ROLE) {
-        if (_aggregatorAddress == address(0)) {
-            revert InvalidAddress();
-        }
-
-        aggregators[_aggregatorAddress] = true;
-    }
-
-    function removeAggregator(address _aggregatorAddress) external onlyRole(AGGREGATOR_MANAGER_ROLE) {
-        if (_aggregatorAddress == address(0)) {
-            revert InvalidAddress();
-        }
-        aggregators[_aggregatorAddress] = false;
     }
 
     function isAllowedWithPermission(Permission memory permission, uint256 handle) public view returns (bool) {
