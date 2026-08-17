@@ -29,6 +29,17 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     /// @param sender   Sender address.
     error DirectAllowForbidden(address sender);
 
+    /// @notice         Returned when no share is pending at (handle, receiver).
+    /// @param handle   Handle.
+    /// @param receiver Address attempting to claim the share.
+    error NotShared(uint256 handle, address receiver);
+
+    /// @notice         Returned when the pending share was created by someone other than the
+    ///                 party the receiver named.
+    /// @param expected Sharer the receiver named.
+    /// @param actual   Sharer that actually created the share.
+    error UnexpectedSharer(address expected, address actual);
+
     /// @notice             Emitted when a list of handles is allowed for decryption.
     /// @param handlesList  List of handles allowed for decryption.
     event AllowedForDecryption(uint256[] handlesList);
@@ -77,6 +88,10 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /// @dev keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACL")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ACL_SLOT = keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACL")) - 1)) & ~bytes32(uint256(0xff));
+
+    /// @dev Domain separator for share slots. Share keys are derived from a longer preimage than
+    ///      transient allowance keys and carry this prefix, so the two key spaces cannot alias.
+    bytes32 private constant SHARE_DOMAIN = keccak256("cofhe.acl.share");
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -212,13 +227,102 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
      * @param account       Address of the account.
      */
     function _allowTransient(uint256 handle, address account) internal {
-        bytes32 key = keccak256(abi.encodePacked(handle, account));
+        _tstoreTracked(keccak256(abi.encodePacked(handle, account)), 1);
+    }
+
+    /**
+     * @dev                 Writes `value` to transient slot `key` and appends `key` to the transient key
+     *                      list, whose length lives in transient slot 0. Every transient write must go
+     *                      through here so cleanTransientStorage() clears allowances and share slots
+     *                      together. receiveCtHash() does not re-check the receiver's own grant, so it
+     *                      relies on "a live share slot implies a live allowance for the receiver" —
+     *                      which only holds while both ride the same cleanup path. Clearing one without
+     *                      the other hands back an unusable handle, surfacing later as an opaque
+     *                      ACLNotAllowed rather than a share-related error.
+     * @param key           Transient slot to write.
+     * @param value         Value to store.
+     */
+    function _tstoreTracked(bytes32 key, uint256 value) private {
         assembly {
-            tstore(key, 1)
+            tstore(key, value)
             let length := tload(0)
             let lengthPlusOne := add(length, 1)
             tstore(lengthPlusOne, key)
             tstore(0, lengthPlusOne)
+        }
+    }
+
+    /**
+     * @dev                 Transient slot holding the sharer of a share directed at `receiver`.
+     * @param handle        Handle.
+     * @param receiver      Address the share is directed at.
+     */
+    function _shareKey(uint256 handle, address receiver) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(SHARE_DOMAIN, handle, receiver));
+    }
+
+    /**
+     * @notice              Grants `receiver` transient access to `handle` and records `sharer` as the
+     *                      party handing it over, for the duration of this transaction.
+     * @dev                 The caller must be the Task Manager contract.
+     * @dev                 Stricter than allowTransient(): there is no TASK_MANAGER_ADDRESS bypass.
+     *                      Nothing shares on the Task Manager's own behalf, so the sharer must
+     *                      genuinely hold the handle.
+     * @param handle        Handle.
+     * @param sharer        Address handing the handle over.
+     * @param receiver      Address the handle is being handed to.
+     */
+    function shareCtHash(uint256 handle, address sharer, address receiver) public virtual {
+        if (msg.sender != TASK_MANAGER_ADDRESS) {
+            revert DirectAllowForbidden(msg.sender);
+        }
+
+        if (!isAllowed(handle, sharer)) {
+            revert SenderNotAllowed(sharer);
+        }
+
+        // Capability, then provenance. `sharer` is a clean uint160 cast, so the tload in
+        // receiveCtHash() needs no masking.
+        _allowTransient(handle, receiver);
+        _tstoreTracked(_shareKey(handle, receiver), uint256(uint160(sharer)));
+    }
+
+    /**
+     * @notice                  Consumes the share directed at `receiver` for `handle`.
+     * @dev                     The caller must be the Task Manager contract.
+     * @dev                     The slot is cleared before the checks run. A reverting claim rolls the
+     *                          clear back with its own frame, so a failed claim leaves the share
+     *                          available to its intended receiver.
+     * @param handle            Handle.
+     * @param expectedSharer    Sharer the receiver names. Required, so a share cannot be consumed
+     *                          without naming who it came from.
+     * @param receiver          Address claiming the share.
+     */
+    function receiveCtHash(uint256 handle, address expectedSharer, address receiver) public virtual {
+        if (msg.sender != TASK_MANAGER_ADDRESS) {
+            revert DirectAllowForbidden(msg.sender);
+        }
+
+        bytes32 shareKey = _shareKey(handle, receiver);
+        address sharer;
+        assembly {
+            sharer := tload(shareKey)
+            tstore(shareKey, 0)
+        }
+
+        if (sharer == address(0)) {
+            revert NotShared(handle, receiver);
+        }
+
+        if (sharer != expectedSharer) {
+            revert UnexpectedSharer(expectedSharer, sharer);
+        }
+
+        // Unreachable today — a live slot implies a live sharer grant, since allowances are never
+        // revoked and cleanTransientStorage() drops slots and allowances together, so NotShared fires
+        // first. Kept so decoupling those cannot silently return provenance without real access.
+        if (!isAllowed(handle, sharer)) {
+            revert SenderNotAllowed(sharer);
         }
     }
 
