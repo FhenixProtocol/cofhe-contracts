@@ -87,9 +87,9 @@ export async function deployOnChainFixture(): Promise<{
 
   // `initialize` only grants DEFAULT_ADMIN_ROLE; mirror the deploy script and give the admin
   // every role, so the fixture stays correct when a contract gains a new one.
-  await grantAllRoles(taskManager, owner, false);
-  await grantAllRoles(ACL.attach(await aclProxy.getAddress()), owner, false);
-  await grantAllRoles(PlaintextsStorage.attach(await psProxy.getAddress()), owner, false);
+  await grantAllRoles(taskManager, owner, undefined, false);
+  await grantAllRoles(ACL.attach(await aclProxy.getAddress()), owner, undefined, false);
+  await grantAllRoles(PlaintextsStorage.attach(await psProxy.getAddress()), owner, undefined, false);
 
   // Configure TaskManager
   await taskManager.setACLContract(await aclProxy.getAddress());

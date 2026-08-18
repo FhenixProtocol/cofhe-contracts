@@ -84,11 +84,73 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       ).to.be.reverted;
     });
 
+    // A proxy deployed through `initialize` never ran an Ownable implementation, so its legacy
+    // owner slot is zero and the migration path is closed to everyone.
     it("should not let anyone re-seed the admin through initializeV2", async function () {
       const registryAsOther = this.registry.connect(this.otherAccount);
       await expect(
         registryAsOther.initializeV2(0, this.otherAccount.address)
-      ).to.be.revertedWithCustomError(this.registry, "AccessControlEnforcedDefaultAdminRules");
+      )
+        .to.be.revertedWithCustomError(this.registry, "NotLegacyOwner")
+        .withArgs(this.otherAccount.address, ethers.ZeroAddress);
+    });
+
+    // There is no upgrade script for this proxy, so a real migration off the Ownable
+    // implementation would be hand-rolled and would not necessarily bundle the migration call
+    // into `upgradeToAndCall`. Reproduce that gap and assert nobody but the legacy owner can
+    // close it: `reinitializer(2)` passes (the Ownable implementation left `_initialized == 1`)
+    // and the inherited `_grantRole` guard does not fire while `defaultAdmin()` is zero.
+    describe("during a non-atomic migration from Ownable", function () {
+      let migrating: any;
+      let legacyOwner: any;
+
+      beforeEach(async function () {
+        legacyOwner = this.admin;
+
+        const LegacyRegistry = await ethers.getContractFactory("OwnableCommitmentRegistryMock");
+        const legacyImpl = await LegacyRegistry.deploy();
+        await legacyImpl.waitForDeployment();
+
+        const ERC1967Proxy = await ethers.getContractFactory("ERC1967ProxyMock");
+        const proxy = await ERC1967Proxy.deploy(
+          await legacyImpl.getAddress(),
+          LegacyRegistry.interface.encodeFunctionData("initialize", [legacyOwner.address]),
+        );
+        await proxy.waitForDeployment();
+
+        const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
+        const newImpl = await CommitmentRegistry.deploy();
+        await newImpl.waitForDeployment();
+
+        // Deliberately no migration calldata - this is the gap being tested.
+        const legacyProxy = LegacyRegistry.attach(await proxy.getAddress()) as any;
+        await legacyProxy.connect(legacyOwner).upgradeToAndCall(await newImpl.getAddress(), "0x");
+
+        migrating = CommitmentRegistry.attach(await proxy.getAddress());
+      });
+
+      it("leaves the proxy with no default admin", async function () {
+        expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
+      });
+
+      it("rejects a stranger claiming DEFAULT_ADMIN_ROLE", async function () {
+        await expect(migrating.connect(this.otherAccount).initializeV2(0, this.otherAccount.address))
+          .to.be.revertedWithCustomError(migrating, "NotLegacyOwner")
+          .withArgs(this.otherAccount.address, legacyOwner.address);
+        expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
+      });
+
+      it("lets the legacy owner complete the migration", async function () {
+        await expect(migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address))
+          .to.not.be.reverted;
+        expect(await migrating.defaultAdmin()).to.equal(legacyOwner.address);
+      });
+
+      it("cannot be replayed once migrated", async function () {
+        await migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address);
+        await expect(migrating.connect(legacyOwner).initializeV2(0, this.otherAccount.address))
+          .to.be.revertedWithCustomError(migrating, "InvalidInitialization");
+      });
     });
   });
 

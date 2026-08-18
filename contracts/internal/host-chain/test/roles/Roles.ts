@@ -2,6 +2,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
+import { getDefaultAdmin, requireDefaultAdminIsSignerOrUnset } from "../../utils/roles";
 
 const { ethers } = hre;
 
@@ -155,22 +156,117 @@ describe("Role-based access control", function () {
   });
 
   // initializeV2 exists to migrate proxies coming from the pre-roles Ownable implementation. It
-  // is unauthenticated, so it must be impossible to re-run against a proxy that already has an
-  // admin - the deploy scripts rely on this plus an atomic upgradeToAndCall.
+  // cannot be onlyRole-gated (there is no role holder yet), so it is gated on the owner the old
+  // implementation left behind. A proxy that never ran an Ownable implementation has a zero legacy
+  // owner and rejects the call outright.
   describe("initializeV2 cannot hijack an initialized proxy", function () {
     it("reverts on TaskManager", async function () {
       await expect(taskManager.connect(other).initializeV2(0, other.address))
-        .to.be.revertedWithCustomError(taskManager, "AccessControlEnforcedDefaultAdminRules");
+        .to.be.revertedWithCustomError(taskManager, "NotLegacyOwner")
+        .withArgs(other.address, ethers.ZeroAddress);
     });
 
     it("reverts on ACL", async function () {
       await expect(acl.connect(other).initializeV2(0, other.address))
-        .to.be.revertedWithCustomError(acl, "AccessControlEnforcedDefaultAdminRules");
+        .to.be.revertedWithCustomError(acl, "NotLegacyOwner")
+        .withArgs(other.address, ethers.ZeroAddress);
     });
 
     it("reverts on PlaintextsStorage", async function () {
       await expect(plaintextsStorage.connect(other).initializeV2(0, other.address))
-        .to.be.revertedWithCustomError(plaintextsStorage, "AccessControlEnforcedDefaultAdminRules");
+        .to.be.revertedWithCustomError(plaintextsStorage, "NotLegacyOwner")
+        .withArgs(other.address, ethers.ZeroAddress);
+    });
+  });
+
+  // The dangerous state is not the already-migrated proxy above - it is the window a real migration
+  // opens. A proxy coming off the Ownable implementation has `_initialized == 1`, so
+  // `reinitializer(2)` passes, and a zero AccessControl namespace, so the inherited `_grantRole`
+  // guard does not fire either. Reproduce that state exactly: bootstrap on DeterministicTM, then
+  // `upgradeToAndCall(TaskManager, "0x")` - the non-atomic upgrade the deploy scripts avoid but
+  // that a Safe or a manual `cast send` would produce.
+  describe("initializeV2 during a non-atomic migration", function () {
+    let migrating: any;
+    let legacyOwner: HardhatEthersSigner;
+
+    beforeEach(async function () {
+      [, , legacyOwner] = await ethers.getSigners();
+
+      const DeterministicTM = await ethers.getContractFactory("DeterministicTM");
+      const legacyImpl = await DeterministicTM.deploy();
+      await legacyImpl.waitForDeployment();
+
+      const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
+      const proxy = await ERC1967Proxy.deploy(
+        await legacyImpl.getAddress(),
+        DeterministicTM.interface.encodeFunctionData("initialize", [legacyOwner.address]),
+      );
+      await proxy.waitForDeployment();
+
+      const TaskManager = await ethers.getContractFactory("TaskManager");
+      const newImpl = await TaskManager.deploy();
+      await newImpl.waitForDeployment();
+
+      // Deliberately no migration calldata - this is the gap being tested.
+      const legacyProxy = DeterministicTM.attach(await proxy.getAddress()) as any;
+      await legacyProxy.connect(legacyOwner).upgradeToAndCall(await newImpl.getAddress(), "0x");
+
+      migrating = TaskManager.attach(await proxy.getAddress());
+    });
+
+    it("leaves the proxy with no default admin", async function () {
+      expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
+    });
+
+    it("rejects a stranger claiming DEFAULT_ADMIN_ROLE", async function () {
+      await expect(migrating.connect(other).initializeV2(0, other.address))
+        .to.be.revertedWithCustomError(migrating, "NotLegacyOwner")
+        .withArgs(other.address, legacyOwner.address);
+      expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
+      expect(await migrating.hasRole(await migrating.DEFAULT_ADMIN_ROLE(), other.address))
+        .to.equal(false);
+    });
+
+    it("lets the legacy owner complete the migration", async function () {
+      await expect(migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address))
+        .to.not.be.reverted;
+      expect(await migrating.defaultAdmin()).to.equal(legacyOwner.address);
+    });
+
+    it("cannot be replayed once migrated", async function () {
+      await migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address);
+      await expect(migrating.connect(legacyOwner).initializeV2(0, other.address))
+        .to.be.revertedWithCustomError(migrating, "InvalidInitialization");
+    });
+  });
+
+  // The deploy scripts upgrade and then grant roles, which need UPGRADER_ROLE and
+  // DEFAULT_ADMIN_ROLE respectively. A signer holding only the former would land the
+  // implementation swap and then revert on the grants, leaving the proxy on new code with no
+  // operational roles. `requireDefaultAdminIsSignerOrUnset` is the pre-flight check for that.
+  describe("deploy-time default-admin guard", function () {
+    it("passes when the signer is the default admin", async function () {
+      const currentDefaultAdmin = await getDefaultAdmin(taskManager, ethers.ZeroAddress);
+      expect(currentDefaultAdmin).to.equal(owner.address);
+      expect(() => requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, owner)).to.not.throw();
+    });
+
+    it("passes when the proxy has no default admin yet", function () {
+      expect(() => requireDefaultAdminIsSignerOrUnset(null, other)).to.not.throw();
+    });
+
+    it("throws when the default admin is someone else", async function () {
+      const currentDefaultAdmin = await getDefaultAdmin(taskManager, ethers.ZeroAddress);
+      expect(() => requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, other))
+        .to.throw(/Refusing to upgrade: default admin is/);
+    });
+
+    it("compares addresses case-insensitively", function () {
+      expect(() =>
+        requireDefaultAdminIsSignerOrUnset(owner.address.toLowerCase(), {
+          address: owner.address.toUpperCase().replace("0X", "0x"),
+        }),
+      ).to.not.throw();
     });
   });
 });

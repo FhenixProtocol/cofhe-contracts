@@ -4,7 +4,7 @@ import type { TaskArguments } from "hardhat/types";
 import { Contract, Wallet } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { getDefaultAdmin, grantAllRoles } from "../utils/roles";
+import { getDefaultAdmin, grantAllRoles, requireDefaultAdminIsSignerOrUnset } from "../utils/roles";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -20,29 +20,40 @@ async function getImplementationAddress(ethers: any, proxy: any) {
   );
 }
 
-async function validateUpgrade(upgrades: any, TMProxyContract: any, TMFactory: any) {
+// Registering the proxy with the OpenZeppelin plugin has to use the implementation that is
+// *currently* behind it, not the one we are upgrading to - importing with the new factory makes
+// `validateUpgrade` compare the new layout against itself, which can never fail. The deterministic
+// bootstrap proxy runs DeterministicTM; anything already migrated runs TaskManager.
+async function currentImplementationFactory(ethers: any, TMProxyContract: any) {
+  const defaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
+  const contractName = defaultAdmin === null ? "DeterministicTM" : "TaskManager";
+  console.log(chalk.dim(`Current implementation assumed to be ${contractName}`));
+  return ethers.getContractFactory(contractName);
+}
+
+async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any) {
+  const proxyAddress = await TMProxyContract.getAddress();
   try {
     console.log("Importing implementation contract...");
-    // First, force import the implementation to register it with OpenZeppelin plugin
     await upgrades.forceImport(
-        await TMProxyContract.getAddress(),
-        TMFactory,
+        proxyAddress,
+        await currentImplementationFactory(ethers, TMProxyContract),
         { kind: 'uups' }
     );
 
     console.log("Validating storage layout...");
     // Now validate the upgrade
     await upgrades.validateUpgrade(
-        await TMProxyContract.getAddress(), 
-        TMFactory, 
+        proxyAddress,
+        TMFactory,
         { kind: 'uups' }
     );
     console.log(chalk.green("✅ Storage layout is compatible with the previous implementation"));
   } catch (error: any) {
     console.log(chalk.red("❌ Storage layout validation failed:"));
-    console.error(chalk.red(error.stack || error.message || error));
-    console.log(chalk.yellow("Upgrade aborted"));
-    return;
+    // Rethrow: `return` here only exits this function, and the caller would go on to upgrade
+    // anyway right after printing "Upgrade aborted".
+    throw error;
   }
 }
 
@@ -53,14 +64,21 @@ async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFac
     const oldImplementationAddress = await getImplementationAddress(ethers, connectedImplementation);
     console.log(chalk.green("Old implementation address:", oldImplementationAddress));
 
+    // `_authorizeUpgrade` needs only UPGRADER_ROLE, but `grantAllRoles` below needs
+    // DEFAULT_ADMIN_ROLE. Once the admin moves to a Safe and this key holds only UPGRADER_ROLE,
+    // the upgrade would land and the grants would then revert, leaving the proxy on the new
+    // implementation with no operational roles and no version bump. Refuse up front instead.
+    requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, adminSigner);
+
     const newIplDeployment = await TMFactory.deploy();
     await newIplDeployment.waitForDeployment();
     const newIplAddress = await newIplDeployment.getAddress();
     console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
 
     // A proxy still on the pre-roles (Ownable) implementation has no AccessControl storage.
-    // Seed it via initializeV2 atomically with the upgrade: initializeV2 is unauthenticated,
-    // so any gap between the two calls would let anyone claim DEFAULT_ADMIN_ROLE.
+    // Seed it via initializeV2 in the same transaction as the upgrade. initializeV2 is gated on
+    // the legacy Ownable owner, so a gap is no longer exploitable, but keeping it atomic means
+    // the proxy is never observable in a half-migrated state.
     const migrationData =
       currentDefaultAdmin === null
         ? TMFactory.interface.encodeFunctionData("initializeV2", [0, adminSigner.address])
@@ -69,7 +87,7 @@ async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFac
     await tx.wait();
     console.log(chalk.green("Successfully upgraded TaskManager contract"));
 
-    // initialize/initializeV2 only grant DEFAULT_ADMIN_ROLE; incVersion needs CONFIG_MANAGER_ROLE.
+    // initialize/initializeV2 only grant DEFAULT_ADMIN_ROLE; incVersion needs UPGRADER_ROLE.
     await grantAllRoles(TMProxyContract, adminSigner);
 
     const incTx = await connectedImplementation.incVersion();
@@ -116,7 +134,7 @@ task("task:upgradeTM")
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     
 
-    await validateUpgrade(upgrades, TMProxyContract, TMFactory);
+    await validateUpgrade(ethers, upgrades, TMProxyContract, TMFactory);
 
     if (!taskArguments.onlyvalidate) {
         await upgradeTM(ethers, upgrades, TMProxyContract, TMFactory, signer);

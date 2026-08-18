@@ -3,11 +3,25 @@ pragma solidity >=0.8.25 <0.9.0;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import {LegacyOwnable} from "./LegacyOwnable.sol";
 
 contract CommitmentRegistry is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant POSTER_MANAGER_ROLE = keccak256("POSTER_MANAGER_ROLE");
     bytes32 public constant VERSION_MANAGER_ROLE = keccak256("VERSION_MANAGER_ROLE");
+
+    /// @dev Reserves the namespaces this contract used while it inherited Ownable2StepUpgradeable.
+    ///      Already-deployed proxies still hold an owner there; keeping the declarations marks
+    ///      that storage as taken so a later upgrade cannot silently reuse it.
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
+    struct OwnableStorage {
+        address _owner;
+    }
+
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable2Step
+    struct Ownable2StepStorage {
+        address _pendingOwner;
+    }
 
     enum VersionStatus { Unset, Active, Deprecated, Revoked }
 
@@ -86,11 +100,14 @@ contract CommitmentRegistry is UUPSUpgradeable, AccessControlDefaultAdminRulesUp
         emit PosterAdded(initialPoster);
     }
 
-    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
-    ///      implementation. Reverts with AccessControlEnforcedDefaultAdminRules if the
-    ///      proxy already has a default admin, so it is safe against accidental reuse.
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
+    ///      Callable only by the owner the pre-roles implementation left behind - see
+    ///      {LegacyOwnable} for why that is the only authority available in this window. There is
+    ///      no upgrade script for this proxy, so the migration cannot rely on being bundled into
+    ///      `upgradeToAndCall`; whoever performs it must send this call from the legacy owner.
     /// @custom:oz-upgrades-validate-as-initializer
     function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+        LegacyOwnable.requireLegacyOwner(msg.sender);
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
     }
 

@@ -2,6 +2,7 @@
 /* solhint-disable one-contract-per-file */
 pragma solidity >=0.8.25 <0.9.0;
 import {ACL, Permission} from "./ACL.sol";
+import {LegacyOwnable} from "./LegacyOwnable.sol";
 import {PlaintextsStorage} from "./PlaintextsStorage.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -153,12 +154,30 @@ library TMCommon {
 }
 
 contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
+    // ---------------------------------------------------------------------------------------
+    // Roles. Splitting `onlyOwner` into capabilities limits *who has to hold* each key, not how
+    // much damage each key can do. Four of these are protocol-critical - a single holder can
+    // break confidentiality or integrity outright, without ever touching the implementation:
+    //
+    //   UPGRADER_ROLE                 arbitrary implementation, i.e. everything.
+    //   CONFIG_MANAGER_ROLE           repoints `acl` (permissive `isAllowed` -> unrestricted
+    //                                 ciphertext access) and `plaintextsStorage` (arbitrary
+    //                                 plaintext for any handle). See setACLContract below.
+    //   VERIFIER_SIGNER_MANAGER_ROLE  forges encrypted inputs; `address(0)` skips verification.
+    //   DECRYPT_SIGNER_MANAGER_ROLE   forges decrypt results; `address(0)` skips verification.
+    //
+    // Treat those four as admin-equivalent: they belong on the same governance as
+    // DEFAULT_ADMIN_ROLE, not on an operational hot key. Only PAUSER_ROLE,
+    // SECURITY_ZONE_MANAGER_ROLE and ACCESS_LIST_MANAGER_ROLE are genuinely narrow - their worst
+    // case is availability (halting intake, or gating it to an allowlist), not disclosure.
+    // ---------------------------------------------------------------------------------------
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant SECURITY_ZONE_MANAGER_ROLE = keccak256("SECURITY_ZONE_MANAGER_ROLE");
     bytes32 public constant ACCESS_LIST_MANAGER_ROLE = keccak256("ACCESS_LIST_MANAGER_ROLE");
     bytes32 public constant VERIFIER_SIGNER_MANAGER_ROLE = keccak256("VERIFIER_SIGNER_MANAGER_ROLE");
     bytes32 public constant DECRYPT_SIGNER_MANAGER_ROLE = keccak256("DECRYPT_SIGNER_MANAGER_ROLE");
+    /// @dev Admin-equivalent despite the name - see the role notes above.
     bytes32 public constant CONFIG_MANAGER_ROLE = keccak256("CONFIG_MANAGER_ROLE");
 
     /// @dev Reserves the namespaces this contract used while it inherited Ownable2StepUpgradeable.
@@ -196,11 +215,15 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         isEnabled = true;
     }
 
-    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
-    ///      implementation. Reverts with AccessControlEnforcedDefaultAdminRules if the
-    ///      proxy already has a default admin, so it is safe against accidental reuse.
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
+    ///      Callable only by the owner the pre-roles implementation left behind - the same account
+    ///      its `_authorizeUpgrade` required - so the migration does not depend on being bundled
+    ///      into `upgradeToAndCall`. Without that check `reinitializer(2)` passes on any proxy
+    ///      whose `_initialized == 1`, and the inherited `_grantRole` guard does not fire while
+    ///      `defaultAdmin()` is still zero, leaving DEFAULT_ADMIN_ROLE free for the taking.
     /// @custom:oz-upgrades-validate-as-initializer
     function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+        LegacyOwnable.requireLegacyOwner(msg.sender);
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
     }
 
@@ -266,7 +289,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // Storage contract for plaintext results of decrypt operations
     PlaintextsStorage public plaintextsStorage;
 
-    // Deprecated: this mapping is no longer used
+    // Deprecated: the aggregator allowlist and the unsigned `handleDecryptResult` / `handleError`
+    // entry points it gated are gone. Decrypt results are now published only through the
+    // signature-checked `publishDecryptResult*`. Kept so the slot stays reserved.
     mapping(address aggregator => bool isActiveAggregator) public _aggregators;
 
     // Master kill-switch for coprocessor intake.
@@ -278,7 +303,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // When set to address(0), signature verification is skipped (debug mode)
     address public decryptResultSigner;
 
-    // Optional, owner-controlled access list, off by default (no behavior change until enabled).
+    // Optional access list managed by ACCESS_LIST_MANAGER_ROLE, off by default (no behavior
+    // change until enabled).
     bool public accessListEnabled;
     mapping(address account => bool isAllowed) public accessList;
 
@@ -855,6 +881,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         return signer;
     }
 
+    /// @notice Set the authorized signer for encrypted inputs
+    /// @dev    Admin-equivalent. The holder can point this at a key it controls and forge
+    ///         encrypted inputs; `address(0)` skips input verification entirely (debug mode,
+    ///         see `verifyInput`). Grant only to whoever holds DEFAULT_ADMIN_ROLE.
+    /// @param signer The new signer address (address(0) disables verification)
     function setVerifierSigner(address signer) external onlyRole(VERIFIER_SIGNER_MANAGER_ROLE) {
         address oldSigner = verifierSigner;
         verifierSigner = signer;
@@ -862,6 +893,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     }
 
     /// @notice Set the authorized signer for decrypt results
+    /// @dev    Admin-equivalent. The holder can point this at a key it controls and forge
+    ///         decrypt results; `address(0)` makes `_verifyDecryptResult` return true for every
+    ///         signature, so any caller can publish arbitrary plaintext for any handle. Deploy
+    ///         scripts refuse to set zero on non-local networks. Grant only to whoever holds
+    ///         DEFAULT_ADMIN_ROLE.
     /// @param signer The new signer address (address(0) disables verification)
     function setDecryptResultSigner(address signer) external onlyRole(DECRYPT_SIGNER_MANAGER_ROLE) {
         address oldSigner = decryptResultSigner;
@@ -883,6 +919,12 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         securityZoneMin = securityZone;
     }
 
+    /// @notice Point the TaskManager at an ACL contract
+    /// @dev    Admin-equivalent, not narrow config. Every confidentiality check funnels through
+    ///         `acl.isAllowed*`, so an ACL whose `isAllowed` returns true grants unrestricted
+    ///         access to every ciphertext - no implementation upgrade required. Grant
+    ///         CONFIG_MANAGER_ROLE only to whoever holds DEFAULT_ADMIN_ROLE.
+    /// @param _aclAddress The ACL contract address
     function setACLContract(address _aclAddress) external onlyRole(CONFIG_MANAGER_ROLE) {
         if (_aclAddress == address(0)) {
             revert InvalidAddress();
@@ -890,6 +932,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         acl = ACL(_aclAddress);
     }
 
+    /// @notice Point the TaskManager at a PlaintextsStorage contract
+    /// @dev    Admin-equivalent, same reasoning as setACLContract: decrypt results are read back
+    ///         from here, so a storage contract that returns attacker-chosen values yields
+    ///         arbitrary plaintext for any handle.
+    /// @param _plaintextsStorageAddress The PlaintextsStorage contract address
     function setPlaintextsStorage(address _plaintextsStorageAddress) external onlyRole(CONFIG_MANAGER_ROLE) {
         if (_plaintextsStorageAddress == address(0)) {
             revert InvalidAddress();

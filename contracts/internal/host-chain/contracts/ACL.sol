@@ -5,6 +5,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
+import {LegacyOwnable} from "./LegacyOwnable.sol";
 import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
 
 /**
@@ -95,11 +96,12 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
         __PermissionedUpgradeable_init();
     }
 
-    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable
-    ///      implementation. Reverts with AccessControlEnforcedDefaultAdminRules if the
-    ///      proxy already has a default admin, so it is safe against accidental reuse.
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
+    ///      Callable only by the owner the pre-roles implementation left behind - see
+    ///      {LegacyOwnable} for why that is the only authority available in this window.
     /// @custom:oz-upgrades-validate-as-initializer
     function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+        LegacyOwnable.requireLegacyOwner(msg.sender);
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
     }
 

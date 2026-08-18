@@ -8,7 +8,7 @@ import fs from "fs";
 
 import { deployCreateX } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
-import { getDefaultAdmin, grantAllRoles } from "../utils/roles";
+import { getDefaultAdmin, grantAllRoles, requireDefaultAdminIsSignerOrUnset } from "../utils/roles";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -17,14 +17,15 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 /**
  * Deploys a proxy contract for a given contract name
  * @param adminSigner The admin account, which becomes the default admin and holds every role
+ * @param adminDelay The default-admin transfer delay to initialize with
  * @param contractName The name of the contract to deploy
  * @returns The proxy contract and its address
  */
-async function getProxyContract(adminSigner: any, contractName: string) {
+async function getProxyContract(adminSigner: any, adminDelay: number, contractName: string) {
   const TaskManager = await ethers.getContractFactory(contractName);
   const ProxyContract = await upgrades.deployProxy(
     TaskManager,
-    [adminSigner.address, 0],
+    [adminSigner.address, adminDelay],
     { kind: "uups", initializer: "initialize" },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
@@ -37,19 +38,40 @@ async function getProxyContract(adminSigner: any, contractName: string) {
       ProxyAddress,
     ),
   );
-  // `initialize` only grants DEFAULT_ADMIN_ROLE; without this the admin could not even
-  // upgrade the contract it just deployed.
+  // `initialize` grants only DEFAULT_ADMIN_ROLE, so grant every role the contract declares to the
+  // deployer - including UPGRADER_ROLE, without which this proxy could never be upgraded again.
   await grantAllRoles(ProxyContract, adminSigner);
   return { ProxyContract, ProxyAddress };
 }
 
 /**
- * Sets up the TaskManager contract
- * Sets the aggregator address and verifies the contract is initialized
- * @param TMProxyContract The TaskManager proxy contract
- * @param aggregatorSigner The signer with permissions to call TaskManager functions
+ * Returns true when the network being deployed to is a local dev chain.
+ * Used to keep dev-only defaults (zero signers, committed keys) from reaching a public network.
  */
-async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) {
+function isLocalNetwork() {
+  const networkName = hre?.network?.name;
+  const networkUrl = (hre?.network?.config as any)?.url;
+  if (networkName === "hardhat" || networkName?.startsWith("localfhenix")) {
+    return true;
+  }
+  return Boolean(
+    networkUrl &&
+      (networkUrl.includes("localhost") || networkUrl.includes("127.0.0.1")),
+  );
+}
+
+/**
+ * Sets up the TaskManager contract
+ * Enables intake, sets the security zones and the verifier / decrypt-result signers.
+ *
+ * Every step here is role-gated, so a missing grant surfaces as a revert. These used to be caught
+ * and returned to a caller that ignored the return value, which turned a half-configured
+ * TaskManager into a successful-looking deploy - rethrow so the deploy exits non-zero instead.
+ *
+ * @param TMProxyContract The TaskManager proxy contract
+ * @param adminSigner The signer holding the operational roles on the TaskManager
+ */
+async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
   // Get the implementation address using ERC1967 storage slot
   try {
     const currentImplementation = await getImplementationAddress(
@@ -67,59 +89,40 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
     );
   } catch (e) {
     console.error(chalk.red(`Failed isInitialized transaction: ${e}`));
-    return e;
+    throw e;
   }
 
-  // Set the aggregator address
+  // Open the coprocessor intake kill-switch
   try {
-    const connectedImplementation = TMProxyContract.connect(aggregatorSigners[0]);
-    for (const aggregatorSigner of aggregatorSigners) {
-      const tx = await connectedImplementation.addAggregator(
-        aggregatorSigner.address,
-      );
-
-      await tx.wait();
-
-      const enableTx = await connectedImplementation.enable();
-      await enableTx.wait();
-
-      console.log(
-        chalk.green("Successfully added Aggregator address ", aggregatorSigner.address, " in TaskManager"),
-      );
-    }
+    const connectedImplementation = TMProxyContract.connect(adminSigner);
+    const enableTx = await connectedImplementation.enable();
+    await enableTx.wait();
+    console.log(chalk.green("Successfully enabled TaskManager"));
   } catch (e) {
-    console.error(chalk.red(`Failed addAggregator transaction: ${e}`));
-    return e;
+    console.error(chalk.red(`Failed enable transaction: ${e}`));
+    throw e;
   }
 
   // Set the security zones
   try {
     const minSZ = 0;
     const maxSZ = 0;
-    const connectedImplementation = TMProxyContract.connect(aggregatorSigners[0]);
+    const connectedImplementation = TMProxyContract.connect(adminSigner);
     const tx = await connectedImplementation.setSecurityZones(minSZ, maxSZ);
     await tx.wait();
     console.log(chalk.green("Successfully set Security Zones in TaskManager"));
   } catch (e) {
     console.error(chalk.red(`Failed setSecurityZones transaction: ${e}`));
-    return e;
+    throw e;
   }
 
   try {
-    const connectedImplementation = TMProxyContract.connect(aggregatorSigners[0]);
-    if (process.env.VERIFIER_ADDRESS === "0x0000000000000000000000000000000000000000") {
-      const networkName = hre?.network?.name;
-      const networkConfig = hre?.network?.config as any;
-      const networkUrl = networkConfig?.url;
-      if (
-        networkUrl &&
-        !networkUrl.includes("localhost") &&
-        !networkUrl.includes("127.0.0.1") &&
-        !networkName?.startsWith("localfhenix")
-      ) {
-        console.error(chalk.red("refusing to set VERIFIER_ADDRESS to 0 on a non-local network!"));
-        return;
-      }
+    const connectedImplementation = TMProxyContract.connect(adminSigner);
+    if (
+      process.env.VERIFIER_ADDRESS === "0x0000000000000000000000000000000000000000" &&
+      !isLocalNetwork()
+    ) {
+      throw new Error("refusing to set VERIFIER_ADDRESS to 0 on a non-local network!");
     }
 
     const tx = await connectedImplementation.setVerifierSigner(
@@ -129,25 +132,17 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
     console.log(chalk.green(`Successfully set verifier signer address: ${process.env.VERIFIER_ADDRESS}`));
   } catch (e) {
     console.error(chalk.red(`Failed setVerifierSigner transaction: ${e}`));
-    return e;
+    throw e;
   }
 
   // Set the decrypt result signer (dispatcher's signing key)
   try {
-    const connectedImplementation = TMProxyContract.connect(aggregatorSigners[0]);
-    if (process.env.DECRYPT_RESULT_SIGNER === "0x0000000000000000000000000000000000000000") {
-      const networkName = hre?.network?.name;
-      const networkConfig = hre?.network?.config as any;
-      const networkUrl = networkConfig?.url;
-      if (
-        networkUrl &&
-        !networkUrl.includes("localhost") &&
-        !networkUrl.includes("127.0.0.1") &&
-        !networkName?.startsWith("localfhenix")
-      ) {
-        console.error(chalk.red("refusing to set DECRYPT_RESULT_SIGNER to 0 on a non-local network!"));
-        return;
-      }
+    const connectedImplementation = TMProxyContract.connect(adminSigner);
+    if (
+      process.env.DECRYPT_RESULT_SIGNER === "0x0000000000000000000000000000000000000000" &&
+      !isLocalNetwork()
+    ) {
+      throw new Error("refusing to set DECRYPT_RESULT_SIGNER to 0 on a non-local network!");
     }
 
     const tx = await connectedImplementation.setDecryptResultSigner(
@@ -157,7 +152,7 @@ async function TaskManagerSetup(TMProxyContract: any, aggregatorSigners: any[]) 
     console.log(chalk.green(`Successfully set decrypt result signer address: ${process.env.DECRYPT_RESULT_SIGNER}`));
   } catch (e) {
     console.error(chalk.red(`Failed setDecryptResultSigner transaction: ${e}`));
-    return e;
+    throw e;
   }
   console.log("\n");
 }
@@ -186,7 +181,7 @@ async function ACLSetup(
     );
   } catch (e) {
     console.error(chalk.red(`Failed setACL transaction: ${e}`));
-    return e;
+    throw e;
   }
   console.log("\n");
 }
@@ -210,32 +205,6 @@ async function ExampleSetup(deploy: any, deployer: string) {
     ),
   );
   console.log("\n");
-}
-
-/**
- * Upgrades a proxy contract to a new implementation
- * Currently not used, but can be used to upgrade the contracts - mainly for testing
- * @param proxy The proxy contract that will be upgraded (must be connected to admin)
- * @param admin The admin account that has upgrade permissions
- * @param newFactory The contract factory for the new implementation (must be connected to admin)
- */
-async function upgradeContract(proxy: any, admin: any, newFactory: any) {
-  const connectedProxy = proxy.connect(admin);
-  const connectedNewFactory = newFactory.connect(admin);
-  // Get the implementation address of the old ACL contract
-  const oldImplementationAddress = await getImplementationAddress(
-    connectedProxy,
-  );
-
-  const rec = await upgrades.upgradeProxy(connectedProxy, connectedNewFactory);
-  // Get the implementation address of the new ACL contract
-  const newImplementationAddress = await getImplementationAddress(rec);
-
-  if (oldImplementationAddress === newImplementationAddress) {
-    console.log(chalk.red("WARNING: Implementation address did not change!"));
-  } else {
-    console.log(chalk.green("Implementation address changed successfully!"));
-  }
 }
 
 /**
@@ -283,15 +252,22 @@ async function getImplementationAddress(proxy: any) {
  * Upgrades the TaskManager contract
  * @param TMProxyContract The TaskManager proxy contract
  * @param TMFactory The factory for the TaskManager contract
- * @param implementationAddress The address of the implementation contract
- * @param aggregatorSigner The signer with permissions to call TaskManager functions
+ * @param adminSigner The signer that is (or becomes) the proxy's default admin
+ * @param adminDelay The default-admin transfer delay to seed on migration
  */
-async function upgradeTM(TMProxyContract: any, TMFactory: any, aggregatorSigner: any) {
+async function upgradeTM(TMProxyContract: any, TMFactory: any, adminSigner: any, adminDelay: number) {
   console.log(chalk.bold.blue("-----------------------Upgrading TaskManager--------------------------"));
-  console.log(chalk.green("Aggregator signer:", aggregatorSigner.address));
+  console.log(chalk.green("Admin signer:", adminSigner.address));
   const currentDefaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
   console.log(chalk.green("Default admin before upgrade:", currentDefaultAdmin ?? "none (pre-roles implementation)"));
-  const connectedImplementation = TMProxyContract.connect(aggregatorSigner);
+
+  // `_authorizeUpgrade` needs only UPGRADER_ROLE, but `grantAllRoles` below needs
+  // DEFAULT_ADMIN_ROLE. Once the admin moves to a Safe and this key holds only UPGRADER_ROLE, the
+  // upgrade would land and the grants would then revert, leaving the proxy on the new
+  // implementation with no operational roles, no version bump and no TaskManagerSetup.
+  requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, adminSigner);
+
+  const connectedImplementation = TMProxyContract.connect(adminSigner);
   const oldImplementationAddress = await getImplementationAddress(connectedImplementation);
   console.log(chalk.green("Old implementation address:", oldImplementationAddress));
 
@@ -300,13 +276,13 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, aggregatorSigner:
   const newIplAddress = await newIplDeployment.getAddress();
   console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
 
-  // The deterministic bootstrap implementation behind this proxy is Ownable, so the
-  // AccessControl storage is still empty. Seed it via initializeV2 in the *same*
-  // transaction as the upgrade: initializeV2 is unauthenticated, so any gap between the
-  // two calls would let anyone claim DEFAULT_ADMIN_ROLE.
+  // The deterministic bootstrap implementation behind this proxy is Ownable, so the AccessControl
+  // storage is still empty. Seed it via initializeV2 in the *same* transaction as the upgrade.
+  // initializeV2 is gated on the legacy Ownable owner, so a gap is no longer exploitable, but
+  // keeping it atomic means the proxy is never observable in a half-migrated state.
   const migrationData =
     currentDefaultAdmin === null
-      ? TMFactory.interface.encodeFunctionData("initializeV2", [0, aggregatorSigner.address])
+      ? TMFactory.interface.encodeFunctionData("initializeV2", [adminDelay, adminSigner.address])
       : "0x";
   const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, migrationData);
   await tx.wait();
@@ -315,7 +291,7 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, aggregatorSigner:
 
   // initialize/initializeV2 only grant DEFAULT_ADMIN_ROLE; incVersion below and the whole
   // of TaskManagerSetup need the operational roles.
-  await grantAllRoles(TMProxyContract, aggregatorSigner);
+  await grantAllRoles(TMProxyContract, adminSigner);
 
   const incTx = await connectedImplementation.incVersion();
   await incTx.wait();
@@ -346,6 +322,60 @@ function getAggregatorWallets(ethers: any) {
   );
 }
 
+/**
+ * Picks the signer that becomes DEFAULT_ADMIN_ROLE on every proxy this script touches, and the
+ * default-admin transfer delay to seed.
+ *
+ * The fallback is `wallets.json[0]` with a zero delay - a key committed to this repository. That is
+ * fine for a local stack and unacceptable anywhere else, so on a non-local network both values must
+ * be stated explicitly via TM_ADMIN_ADDRESS / TM_ADMIN_DELAY. TM_ADMIN_ADDRESS is matched against
+ * the candidate signers rather than merely recorded: this script has to hold DEFAULT_ADMIN_ROLE to
+ * run `grantAllRoles`, so an admin it cannot sign for could not be honoured anyway.
+ */
+function resolveAdmin(candidateSigners: any[]) {
+  const local = isLocalNetwork();
+  const requestedAdmin = process.env.TM_ADMIN_ADDRESS;
+  const requestedDelay = process.env.TM_ADMIN_DELAY;
+
+  if (!local && !requestedAdmin) {
+    throw new Error(
+      "TM_ADMIN_ADDRESS must be set on a non-local network. Refusing to make the committed " +
+        "wallets.json key the DEFAULT_ADMIN of these proxies.",
+    );
+  }
+  if (!local && requestedDelay === undefined) {
+    throw new Error(
+      "TM_ADMIN_DELAY must be set on a non-local network. A zero delay makes default-admin " +
+        "transfers take effect immediately, removing the timelock this contract exists to enforce.",
+    );
+  }
+
+  const adminSigner = requestedAdmin
+    ? candidateSigners.find(
+        (candidate) => candidate.address.toLowerCase() === requestedAdmin.toLowerCase(),
+      )
+    : candidateSigners[0];
+
+  if (!adminSigner) {
+    throw new Error(
+      `TM_ADMIN_ADDRESS is ${requestedAdmin}, but this deployment has no signer for it. ` +
+        `Available: ${candidateSigners.map((c) => c.address).join(", ")}. This script must sign ` +
+        `as the default admin to grant the operational roles.`,
+    );
+  }
+
+  const adminDelay = requestedDelay === undefined ? 0 : Number(requestedDelay);
+  if (!Number.isInteger(adminDelay) || adminDelay < 0) {
+    throw new Error(`TM_ADMIN_DELAY must be a non-negative integer number of seconds, got "${requestedDelay}"`);
+  }
+
+  console.log(chalk.green("Default admin:", adminSigner.address, "delay:", adminDelay));
+  if (local && !requestedAdmin) {
+    console.log(chalk.yellow("TM_ADMIN_ADDRESS not set - using the committed dev key (local network only)"));
+  }
+  return { adminSigner, adminDelay };
+}
+
 const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
@@ -373,6 +403,8 @@ const func: DeployFunction = async function () {
   console.log(chalk.dim("Successfully funded aggregator and deployer accounts"));
   console.log("\n");
 
+  const { adminSigner, adminDelay } = resolveAdmin([...aggregatorSigners, signer]);
+
   const TMProxyAddress = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
   // Headline in chalk blue, with length of 60
@@ -380,18 +412,18 @@ const func: DeployFunction = async function () {
   const TMFactory = await ethers.getContractFactory("TaskManager");
   const TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
   console.log(chalk.green("TMProxyContract attached to:", await TMProxyContract.getAddress()));
-  await upgradeTM(TMProxyContract, TMFactory, aggregatorSigners[0]);
-  await TaskManagerSetup(TMProxyContract, aggregatorSigners);
+  await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
+  await TaskManagerSetup(TMProxyContract, adminSigner);
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));
   // Deploy and upgrade ACL contract
-  const {ProxyContract: aclContract} = await getProxyContract(aggregatorSigners[0], "ACL");
-  await ACLSetup(TMProxyContract, aggregatorSigners[0], aclContract);
+  const {ProxyContract: aclContract} = await getProxyContract(adminSigner, adminDelay, "ACL");
+  await ACLSetup(TMProxyContract, adminSigner, aclContract);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
-  const {ProxyAddress: ptStorageAddress} = await getProxyContract(aggregatorSigners[0], "PlaintextsStorage");
-  await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, aggregatorSigners[0]);
+  const {ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, adminDelay, "PlaintextsStorage");
+  await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, adminSigner);
 };
 
 export default func;

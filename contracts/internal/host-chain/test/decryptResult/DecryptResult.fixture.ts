@@ -108,9 +108,9 @@ export async function deployDecryptResultFixture(): Promise<DecryptResultFixture
 
   // `initialize` only grants DEFAULT_ADMIN_ROLE; mirror the deploy script and give the admin
   // every role, so the fixture stays correct when a contract gains a new one.
-  await grantAllRoles(taskManager, owner, false);
-  await grantAllRoles(acl, owner, false);
-  await grantAllRoles(plaintextsStorage, owner, false);
+  await grantAllRoles(taskManager, owner, undefined, false);
+  await grantAllRoles(acl, owner, undefined, false);
+  await grantAllRoles(plaintextsStorage, owner, undefined, false);
 
   // Configure TaskManager
   await taskManager.setACLContract(await acl.getAddress());

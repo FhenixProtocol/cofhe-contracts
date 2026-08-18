@@ -10,7 +10,7 @@
           "slot": "0",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:156"
+          "src": "contracts/TaskManager.sol:196"
         },
         {
           "label": "securityZoneMax",
@@ -18,7 +18,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:219"
+          "src": "contracts/TaskManager.sol:273"
         },
         {
           "label": "securityZoneMin",
@@ -26,7 +26,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:220"
+          "src": "contracts/TaskManager.sol:274"
         },
         {
           "label": "randomCounter",
@@ -34,23 +34,23 @@
           "slot": "1",
           "type": "t_uint256",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:223"
+          "src": "contracts/TaskManager.sol:277"
         },
         {
-          "label": "unusedAggregator",
+          "label": "_aggregator",
           "offset": 0,
           "slot": "2",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:225"
+          "src": "contracts/TaskManager.sol:280"
         },
         {
           "label": "acl",
           "offset": 0,
           "slot": "3",
-          "type": "t_contract(ACL)27249",
+          "type": "t_contract(ACL)28768",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:228"
+          "src": "contracts/TaskManager.sol:283"
         },
         {
           "label": "verifierSigner",
@@ -58,7 +58,7 @@
           "slot": "4",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:230"
+          "src": "contracts/TaskManager.sol:285"
         },
         {
           "label": "version",
@@ -66,23 +66,23 @@
           "slot": "4",
           "type": "t_uint8",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:232"
+          "src": "contracts/TaskManager.sol:287"
         },
         {
           "label": "plaintextsStorage",
           "offset": 0,
           "slot": "5",
-          "type": "t_contract(PlaintextsStorage)27679",
+          "type": "t_contract(PlaintextsStorage)29293",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:235"
+          "src": "contracts/TaskManager.sol:290"
         },
         {
-          "label": "aggregators",
+          "label": "_aggregators",
           "offset": 0,
           "slot": "6",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:237"
+          "src": "contracts/TaskManager.sol:295"
         },
         {
           "label": "isEnabled",
@@ -90,7 +90,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:241"
+          "src": "contracts/TaskManager.sol:300"
         },
         {
           "label": "decryptResultSigner",
@@ -98,7 +98,7 @@
           "slot": "7",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:245"
+          "src": "contracts/TaskManager.sol:304"
         },
         {
           "label": "accessListEnabled",
@@ -106,7 +106,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:250"
+          "src": "contracts/TaskManager.sol:308"
         },
         {
           "label": "accessList",
@@ -114,7 +114,7 @@
           "slot": "8",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:251"
+          "src": "contracts/TaskManager.sol:309"
         }
       ],
       "types": {
@@ -126,11 +126,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_contract(ACL)27249": {
+        "t_contract(ACL)28768": {
           "label": "contract ACL",
           "numberOfBytes": "20"
         },
-        "t_contract(PlaintextsStorage)27679": {
+        "t_contract(PlaintextsStorage)29293": {
           "label": "contract PlaintextsStorage",
           "numberOfBytes": "20"
         },
@@ -150,25 +150,93 @@
           "label": "uint8",
           "numberOfBytes": "1"
         },
+        "t_uint48": {
+          "label": "uint48"
+        },
+        "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)": {
+          "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+        },
+        "t_bytes32": {
+          "label": "bytes32"
+        },
+        "t_struct(RoleData)19325_storage": {
+          "label": "struct AccessControlUpgradeable.RoleData",
+          "members": [
+            {
+              "label": "hasRole",
+              "type": "t_mapping(t_address,t_bool)"
+            },
+            {
+              "label": "adminRole",
+              "type": "t_bytes32"
+            }
+          ]
+        },
         "t_uint64": {
           "label": "uint64"
         }
       },
       "namespaces": {
-        "erc7201:openzeppelin.storage.Ownable2Step": [
-          {
-            "contract": "Ownable2StepUpgradeable",
-            "label": "_pendingOwner",
-            "type": "t_address",
-            "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29"
-          }
-        ],
         "erc7201:openzeppelin.storage.Ownable": [
           {
-            "contract": "OwnableUpgradeable",
+            "contract": "TaskManager",
             "label": "_owner",
             "type": "t_address",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24"
+            "src": "contracts/TaskManager.sol:188"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable2Step": [
+          {
+            "contract": "TaskManager",
+            "label": "_pendingOwner",
+            "type": "t_address",
+            "src": "contracts/TaskManager.sol:193"
+          }
+        ],
+        "erc7201:openzeppelin.storage.AccessControlDefaultAdminRules": [
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDefaultAdmin",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:45"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDefaultAdminSchedule",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:46"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_currentDelay",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:48"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_currentDefaultAdmin",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:49"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDelay",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:52"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDelaySchedule",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:53"
+          }
+        ],
+        "erc7201:openzeppelin.storage.AccessControl": [
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
         "erc7201:openzeppelin.storage.Initializable": [
@@ -191,6 +259,9 @@
       "solcVersion": "0.8.25",
       "storage": [],
       "types": {
+        "t_address": {
+          "label": "address"
+        },
         "t_mapping(t_uint256,t_bool)": {
           "label": "mapping(uint256 => bool)"
         },
@@ -206,9 +277,6 @@
         "t_mapping(t_address,t_bool)": {
           "label": "mapping(address => bool)"
         },
-        "t_address": {
-          "label": "address"
-        },
         "t_mapping(t_address,t_mapping(t_address,t_mapping(t_address,t_bool)))": {
           "label": "mapping(address => mapping(address => mapping(address => bool)))"
         },
@@ -221,35 +289,70 @@
         "t_string_storage": {
           "label": "string"
         },
+        "t_uint48": {
+          "label": "uint48"
+        },
+        "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)": {
+          "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+        },
+        "t_struct(RoleData)19325_storage": {
+          "label": "struct AccessControlUpgradeable.RoleData",
+          "members": [
+            {
+              "label": "hasRole",
+              "type": "t_mapping(t_address,t_bool)"
+            },
+            {
+              "label": "adminRole",
+              "type": "t_bytes32"
+            }
+          ]
+        },
         "t_uint64": {
           "label": "uint64"
         }
       },
       "namespaces": {
+        "erc7201:openzeppelin.storage.Ownable": [
+          {
+            "contract": "ACL",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "contracts/ACL.sol:26"
+          }
+        ],
+        "erc7201:openzeppelin.storage.Ownable2Step": [
+          {
+            "contract": "ACL",
+            "label": "_pendingOwner",
+            "type": "t_address",
+            "src": "contracts/ACL.sol:31"
+          }
+        ],
         "erc7201:cofhe.storage.ACL": [
           {
             "contract": "ACL",
             "label": "globalHandles",
             "type": "t_mapping(t_uint256,t_bool)",
-            "src": "contracts/ACL.sol:44"
+            "src": "contracts/ACL.sol:60"
           },
           {
             "contract": "ACL",
             "label": "persistedAllowedPairs",
             "type": "t_mapping(t_uint256,t_mapping(t_address,t_bool))",
-            "src": "contracts/ACL.sol:45"
+            "src": "contracts/ACL.sol:61"
           },
           {
             "contract": "ACL",
             "label": "allowedForDecryption",
             "type": "t_mapping(t_uint256,t_bool)",
-            "src": "contracts/ACL.sol:46"
+            "src": "contracts/ACL.sol:62"
           },
           {
             "contract": "ACL",
             "label": "delegates",
             "type": "t_mapping(t_address,t_mapping(t_address,t_mapping(t_address,t_bool)))",
-            "src": "contracts/ACL.sol:47"
+            "src": "contracts/ACL.sol:63"
           }
         ],
         "erc7201:openzeppelin.storage.EIP712": [
@@ -278,20 +381,50 @@
             "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:44"
           }
         ],
-        "erc7201:openzeppelin.storage.Ownable2Step": [
+        "erc7201:openzeppelin.storage.AccessControlDefaultAdminRules": [
           {
-            "contract": "Ownable2StepUpgradeable",
-            "label": "_pendingOwner",
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDefaultAdmin",
             "type": "t_address",
-            "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29"
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:45"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDefaultAdminSchedule",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:46"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_currentDelay",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:48"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_currentDefaultAdmin",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:49"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDelay",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:52"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDelaySchedule",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:53"
           }
         ],
-        "erc7201:openzeppelin.storage.Ownable": [
+        "erc7201:openzeppelin.storage.AccessControl": [
           {
-            "contract": "OwnableUpgradeable",
-            "label": "_owner",
-            "type": "t_address",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24"
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
         "erc7201:openzeppelin.storage.Initializable": [
@@ -317,9 +450,9 @@
           "label": "plaintextResults",
           "offset": 0,
           "slot": "0",
-          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)27580_storage)",
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)29166_storage)",
           "contract": "PlaintextsStorage",
-          "src": "contracts/PlaintextsStorage.sol:13"
+          "src": "contracts/PlaintextsStorage.sol:24"
         }
       ],
       "types": {
@@ -327,11 +460,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_mapping(t_uint256,t_struct(PlaintextResult)27580_storage)": {
+        "t_mapping(t_uint256,t_struct(PlaintextResult)29166_storage)": {
           "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
           "numberOfBytes": "32"
         },
-        "t_struct(PlaintextResult)27580_storage": {
+        "t_struct(PlaintextResult)29166_storage": {
           "label": "struct PlaintextsStorage.PlaintextResult",
           "members": [
             {
@@ -356,6 +489,31 @@
         "t_address": {
           "label": "address"
         },
+        "t_uint48": {
+          "label": "uint48"
+        },
+        "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)": {
+          "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+        },
+        "t_bytes32": {
+          "label": "bytes32"
+        },
+        "t_struct(RoleData)19325_storage": {
+          "label": "struct AccessControlUpgradeable.RoleData",
+          "members": [
+            {
+              "label": "hasRole",
+              "type": "t_mapping(t_address,t_bool)"
+            },
+            {
+              "label": "adminRole",
+              "type": "t_bytes32"
+            }
+          ]
+        },
+        "t_mapping(t_address,t_bool)": {
+          "label": "mapping(address => bool)"
+        },
         "t_uint64": {
           "label": "uint64"
         }
@@ -363,10 +521,56 @@
       "namespaces": {
         "erc7201:openzeppelin.storage.Ownable": [
           {
-            "contract": "OwnableUpgradeable",
+            "contract": "PlaintextsStorage",
             "label": "_owner",
             "type": "t_address",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24"
+            "src": "contracts/PlaintextsStorage.sol:16"
+          }
+        ],
+        "erc7201:openzeppelin.storage.AccessControlDefaultAdminRules": [
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDefaultAdmin",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:45"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDefaultAdminSchedule",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:46"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_currentDelay",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:48"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_currentDefaultAdmin",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:49"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDelay",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:52"
+          },
+          {
+            "contract": "AccessControlDefaultAdminRulesUpgradeable",
+            "label": "_pendingDelaySchedule",
+            "type": "t_uint48",
+            "src": "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol:53"
+          }
+        ],
+        "erc7201:openzeppelin.storage.AccessControl": [
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)19325_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
         "erc7201:openzeppelin.storage.Initializable": [

@@ -31,11 +31,20 @@ export async function deployUUPSProxy(
  * DEFAULT_ADMIN_ROLE is skipped on purpose - AccessControlDefaultAdminRules reverts on granting
  * it directly, and the initial admin already holds it from `initialize`.
  *
+ * Keep the signature in sync with the sibling copy in `host-chain/utils/roles.ts` - the two
+ * hardhat projects have no shared package, so this is duplicated on purpose.
+ *
  * @param contract    An AccessControl contract instance.
  * @param adminSigner Signer holding DEFAULT_ADMIN_ROLE; also the grantee unless `account` is set.
  * @param account     Optional grantee, defaults to `adminSigner.address`.
+ * @param log         Whether to print each grant. Off for test fixtures.
  */
-export async function grantAllRoles(contract: any, adminSigner: any, account?: string) {
+export async function grantAllRoles(
+  contract: any,
+  adminSigner: any,
+  account?: string,
+  log = true,
+) {
   const grantee = account ?? adminSigner.address;
   const connectedContract = contract.connect(adminSigner);
   const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
@@ -51,14 +60,13 @@ export async function grantAllRoles(contract: any, adminSigner: any, account?: s
 
   for (const roleName of roleNames) {
     const role = await contract[roleName]();
-    if (role === defaultAdminRole) {
-      continue;
-    }
-    if (await contract.hasRole(role, grantee)) {
+    if (role === defaultAdminRole || (await contract.hasRole(role, grantee))) {
       continue;
     }
     const tx = await connectedContract.grantRole(role, grantee);
     await tx.wait();
-    console.log(`Granted ${roleName} to ${grantee}`);
+    if (log) {
+      console.log(`Granted ${roleName} to ${grantee}`);
+    }
   }
 }

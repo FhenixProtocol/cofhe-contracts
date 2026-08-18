@@ -1,7 +1,7 @@
 import chalk from "chalk";
 
 /**
- * Grants every role a contract declares (any `*_ROLE` public constant in its ABI) to `adminSigner`.
+ * Grants every role a contract declares (any `*_ROLE` public constant in its ABI) to `account`.
  *
  * Discovering the roles from the ABI rather than listing them keeps deployments in sync with the
  * contracts: a role added to a contract is granted here without touching this file.
@@ -9,12 +9,21 @@ import chalk from "chalk";
  * DEFAULT_ADMIN_ROLE is skipped on purpose - AccessControlDefaultAdminRules reverts on granting it
  * directly, and the initial admin already holds it from `initialize`.
  *
+ * Keep the signature in sync with the sibling copy in `registry-chain/utils/deploy.ts` - the two
+ * hardhat projects have no shared package, so this is duplicated on purpose.
+ *
  * @param contract    An AccessControl contract instance.
- * @param adminSigner Signer holding DEFAULT_ADMIN_ROLE, and the grantee.
+ * @param adminSigner Signer holding DEFAULT_ADMIN_ROLE; also the grantee unless `account` is set.
+ * @param account     Optional grantee, defaults to `adminSigner.address`.
  * @param log         Whether to print each grant. Off for test fixtures.
  */
-export async function grantAllRoles(contract: any, adminSigner: any, log = true) {
-  const grantee = adminSigner.address;
+export async function grantAllRoles(
+  contract: any,
+  adminSigner: any,
+  account?: string,
+  log = true,
+) {
+  const grantee = account ?? adminSigner.address;
   const connectedContract = contract.connect(adminSigner);
   const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
 
@@ -51,5 +60,31 @@ export async function getDefaultAdmin(proxy: any, zeroAddress: string): Promise<
     return defaultAdmin === zeroAddress ? null : defaultAdmin;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Throws unless the proxy's default admin is unset (pre-roles proxy, about to be migrated) or is
+ * `signer` itself.
+ *
+ * Upgrading and granting roles need different roles - UPGRADER_ROLE and DEFAULT_ADMIN_ROLE - so a
+ * signer holding only the former gets halfway: the implementation swaps, then `grantAllRoles`
+ * reverts. That leaves the proxy on new code with no operational roles. Check before the swap.
+ */
+export function requireDefaultAdminIsSignerOrUnset(
+  currentDefaultAdmin: string | null,
+  signer: { address: string },
+) {
+  if (
+    currentDefaultAdmin !== null &&
+    currentDefaultAdmin.toLowerCase() !== signer.address.toLowerCase()
+  ) {
+    throw new Error(
+      `Refusing to upgrade: default admin is ${currentDefaultAdmin}, but the signer is ` +
+        `${signer.address}. The upgrade would succeed and the subsequent role grants would ` +
+        `revert, leaving the proxy on the new implementation without operational roles. Run ` +
+        `this from the default admin, or split the upgrade and the grants into separate ` +
+        `admin-signed steps.`,
+    );
   }
 }
