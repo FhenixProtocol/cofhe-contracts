@@ -3,12 +3,11 @@
 pragma solidity >=0.8.13 <0.9.0;
 
 import {ITaskManager} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
+import {taskManagerAddress} from "../addresses/TaskManagerAddress.sol";
 
 /// @notice Calls createRandomTask and allow in a single transaction, which is required
 /// because transient ACL grants are cleared at the end of each transaction.
 contract RandomTaskCaller {
-    address private constant TASK_MANAGER = 0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9;
-
     uint256 public lastHandle;
 
     /// @notice Creates a random task, then grants on an explicitly supplied handle.
@@ -19,8 +18,8 @@ contract RandomTaskCaller {
         uint256 handle,
         address beneficiary
     ) external {
-        ITaskManager(TASK_MANAGER).createRandomTask(utype, seed, securityZone);
-        ITaskManager(TASK_MANAGER).allow(handle, beneficiary);
+        ITaskManager(taskManagerAddress).createRandomTask(utype, seed, securityZone);
+        ITaskManager(taskManagerAddress).allow(handle, beneficiary);
     }
 
     /// @notice Creates a random task, then grants on the handle it returned.
@@ -30,8 +29,8 @@ contract RandomTaskCaller {
         int32 securityZone,
         address beneficiary
     ) external {
-        uint256 handle = ITaskManager(TASK_MANAGER).createRandomTask(utype, seed, securityZone);
-        ITaskManager(TASK_MANAGER).allow(handle, beneficiary);
+        uint256 handle = ITaskManager(taskManagerAddress).createRandomTask(utype, seed, securityZone);
+        ITaskManager(taskManagerAddress).allow(handle, beneficiary);
         lastHandle = handle;
     }
 }
