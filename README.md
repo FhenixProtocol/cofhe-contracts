@@ -28,7 +28,7 @@ import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 ## Example
 
 ```solidity
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.25;
 
 import {FHE, euint8, InEuint8} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
