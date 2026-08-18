@@ -175,7 +175,10 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         isEnabled = true;
     }
 
-    function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyOwner {
+        function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyOwner {
+        if (minSZ > maxSZ) {
+            revert InvalidSecurityZone(minSZ, minSZ, maxSZ);
+        }
         securityZoneMin = minSZ;
         securityZoneMax = maxSZ;
     }
