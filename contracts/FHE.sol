@@ -4725,6 +4725,15 @@ library BindingsEuint64 {
         return FHE.mul(lhs, rhs);
     }
 
+    /// @notice Performs the div operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint64
+    /// @param rhs second input of type euint64
+    /// @return the result of the div
+    function div(euint64 lhs, euint64 rhs) internal returns (euint64) {
+        return FHE.div(lhs, rhs);
+    }
+
     /// @notice Performs the sub operation
     /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
     /// @param lhs input of type euint64
@@ -4821,6 +4830,15 @@ library BindingsEuint64 {
     /// @return the result of the lte
     function lte(euint64 lhs, euint64 rhs) internal returns (ebool) {
         return FHE.lte(lhs, rhs);
+    }
+
+    /// @notice Performs the rem operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint64
+    /// @param rhs second input of type euint64
+    /// @return the result of the rem
+    function rem(euint64 lhs, euint64 rhs) internal returns (euint64) {
+        return FHE.rem(lhs, rhs);
     }
 
     /// @notice Performs the max operation
@@ -4949,6 +4967,24 @@ library BindingsEuint128 {
         return FHE.add(lhs, rhs);
     }
 
+    /// @notice Performs the mul operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @param rhs second input of type euint128
+    /// @return the result of the mul
+    function mul(euint128 lhs, euint128 rhs) internal returns (euint128) {
+        return FHE.mul(lhs, rhs);
+    }
+
+    /// @notice Performs the div operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @param rhs second input of type euint128
+    /// @return the result of the div
+    function div(euint128 lhs, euint128 rhs) internal returns (euint128) {
+        return FHE.div(lhs, rhs);
+    }
+
     /// @notice Performs the sub operation
     /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
     /// @param lhs input of type euint128
@@ -5047,6 +5083,15 @@ library BindingsEuint128 {
         return FHE.lte(lhs, rhs);
     }
 
+    /// @notice Performs the rem operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @param rhs second input of type euint128
+    /// @return the result of the rem
+    function rem(euint128 lhs, euint128 rhs) internal returns (euint128) {
+        return FHE.rem(lhs, rhs);
+    }
+
     /// @notice Performs the max operation
     /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
     /// @param lhs input of type euint128
@@ -5099,6 +5144,14 @@ library BindingsEuint128 {
     /// @return the result of the ror
     function ror(euint128 lhs, euint128 rhs) internal returns (euint128) {
         return FHE.ror(lhs, rhs);
+    }
+
+    /// @notice Performs the square operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @return the result of the square
+    function square(euint128 lhs) internal returns (euint128) {
+        return FHE.square(lhs);
     }
     function toBool(euint128 value) internal  returns (ebool) {
         return FHE.asEbool(value);
