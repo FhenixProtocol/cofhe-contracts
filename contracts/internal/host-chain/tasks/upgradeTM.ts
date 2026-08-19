@@ -4,7 +4,12 @@ import type { TaskArguments } from "hardhat/types";
 import { Contract, Wallet } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { getDefaultAdmin, grantAllRoles, requireDefaultAdminIsSignerOrUnset } from "../utils/roles";
+import {
+  getDefaultAdmin,
+  grantAllRoles,
+  requireDefaultAdminIsSignerOrUnset,
+  resolveAdminDelay,
+} from "../utils/roles";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -20,34 +25,59 @@ async function getImplementationAddress(ethers: any, proxy: any) {
   );
 }
 
-// Registering the proxy with the OpenZeppelin plugin has to use the implementation that is
-// *currently* behind it, not the one we are upgrading to - importing with the new factory makes
-// `validateUpgrade` compare the new layout against itself, which can never fail. The deterministic
-// bootstrap proxy runs DeterministicTM; anything already migrated runs TaskManager.
-async function currentImplementationFactory(ethers: any, TMProxyContract: any) {
-  const defaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
-  const contractName = defaultAdmin === null ? "DeterministicTM" : "TaskManager";
-  console.log(chalk.dim(`Current implementation assumed to be ${contractName}`));
-  return ethers.getContractFactory(contractName);
+/**
+ * Identifies the implementation currently behind the proxy.
+ *
+ * `defaultAdmin() == null` is NOT a proxy for "this is the deterministic stub" - the pre-roles
+ * Ownable TaskManager, which is what is actually deployed on staging/testnet, has no
+ * `defaultAdmin()` selector either and so also reads as null. The two have different layouts
+ * (`DeterministicTM` packs `aggregator` into slot 0 and has no `randomCounter`), so guessing wrong
+ * makes `validateUpgrade` reject the one migration that is genuinely safe.
+ *
+ * Probe instead: `aggregator()` is a public getter only `DeterministicTM` declares.
+ */
+async function detectCurrentImplementation(ethers: any, proxyAddress: string) {
+  const stub = (await ethers.getContractFactory("DeterministicTM")).attach(proxyAddress);
+  try {
+    await stub.aggregator();
+    return "DeterministicTM" as const;
+  } catch {
+    return "TaskManager" as const;
+  }
 }
 
+/**
+ * Validates the storage layout of the pending upgrade, and throws if it is incompatible.
+ *
+ * Skipped for the deterministic bootstrap: DeterministicTM -> TaskManager is knowingly
+ * layout-incompatible (TaskManager inserts `randomCounter` at slot 1 and moves the aggregator
+ * address to slot 2), so the reinterpreted slots are deliberate, not an accident. `initializeV2`
+ * reseeds the ones that matter to fail-closed values. Validation stays strict on every other path,
+ * which is where an accidental layout break would actually show up.
+ */
 async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any) {
   const proxyAddress = await TMProxyContract.getAddress();
+  const current = await detectCurrentImplementation(ethers, proxyAddress);
+  console.log(chalk.dim(`Current implementation detected as ${current}`));
+
+  if (current === "DeterministicTM") {
+    console.log(
+      chalk.yellow(
+        "⚠ Skipping storage-layout validation: the deterministic bootstrap stub is intentionally " +
+          "layout-incompatible with TaskManager. initializeV2 reseeds the reinterpreted slots.",
+      ),
+    );
+    return;
+  }
+
   try {
     console.log("Importing implementation contract...");
-    await upgrades.forceImport(
-        proxyAddress,
-        await currentImplementationFactory(ethers, TMProxyContract),
-        { kind: 'uups' }
-    );
+    await upgrades.forceImport(proxyAddress, await ethers.getContractFactory(current), {
+      kind: "uups",
+    });
 
     console.log("Validating storage layout...");
-    // Now validate the upgrade
-    await upgrades.validateUpgrade(
-        proxyAddress,
-        TMFactory,
-        { kind: 'uups' }
-    );
+    await upgrades.validateUpgrade(proxyAddress, TMFactory, { kind: "uups" });
     console.log(chalk.green("✅ Storage layout is compatible with the previous implementation"));
   } catch (error: any) {
     console.log(chalk.red("❌ Storage layout validation failed:"));
@@ -57,7 +87,7 @@ async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any,
   }
 }
 
-async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any, adminSigner: any) {
+async function upgradeTM(ethers: any, TMProxyContract: any, TMFactory: any, adminSigner: any, adminDelay: number) {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
     const currentDefaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
     console.log(chalk.green("TMProxyContract default admin:", currentDefaultAdmin ?? "none (pre-roles implementation)"));
@@ -81,7 +111,7 @@ async function upgradeTM(ethers: any, upgrades: any, TMProxyContract: any, TMFac
     // the proxy is never observable in a half-migrated state.
     const migrationData =
       currentDefaultAdmin === null
-        ? TMFactory.interface.encodeFunctionData("initializeV2", [0, adminSigner.address])
+        ? TMFactory.interface.encodeFunctionData("initializeV2", [adminSigner.address, adminDelay])
         : "0x";
     const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, migrationData);
     await tx.wait();
@@ -137,6 +167,6 @@ task("task:upgradeTM")
     await validateUpgrade(ethers, upgrades, TMProxyContract, TMFactory);
 
     if (!taskArguments.onlyvalidate) {
-        await upgradeTM(ethers, upgrades, TMProxyContract, TMFactory, signer);
+        await upgradeTM(ethers, TMProxyContract, TMFactory, signer, resolveAdminDelay(hre));
     }
   });

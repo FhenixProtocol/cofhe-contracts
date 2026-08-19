@@ -59,10 +59,15 @@ contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpg
     /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
     ///      Callable only by the owner the pre-roles implementation left behind - see
     ///      {LegacyOwnable} for why that is the only authority available in this window.
+    ///      Grants UPGRADER_ROLE too: there is no upgrade task for this proxy, so a hand-rolled
+    ///      migration with no follow-up grant would leave it permanently un-upgradeable.
+    /// @param initialAdmin  Address receiving DEFAULT_ADMIN_ROLE and UPGRADER_ROLE.
+    /// @param initialDelay  Delay enforced on subsequent default-admin transfers.
     /// @custom:oz-upgrades-validate-as-initializer
-    function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+    function initializeV2(address initialAdmin, uint48 initialDelay) public reinitializer(2) {
         LegacyOwnable.requireLegacyOwner(msg.sender);
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+        _grantRole(UPGRADER_ROLE, initialAdmin);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}

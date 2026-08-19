@@ -105,10 +105,17 @@ contract CommitmentRegistry is UUPSUpgradeable, AccessControlDefaultAdminRulesUp
     ///      {LegacyOwnable} for why that is the only authority available in this window. There is
     ///      no upgrade script for this proxy, so the migration cannot rely on being bundled into
     ///      `upgradeToAndCall`; whoever performs it must send this call from the legacy owner.
+    ///      Grants the operational roles too, so a hand-rolled migration cannot leave the proxy
+    ///      without an UPGRADER_ROLE holder. Revoke afterwards to re-establish separation.
+    /// @param initialAdmin  Address receiving DEFAULT_ADMIN_ROLE and the operational roles.
+    /// @param initialDelay  Delay enforced on subsequent default-admin transfers.
     /// @custom:oz-upgrades-validate-as-initializer
-    function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+    function initializeV2(address initialAdmin, uint48 initialDelay) public reinitializer(2) {
         LegacyOwnable.requireLegacyOwner(msg.sender);
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+        _grantRole(UPGRADER_ROLE, initialAdmin);
+        _grantRole(POSTER_MANAGER_ROLE, initialAdmin);
+        _grantRole(VERSION_MANAGER_ROLE, initialAdmin);
     }
 
     function postCommitments(

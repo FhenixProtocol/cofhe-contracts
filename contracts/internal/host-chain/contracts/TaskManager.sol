@@ -221,10 +221,48 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     ///      into `upgradeToAndCall`. Without that check `reinitializer(2)` passes on any proxy
     ///      whose `_initialized == 1`, and the inherited `_grantRole` guard does not fire while
     ///      `defaultAdmin()` is still zero, leaving DEFAULT_ADMIN_ROLE free for the taking.
+    ///
+    ///      Grants the operational roles to `initialAdmin` as well as DEFAULT_ADMIN_ROLE. The admin
+    ///      can grant them to itself anyway, so this is no extra power - it just means a migration
+    ///      driven by a Safe or a manual `cast send`, with no follow-up script, cannot leave the
+    ///      proxy without an UPGRADER_ROLE holder (which would brick it permanently).
+    ///      Revoke afterwards to re-establish separation.
+    /// @param initialAdmin  Address receiving DEFAULT_ADMIN_ROLE and the operational roles.
+    /// @param initialDelay  Delay enforced on subsequent default-admin transfers.
     /// @custom:oz-upgrades-validate-as-initializer
-    function initializeV2(uint48 initialDelay, address initialAdmin) public reinitializer(2) {
+    function initializeV2(address initialAdmin, uint48 initialDelay) public reinitializer(2) {
         LegacyOwnable.requireLegacyOwner(msg.sender);
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+
+        // Looped rather than seven inlined calls: `_grantRole` is large enough that inlining it
+        // seven times costs ~1KB of the 24KB limit, and TaskManager is already the contract closest
+        // to it.
+        bytes32[7] memory roles = [
+            UPGRADER_ROLE,
+            PAUSER_ROLE,
+            SECURITY_ZONE_MANAGER_ROLE,
+            ACCESS_LIST_MANAGER_ROLE,
+            VERIFIER_SIGNER_MANAGER_ROLE,
+            DECRYPT_SIGNER_MANAGER_ROLE,
+            CONFIG_MANAGER_ROLE
+        ];
+        for (uint256 i = 0; i < roles.length; i++) {
+            _grantRole(roles[i], initialAdmin);
+        }
+
+        // A proxy arriving from the deterministic bootstrap stub reinterprets slots: that stub
+        // stops at slot 3, so TaskManager's `verifierSigner` (slot 4) and `decryptResultSigner`
+        // (slot 7) read storage it never wrote, i.e. zero - which is the verification-*disabled*
+        // sentinel, not a safe default. Seed the fail-closed value so a migrated proxy is safe by
+        // construction rather than by whatever the deploy script gets around to setting.
+        //
+        // A proxy arriving from the pre-roles TaskManager already holds real signers in those
+        // slots and is left untouched: its `initialize` set both to address(1), so neither can
+        // legitimately be zero there. `isEnabled`, `acl` and `plaintextsStorage` are deliberately
+        // not touched - the first is already true on a live proxy (migrating must not pause it),
+        // and the latter two have no safe default and must be set via CONFIG_MANAGER_ROLE.
+        if (verifierSigner == address(0)) verifierSigner = address(1);
+        if (decryptResultSigner == address(0)) decryptResultSigner = address(1);
     }
 
     function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
@@ -812,7 +850,10 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         return result;
     }
 
-    function verifyInput(EncryptedInput memory input, address sender) external onlyAccessListed returns (uint256) {
+    /// @dev `onlyIfEnabled` for the same reason as the other intake paths: this is the only one that
+    ///      was not behind the kill-switch, so a disabled TaskManager still accepted inputs - and
+    ///      still emitted `InputVerified`, which off-chain services relay to the CommitmentRegistry.
+    function verifyInput(EncryptedInput memory input, address sender) external onlyIfEnabled onlyAccessListed returns (uint256) {
         int32 securityZone = int32(uint32(input.securityZone));
 
         // When signer is set to 0 address we skip this logic to be able to support debug use cases.

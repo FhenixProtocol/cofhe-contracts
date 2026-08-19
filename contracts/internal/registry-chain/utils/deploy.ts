@@ -58,6 +58,16 @@ export async function grantAllRoles(
     )
     .map((fragment: any) => fragment.name);
 
+  // Discovering roles from the ABI means an ABI that no longer exposes them - a stale typechain
+  // build, the wrong factory, a renamed constant - silently grants nothing and returns success,
+  // leaving the proxy with no UPGRADER_ROLE holder and a clean deploy log. Fail loudly instead.
+  if (roleNames.length === 0) {
+    throw new Error(
+      `grantAllRoles found no *_ROLE constants on this contract's ABI, so it would grant nothing. ` +
+        `Expected at least UPGRADER_ROLE. Recompile, or check the factory being passed in.`,
+    );
+  }
+
   for (const roleName of roleNames) {
     const role = await contract[roleName]();
     if (role === defaultAdminRole || (await contract.hasRole(role, grantee))) {

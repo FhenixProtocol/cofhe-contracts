@@ -1,10 +1,6 @@
 import hre from "hardhat";
 import { deployUUPSProxy, grantAllRoles } from "../utils/deploy";
 
-// Delay enforced on default-admin handover, matching the host-chain deployment. 0 makes transfers
-// take effect immediately, which suits dev/test; production should deploy with a non-zero delay.
-const DEFAULT_ADMIN_DELAY = 0;
-
 // OZ Relayer signer address (deterministic from dev keystore)
 const DEFAULT_POSTER_ADDRESS = "0x53118C97bD4b7FdDb68244D788Ce7b2946ECd327";
 
@@ -19,6 +15,44 @@ function isLocalNetwork() {
     return true;
   }
   return Boolean(url && (url.includes("localhost") || url.includes("127.0.0.1")));
+}
+
+/**
+ * Resolves the delay enforced on default-admin handover, from `REGISTRY_ADMIN_DELAY`.
+ *
+ * Mirrors the host-chain guard: a zero delay makes default-admin transfers take effect
+ * immediately, removing the timelock. Fine on a local stack, refused anywhere else. Blank and
+ * whitespace-only count as unset rather than as zero, since `Number("")` is `0` and a set-but-empty
+ * env var is common in CI and docker-compose.
+ */
+function resolveAdminDelay() {
+  const raw = process.env.REGISTRY_ADMIN_DELAY;
+  const provided = raw !== undefined && raw.trim() !== "";
+
+  if (!provided) {
+    if (!isLocalNetwork()) {
+      throw new Error(
+        `REGISTRY_ADMIN_DELAY must be set to a non-zero number of seconds on network ` +
+          `"${hre.network.name}" (got ${raw === undefined ? "unset" : JSON.stringify(raw)}). A ` +
+          `zero delay removes the default-admin transfer timelock.`,
+      );
+    }
+    return 0;
+  }
+
+  const delay = Number(raw!.trim());
+  if (!Number.isInteger(delay) || delay < 0) {
+    throw new Error(
+      `REGISTRY_ADMIN_DELAY must be a non-negative integer number of seconds, got ${JSON.stringify(raw)}`,
+    );
+  }
+  if (delay === 0 && !isLocalNetwork()) {
+    throw new Error(
+      `REGISTRY_ADMIN_DELAY is 0 on network "${hre.network.name}". Refusing - that removes the ` +
+        `default-admin transfer timelock.`,
+    );
+  }
+  return delay;
 }
 
 /**
@@ -44,14 +78,15 @@ function resolvePosterAddress() {
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
   const posterAddress = resolvePosterAddress();
+  const adminDelay = resolveAdminDelay();
   console.log("Deploying CommitmentRegistry with account:", deployer.address);
 
   const { proxy: registry, address: proxyAddress } = await deployUUPSProxy(
     "CommitmentRegistry",
-    [deployer.address, DEFAULT_ADMIN_DELAY, posterAddress],
+    [deployer.address, adminDelay, posterAddress],
   );
 
-  console.log("Default admin:", deployer.address);
+  console.log("Default admin:", deployer.address, "delay:", adminDelay);
   console.log("Poster:", posterAddress);
 
   // `initialize` only grants DEFAULT_ADMIN_ROLE. The deployer needs VERSION_MANAGER_ROLE for

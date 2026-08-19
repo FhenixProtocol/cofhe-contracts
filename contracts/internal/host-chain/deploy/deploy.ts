@@ -8,7 +8,13 @@ import fs from "fs";
 
 import { deployCreateX } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
-import { getDefaultAdmin, grantAllRoles, requireDefaultAdminIsSignerOrUnset } from "../utils/roles";
+import {
+  getDefaultAdmin,
+  grantAllRoles,
+  isLocalNetwork,
+  requireDefaultAdminIsSignerOrUnset,
+  resolveAdminDelay,
+} from "../utils/roles";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -42,22 +48,6 @@ async function getProxyContract(adminSigner: any, adminDelay: number, contractNa
   // deployer - including UPGRADER_ROLE, without which this proxy could never be upgraded again.
   await grantAllRoles(ProxyContract, adminSigner);
   return { ProxyContract, ProxyAddress };
-}
-
-/**
- * Returns true when the network being deployed to is a local dev chain.
- * Used to keep dev-only defaults (zero signers, committed keys) from reaching a public network.
- */
-function isLocalNetwork() {
-  const networkName = hre?.network?.name;
-  const networkUrl = (hre?.network?.config as any)?.url;
-  if (networkName === "hardhat" || networkName?.startsWith("localfhenix")) {
-    return true;
-  }
-  return Boolean(
-    networkUrl &&
-      (networkUrl.includes("localhost") || networkUrl.includes("127.0.0.1")),
-  );
 }
 
 /**
@@ -120,7 +110,7 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
     if (
       process.env.VERIFIER_ADDRESS === "0x0000000000000000000000000000000000000000" &&
-      !isLocalNetwork()
+      !isLocalNetwork(hre)
     ) {
       throw new Error("refusing to set VERIFIER_ADDRESS to 0 on a non-local network!");
     }
@@ -140,7 +130,7 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
     if (
       process.env.DECRYPT_RESULT_SIGNER === "0x0000000000000000000000000000000000000000" &&
-      !isLocalNetwork()
+      !isLocalNetwork(hre)
     ) {
       throw new Error("refusing to set DECRYPT_RESULT_SIGNER to 0 on a non-local network!");
     }
@@ -282,7 +272,7 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, adminSigner: any,
   // keeping it atomic means the proxy is never observable in a half-migrated state.
   const migrationData =
     currentDefaultAdmin === null
-      ? TMFactory.interface.encodeFunctionData("initializeV2", [adminDelay, adminSigner.address])
+      ? TMFactory.interface.encodeFunctionData("initializeV2", [adminSigner.address, adminDelay])
       : "0x";
   const tx = await connectedImplementation.upgradeToAndCall(newIplAddress, migrationData);
   await tx.wait();
@@ -333,9 +323,8 @@ function getAggregatorWallets(ethers: any) {
  * run `grantAllRoles`, so an admin it cannot sign for could not be honoured anyway.
  */
 function resolveAdmin(candidateSigners: any[]) {
-  const local = isLocalNetwork();
-  const requestedAdmin = process.env.TM_ADMIN_ADDRESS;
-  const requestedDelay = process.env.TM_ADMIN_DELAY;
+  const local = isLocalNetwork(hre);
+  const requestedAdmin = process.env.TM_ADMIN_ADDRESS?.trim();
 
   if (!local && !requestedAdmin) {
     throw new Error(
@@ -343,12 +332,9 @@ function resolveAdmin(candidateSigners: any[]) {
         "wallets.json key the DEFAULT_ADMIN of these proxies.",
     );
   }
-  if (!local && requestedDelay === undefined) {
-    throw new Error(
-      "TM_ADMIN_DELAY must be set on a non-local network. A zero delay makes default-admin " +
-        "transfers take effect immediately, removing the timelock this contract exists to enforce.",
-    );
-  }
+
+  // Throws on a blank or zero delay off a local network - see resolveAdminDelay.
+  const adminDelay = resolveAdminDelay(hre);
 
   const adminSigner = requestedAdmin
     ? candidateSigners.find(
@@ -362,11 +348,6 @@ function resolveAdmin(candidateSigners: any[]) {
         `Available: ${candidateSigners.map((c) => c.address).join(", ")}. This script must sign ` +
         `as the default admin to grant the operational roles.`,
     );
-  }
-
-  const adminDelay = requestedDelay === undefined ? 0 : Number(requestedDelay);
-  if (!Number.isInteger(adminDelay) || adminDelay < 0) {
-    throw new Error(`TM_ADMIN_DELAY must be a non-negative integer number of seconds, got "${requestedDelay}"`);
   }
 
   console.log(chalk.green("Default admin:", adminSigner.address, "delay:", adminDelay));

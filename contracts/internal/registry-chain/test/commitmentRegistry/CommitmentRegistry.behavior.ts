@@ -89,7 +89,7 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
     it("should not let anyone re-seed the admin through initializeV2", async function () {
       const registryAsOther = this.registry.connect(this.otherAccount);
       await expect(
-        registryAsOther.initializeV2(0, this.otherAccount.address)
+        registryAsOther.initializeV2(this.otherAccount.address, 0)
       )
         .to.be.revertedWithCustomError(this.registry, "NotLegacyOwner")
         .withArgs(this.otherAccount.address, ethers.ZeroAddress);
@@ -134,21 +134,33 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       });
 
       it("rejects a stranger claiming DEFAULT_ADMIN_ROLE", async function () {
-        await expect(migrating.connect(this.otherAccount).initializeV2(0, this.otherAccount.address))
+        await expect(migrating.connect(this.otherAccount).initializeV2(this.otherAccount.address, 0))
           .to.be.revertedWithCustomError(migrating, "NotLegacyOwner")
           .withArgs(this.otherAccount.address, legacyOwner.address);
         expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
       });
 
       it("lets the legacy owner complete the migration", async function () {
-        await expect(migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address))
+        await expect(migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0))
           .to.not.be.reverted;
         expect(await migrating.defaultAdmin()).to.equal(legacyOwner.address);
       });
 
+      // This proxy has no upgrade script at all, so the migration will be hand-rolled with no
+      // follow-up grant. Without the operational roles it would come out permanently bricked.
+      it("grants the operational roles, so the proxy is not bricked", async function () {
+        await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+        for (const role of ["UPGRADER_ROLE", "POSTER_MANAGER_ROLE", "VERSION_MANAGER_ROLE"]) {
+          expect(
+            await migrating.hasRole(await migrating[role](), legacyOwner.address),
+            role,
+          ).to.equal(true);
+        }
+      });
+
       it("cannot be replayed once migrated", async function () {
-        await migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address);
-        await expect(migrating.connect(legacyOwner).initializeV2(0, this.otherAccount.address))
+        await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+        await expect(migrating.connect(legacyOwner).initializeV2(this.otherAccount.address, 0))
           .to.be.revertedWithCustomError(migrating, "InvalidInitialization");
       });
     });

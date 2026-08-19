@@ -8,9 +8,15 @@ const { ethers } = hre;
 
 const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
-/** Every `*_ROLE` constant the contract declares, other than DEFAULT_ADMIN_ROLE. */
+/**
+ * Every `*_ROLE` constant the contract declares, other than DEFAULT_ADMIN_ROLE.
+ *
+ * Asserts the list is non-empty here rather than at each call site: a caller that loops over an
+ * empty list runs zero assertions and passes, so an ABI regression would turn these tests green
+ * instead of red.
+ */
 function declaredRoleNames(contract: any): string[] {
-  return contract.interface.fragments
+  const names = contract.interface.fragments
     .filter(
       (fragment: any) =>
         fragment.type === "function" &&
@@ -19,6 +25,8 @@ function declaredRoleNames(contract: any): string[] {
         fragment.name !== "DEFAULT_ADMIN_ROLE",
     )
     .map((fragment: any) => (fragment as any).name);
+  expect(names.length, "declaredRoleNames found no *_ROLE constants").to.be.greaterThan(0);
+  return names;
 }
 
 describe("Role-based access control", function () {
@@ -43,9 +51,7 @@ describe("Role-based access control", function () {
   // role added to a contract without a matching grant fails the suite rather than the deployment.
   describe("admin wallet holds every declared role", function () {
     it("on TaskManager", async function () {
-      const roleNames = declaredRoleNames(taskManager);
-      expect(roleNames.length).to.be.greaterThan(0);
-      for (const roleName of roleNames) {
+      for (const roleName of declaredRoleNames(taskManager)) {
         expect(await taskManager.hasRole(await taskManager[roleName](), owner.address), roleName)
           .to.equal(true);
       }
@@ -75,9 +81,11 @@ describe("Role-based access control", function () {
     });
 
     it("does not grant operational roles to anyone else", async function () {
-      for (const roleName of declaredRoleNames(taskManager)) {
-        expect(await taskManager.hasRole(await taskManager[roleName](), other.address), roleName)
-          .to.equal(false);
+      for (const contract of [taskManager, acl, plaintextsStorage]) {
+        for (const roleName of declaredRoleNames(contract)) {
+          expect(await contract.hasRole(await contract[roleName](), other.address), roleName)
+            .to.equal(false);
+        }
       }
     });
   });
@@ -137,7 +145,10 @@ describe("Role-based access control", function () {
       await expect(taskManager.connect(owner).disable())
         .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
         .withArgs(owner.address, pauserRole);
-      await expect(taskManager.connect(owner).incVersion()).to.not.be.reverted;
+      // setACLContract is the CONFIG_MANAGER_ROLE call - incVersion is UPGRADER_ROLE, so using it
+      // here would leave CONFIG_MANAGER_ROLE untested despite the name.
+      await expect(taskManager.connect(owner).setACLContract(await acl.getAddress()))
+        .to.not.be.reverted;
 
       await taskManager.connect(owner).grantRole(pauserRole, owner.address);
     });
@@ -161,19 +172,19 @@ describe("Role-based access control", function () {
   // owner and rejects the call outright.
   describe("initializeV2 cannot hijack an initialized proxy", function () {
     it("reverts on TaskManager", async function () {
-      await expect(taskManager.connect(other).initializeV2(0, other.address))
+      await expect(taskManager.connect(other).initializeV2(other.address, 0))
         .to.be.revertedWithCustomError(taskManager, "NotLegacyOwner")
         .withArgs(other.address, ethers.ZeroAddress);
     });
 
     it("reverts on ACL", async function () {
-      await expect(acl.connect(other).initializeV2(0, other.address))
+      await expect(acl.connect(other).initializeV2(other.address, 0))
         .to.be.revertedWithCustomError(acl, "NotLegacyOwner")
         .withArgs(other.address, ethers.ZeroAddress);
     });
 
     it("reverts on PlaintextsStorage", async function () {
-      await expect(plaintextsStorage.connect(other).initializeV2(0, other.address))
+      await expect(plaintextsStorage.connect(other).initializeV2(other.address, 0))
         .to.be.revertedWithCustomError(plaintextsStorage, "NotLegacyOwner")
         .withArgs(other.address, ethers.ZeroAddress);
     });
@@ -219,7 +230,7 @@ describe("Role-based access control", function () {
     });
 
     it("rejects a stranger claiming DEFAULT_ADMIN_ROLE", async function () {
-      await expect(migrating.connect(other).initializeV2(0, other.address))
+      await expect(migrating.connect(other).initializeV2(other.address, 0))
         .to.be.revertedWithCustomError(migrating, "NotLegacyOwner")
         .withArgs(other.address, legacyOwner.address);
       expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
@@ -228,15 +239,70 @@ describe("Role-based access control", function () {
     });
 
     it("lets the legacy owner complete the migration", async function () {
-      await expect(migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address))
+      await expect(migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0))
         .to.not.be.reverted;
       expect(await migrating.defaultAdmin()).to.equal(legacyOwner.address);
     });
 
+    // The bootstrap stub's layout stops at slot 3, so TaskManager's signer slots read as zero -
+    // which is the verification-*disabled* sentinel. initializeV2 must reseed them, otherwise a
+    // migrated-but-not-yet-configured proxy accepts unsigned inputs and unsigned decrypt results.
+    // Pinning it here means a future layout shift fails CI rather than a testnet.
+    it("leaves both signers fail-closed, not in debug mode", async function () {
+      expect(await migrating.verifierSigner()).to.equal(ethers.ZeroAddress);
+      expect(await migrating.decryptResultSigner()).to.equal(ethers.ZeroAddress);
+
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+
+      expect(await migrating.verifierSigner()).to.equal("0x0000000000000000000000000000000000000001");
+      expect(await migrating.decryptResultSigner()).to.equal("0x0000000000000000000000000000000000000001");
+    });
+
+    // Intake stays shut until an operator explicitly enables it, and the unconfigured contract
+    // addresses stay zero - they have no safe default and must come from CONFIG_MANAGER_ROLE.
+    it("does not auto-enable intake or invent contract addresses", async function () {
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+      expect(await migrating.isEnabled()).to.equal(false);
+      expect(await migrating.acl()).to.equal(ethers.ZeroAddress);
+      expect(await migrating.plaintextsStorage()).to.equal(ethers.ZeroAddress);
+    });
+
+    // A Safe or a manual `cast send` performs the migration with no follow-up grant script, so
+    // initializeV2 has to leave a usable contract - above all an UPGRADER_ROLE holder, without
+    // which the proxy is bricked permanently.
+    it("grants the operational roles, so the proxy is not bricked", async function () {
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+      for (const roleName of declaredRoleNames(migrating)) {
+        expect(
+          await migrating.hasRole(await migrating[roleName](), legacyOwner.address),
+          roleName,
+        ).to.equal(true);
+      }
+    });
+
     it("cannot be replayed once migrated", async function () {
-      await migrating.connect(legacyOwner).initializeV2(0, legacyOwner.address);
-      await expect(migrating.connect(legacyOwner).initializeV2(0, other.address))
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+      await expect(migrating.connect(legacyOwner).initializeV2(other.address, 0))
         .to.be.revertedWithCustomError(migrating, "InvalidInitialization");
+    });
+  });
+
+  // The seeding above must not touch a proxy migrating from the pre-roles TaskManager: those slots
+  // hold real, live values there (its `initialize` set both signers to address(1)), and overwriting
+  // them would reject every genuine input until an operator re-ran the setters.
+  describe("initializeV2 does not clobber a configured proxy", function () {
+    it("leaves an already-migrated proxy's signers and ACL untouched", async function () {
+      const verifier = await taskManager.verifierSigner();
+      const decrypt = await taskManager.decryptResultSigner();
+      const aclAddress = await taskManager.acl();
+      const enabled = await taskManager.isEnabled();
+
+      await expect(taskManager.connect(owner).initializeV2(owner.address, 0)).to.be.reverted;
+
+      expect(await taskManager.verifierSigner()).to.equal(verifier);
+      expect(await taskManager.decryptResultSigner()).to.equal(decrypt);
+      expect(await taskManager.acl()).to.equal(aclAddress);
+      expect(await taskManager.isEnabled()).to.equal(enabled);
     });
   });
 
