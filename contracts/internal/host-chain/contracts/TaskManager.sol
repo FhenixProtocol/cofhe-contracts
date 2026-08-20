@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 /* solhint-disable one-contract-per-file */
 pragma solidity >=0.8.25 <0.9.0;
-import {ACL, Permission} from "./ACL.sol";
+import {ACL, ACP} from "./ACL.sol";
 import {PlaintextsStorage} from "./PlaintextsStorage.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -899,7 +899,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, Ownable2St
         aggregators[_aggregatorAddress] = false;
     }
 
-    function isAllowedWithPermission(Permission memory permission, uint256 handle) public view returns (bool) {
-        return acl.isAllowedWithPermission(permission, handle);
+    /// @notice ACP scope-checked access, forwarded to the ACL.
+    function isAllowedWithPermission(ACP memory acp, uint256 handle) public view returns (bool) {
+        return acl.isAllowedWithPermission(acp, handle);
     }
 }
