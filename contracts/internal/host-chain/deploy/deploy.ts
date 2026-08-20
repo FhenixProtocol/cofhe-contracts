@@ -209,6 +209,16 @@ async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any) {
     console.log(
       chalk.green("Successfully set default revoker contract in ACL"),
     );
+
+    const { ProxyAddress: shareRegistryAddress } = await getProxyContract(
+      ownerSigner.address,
+      "ACPShareRegistry",
+    );
+    const registryTx = await aclContract
+      .connect(ownerSigner)
+      .setShareRegistry(shareRegistryAddress);
+    await registryTx.wait();
+    console.log(chalk.green("Successfully set share registry in ACL"));
   } catch (e) {
     console.error(chalk.red(`Failed ACP infrastructure setup: ${e}`));
     return e;
