@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- **Removed the unused `Strings` import from `FHE.sol`** — `Strings` was imported from OpenZeppelin and never referenced, and it was the only `@openzeppelin` reference in either published file, so `FHE.sol` and `ICofhe.sol` now compile with no external dependency. Generated code is unaffected: a consumer contract built against the library produces byte-identical runtime bytecode. **Source-breaking:** Solidity re-exports imported symbols, so a downstream contract using the unnamed form `import "@fhenixprotocol/cofhe-contracts/FHE.sol";` had `Strings` in scope for free and now fails with `Undeclared identifier`. Named imports such as `import {FHE, euint64} from "@fhenixprotocol/cofhe-contracts/FHE.sol";` never brought it into scope and are unaffected, as is any contract that imports `Strings` itself. Fix: add `import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";` to the downstream file.
+
 ## v0.1.5 - 2026-08-16
 
 ### Added
