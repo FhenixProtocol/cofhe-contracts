@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 // solhint-disable one-contract-per-file
 
-pragma solidity >=0.8.19 <0.9.0;
+pragma solidity >=0.8.25 <0.9.0;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {FunctionId, ITaskManager, Utils, EncryptedInput, UnsignedEncryptedInput} from "./ICofhe.sol";
@@ -3184,7 +3184,7 @@ library FHE {
     /// @param ctHash The encrypted boolean value to check access for
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
-    function isAllowed(ebool ctHash, address account) internal returns (bool) {
+    function isAllowed(ebool ctHash, address account) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(ebool.unwrap(ctHash)), account);
     }
 
@@ -3193,7 +3193,7 @@ library FHE {
     /// @param ctHash The encrypted uint8 value to check access for
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
-    function isAllowed(euint8 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint8 ctHash, address account) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint8.unwrap(ctHash)), account);
     }
 
@@ -3202,7 +3202,7 @@ library FHE {
     /// @param ctHash The encrypted uint16 value to check access for
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
-    function isAllowed(euint16 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint16 ctHash, address account) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint16.unwrap(ctHash)), account);
     }
 
@@ -3211,7 +3211,7 @@ library FHE {
     /// @param ctHash The encrypted uint32 value to check access for
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
-    function isAllowed(euint32 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint32 ctHash, address account) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint32.unwrap(ctHash)), account);
     }
 
@@ -3220,7 +3220,7 @@ library FHE {
     /// @param ctHash The encrypted uint64 value to check access for
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
-    function isAllowed(euint64 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint64 ctHash, address account) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint64.unwrap(ctHash)), account);
     }
 
@@ -3229,7 +3229,7 @@ library FHE {
     /// @param ctHash The encrypted uint128 value to check access for
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
-    function isAllowed(euint128 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint128 ctHash, address account) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint128.unwrap(ctHash)), account);
     }
 
@@ -3239,7 +3239,7 @@ library FHE {
     /// @param ctHash The encrypted address value to check access for
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
-    function isAllowed(eaddress ctHash, address account) internal returns (bool) {
+    function isAllowed(eaddress ctHash, address account) internal view returns (bool) {
         return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(eaddress.unwrap(ctHash)), account);
     }
 
@@ -4290,7 +4290,7 @@ library BindingsEbool {
     function allow(ebool ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
-    function isAllowed(ebool ctHash, address account) internal returns (bool) {
+    function isAllowed(ebool ctHash, address account) internal view returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
     function isPubliclyAllowed(ebool ctHash) internal view returns (bool) {
@@ -4541,7 +4541,7 @@ library BindingsEuint8 {
     function allow(euint8 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
-    function isAllowed(euint8 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint8 ctHash, address account) internal view returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
     function isPubliclyAllowed(euint8 ctHash) internal view returns (bool) {
@@ -4792,7 +4792,7 @@ library BindingsEuint16 {
     function allow(euint16 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
-    function isAllowed(euint16 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint16 ctHash, address account) internal view returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
     function isPubliclyAllowed(euint16 ctHash) internal view returns (bool) {
@@ -5043,7 +5043,7 @@ library BindingsEuint32 {
     function allow(euint32 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
-    function isAllowed(euint32 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint32 ctHash, address account) internal view returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
     function isPubliclyAllowed(euint32 ctHash) internal view returns (bool) {
@@ -5097,6 +5097,15 @@ library BindingsEuint64 {
     /// @return the result of the mul
     function mul(euint64 lhs, euint64 rhs) internal returns (euint64) {
         return FHE.mul(lhs, rhs);
+    }
+
+    /// @notice Performs the div operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint64
+    /// @param rhs second input of type euint64
+    /// @return the result of the div
+    function div(euint64 lhs, euint64 rhs) internal returns (euint64) {
+        return FHE.div(lhs, rhs);
     }
 
     /// @notice Performs the sub operation
@@ -5197,6 +5206,15 @@ library BindingsEuint64 {
         return FHE.lte(lhs, rhs);
     }
 
+    /// @notice Performs the rem operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint64
+    /// @param rhs second input of type euint64
+    /// @return the result of the rem
+    function rem(euint64 lhs, euint64 rhs) internal returns (euint64) {
+        return FHE.rem(lhs, rhs);
+    }
+
     /// @notice Performs the max operation
     /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
     /// @param lhs input of type euint64
@@ -5276,7 +5294,7 @@ library BindingsEuint64 {
     function allow(euint64 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
-    function isAllowed(euint64 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint64 ctHash, address account) internal view returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
     function isPubliclyAllowed(euint64 ctHash) internal view returns (bool) {
@@ -5321,6 +5339,24 @@ library BindingsEuint128 {
     /// @return the result of the add
     function add(euint128 lhs, euint128 rhs) internal returns (euint128) {
         return FHE.add(lhs, rhs);
+    }
+
+    /// @notice Performs the mul operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @param rhs second input of type euint128
+    /// @return the result of the mul
+    function mul(euint128 lhs, euint128 rhs) internal returns (euint128) {
+        return FHE.mul(lhs, rhs);
+    }
+
+    /// @notice Performs the div operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @param rhs second input of type euint128
+    /// @return the result of the div
+    function div(euint128 lhs, euint128 rhs) internal returns (euint128) {
+        return FHE.div(lhs, rhs);
     }
 
     /// @notice Performs the sub operation
@@ -5421,6 +5457,15 @@ library BindingsEuint128 {
         return FHE.lte(lhs, rhs);
     }
 
+    /// @notice Performs the rem operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @param rhs second input of type euint128
+    /// @return the result of the rem
+    function rem(euint128 lhs, euint128 rhs) internal returns (euint128) {
+        return FHE.rem(lhs, rhs);
+    }
+
     /// @notice Performs the max operation
     /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
     /// @param lhs input of type euint128
@@ -5474,6 +5519,14 @@ library BindingsEuint128 {
     function ror(euint128 lhs, euint128 rhs) internal returns (euint128) {
         return FHE.ror(lhs, rhs);
     }
+
+    /// @notice Performs the square operation
+    /// @dev Pure in this function is marked as a hack/workaround - note that this function is NOT pure as fetches of ciphertexts require state access
+    /// @param lhs input of type euint128
+    /// @return the result of the square
+    function square(euint128 lhs) internal returns (euint128) {
+        return FHE.square(lhs);
+    }
     function toBool(euint128 value) internal  returns (ebool) {
         return FHE.asEbool(value);
     }
@@ -5492,7 +5545,7 @@ library BindingsEuint128 {
     function allow(euint128 ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
-    function isAllowed(euint128 ctHash, address account) internal returns (bool) {
+    function isAllowed(euint128 ctHash, address account) internal view returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
     function isPubliclyAllowed(euint128 ctHash) internal view returns (bool) {
@@ -5568,7 +5621,7 @@ library BindingsEaddress {
     function allow(eaddress ctHash, address account) internal {
         FHE.allow(ctHash, account);
     }
-    function isAllowed(eaddress ctHash, address account) internal returns (bool) {
+    function isAllowed(eaddress ctHash, address account) internal view returns (bool) {
         return FHE.isAllowed(ctHash, account);
     }
     function isPubliclyAllowed(eaddress ctHash) internal view returns (bool) {
