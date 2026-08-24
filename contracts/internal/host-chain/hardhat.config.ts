@@ -20,14 +20,16 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 const TESTNET_CHAIN_ID = 8008135;
 const TESTNET_RPC_URL = "https://api.helium.fhenix.zone";
 
+// Keyed provider endpoints must come from the environment (or GitHub secrets in CI) —
+// this is a public repo, so only keyless public RPCs may appear as defaults.
 const SEPOLIA_CHAIN_ID = 11155111;
-const SEPOLIA_RPC_URL = "https://muddy-compatible-film.ethereum-sepolia.quiknode.pro/56d6bb630309af9e0856297b656e92fbf77adcc9/"
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com"
 
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
-const ARBITRUM_SEPOLIA_RPC_URL = "https://little-convincing-fog.arbitrum-sepolia.quiknode.pro/e925be62bdfa8faab560daa332c0c95e26189870/"
+const ARBITRUM_SEPOLIA_RPC_URL = process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://arbitrum-sepolia-rpc.publicnode.com"
 
 const BASE_SEPOLIA_CHAIN_ID = 84532;
-const BASE_SEPOLIA_RPC_URL = "https://cool-wandering-asphalt.base-sepolia.quiknode.pro/9a6b3aaaf2d42fb02114024c0e5dda55cd3a1957/"
+const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "https://base-sepolia-rpc.publicnode.com"
 
 const testnetConfig = {
     chainId: TESTNET_CHAIN_ID,
