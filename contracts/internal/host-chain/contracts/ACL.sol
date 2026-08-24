@@ -3,8 +3,9 @@ pragma solidity >=0.8.25 <0.9.0;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
+import {LegacyOwnable} from "./LegacyOwnable.sol";
 import {PermissionedUpgradeable, ACP, SCOPE_GLOBAL, SCOPE_CONTRACT, SCOPE_HANDLES} from "./Permissioned.sol";
 
 /**
@@ -14,7 +15,22 @@ import {PermissionedUpgradeable, ACP, SCOPE_GLOBAL, SCOPE_CONTRACT, SCOPE_HANDLE
  *         By defining and enforcing these permissions, the ACL ensures that encrypted data remains secure while still being usable
  *         within authorized contexts.
  */
-contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeable {
+contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, PermissionedUpgradeable {
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /// @dev Reserves the namespaces this contract used while it inherited Ownable2StepUpgradeable.
+    ///      Already-deployed proxies still hold an owner there; keeping the declarations marks
+    ///      that storage as taken so a later upgrade cannot silently reuse it.
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
+    struct OwnableStorage {
+        address _owner;
+    }
+
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable2Step
+    struct Ownable2StepStorage {
+        address _pendingOwner;
+    }
+
     /// @notice Returned if the delegatee contract is already delegatee for sender & delegator addresses.
     error AlreadyDelegated();
 
@@ -100,11 +116,26 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /**
      * @notice              Initializes the contract.
-     * @param initialOwner  Initial owner address.
+     * @param initialAdmin  Initial admin address.
+     * @param initialDelay  Initial delay for the default admin transfer.
      */
-    function initialize(address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
+    function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __PermissionedUpgradeable_init();
+    }
+
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
+    ///      Callable only by the owner the pre-roles implementation left behind - see
+    ///      {LegacyOwnable} for why that is the only authority available in this window.
+    ///      Grants UPGRADER_ROLE too: there is no upgrade task for this proxy, so a hand-rolled
+    ///      migration with no follow-up grant would leave it permanently un-upgradeable.
+    /// @param initialAdmin  Address receiving DEFAULT_ADMIN_ROLE and UPGRADER_ROLE.
+    /// @param initialDelay  Delay enforced on subsequent default-admin transfers.
+    /// @custom:oz-upgrades-validate-as-initializer
+    function initializeV2(address initialAdmin, uint48 initialDelay) public reinitializer(2) {
+        LegacyOwnable.requireLegacyOwner(msg.sender);
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+        _grantRole(UPGRADER_ROLE, initialAdmin);
     }
 
     /**
@@ -482,10 +513,10 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /**
      * @dev Should revert when `msg.sender` is not authorized to upgrade the contract.
-     *      Empty implementation since authorization is handled by onlyOwner modifier.
+     *      Empty implementation since authorization is handled by onlyRole(UPGRADER_ROLE) modifier.
      */
     /* solhint-disable-next-line no-empty-blocks */
-    function _authorizeUpgrade(address _newImplementation) internal virtual override onlyOwner {}
+    function _authorizeUpgrade(address _newImplementation) internal virtual override onlyRole(UPGRADER_ROLE) {}
 
     /**
      * @dev                         Returns the ACL storage location.
@@ -519,7 +550,7 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /// @notice             Sets the default revoker contract address.
     /// @param newAddress   The new address (zero = unset).
-    function setDefaultRevokerContract(address newAddress) external virtual onlyOwner {
+    function setDefaultRevokerContract(address newAddress) external virtual onlyRole(DEFAULT_ADMIN_ROLE) {
         ACLStorage storage $ = _getACLStorage();
         emit DefaultRevokerContractUpdated($.defaultRevokerContract, newAddress);
         $.defaultRevokerContract = newAddress;
@@ -527,7 +558,7 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /// @notice             Sets the share registry address.
     /// @param newAddress   The new address (zero = unset).
-    function setShareRegistry(address newAddress) external virtual onlyOwner {
+    function setShareRegistry(address newAddress) external virtual onlyRole(DEFAULT_ADMIN_ROLE) {
         ACLStorage storage $ = _getACLStorage();
         emit ShareRegistryUpdated($.shareRegistry, newAddress);
         $.shareRegistry = newAddress;

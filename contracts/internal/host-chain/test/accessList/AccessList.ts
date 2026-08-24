@@ -74,13 +74,20 @@ describe("TaskManager access list", function () {
 
   it("restricts every admin function to the owner", async function () {
     await expect(taskManager.connect(other).enableAccessList())
-      .to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
+      .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount");
     await expect(taskManager.connect(other).disableAccessList())
-      .to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
+      .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount");
     await expect(taskManager.connect(other).addToAccessList([other.address]))
-      .to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
+      .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount");
     await expect(taskManager.connect(other).removeFromAccessList([other.address]))
-      .to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
+      .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount");
+  });
+
+  it("names the ACCESS_LIST_MANAGER_ROLE in the revert for non-holders", async function () {
+    const role = await taskManager.ACCESS_LIST_MANAGER_ROLE();
+    await expect(taskManager.connect(other).enableAccessList())
+      .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+      .withArgs(other.address, role);
   });
 
   it("rejects the zero address when adding or removing", async function () {

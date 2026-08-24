@@ -3,45 +3,42 @@ import { expect } from "chai";
 
 const { ethers } = hre;
 
+import { grantAllRoles } from "../../utils/roles";
+
 const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
+/**
+ * Install a UUPS proxy's runtime bytecode at a fixed address and initialize it
+ * in place. We can't `deployProxy` at an arbitrary address, and AccessControl
+ * stores role membership in computed mapping slots (not one fixed slot), so we
+ * initialize through the real proxy rather than copying storage slots.
+ */
 async function deployProxyAtAddress(
   targetAddress: string,
   implementationAddress: string,
   initData: string
 ): Promise<void> {
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-  const tempProxy = await ERC1967Proxy.deploy(implementationAddress, initData);
+  // Deploy a throwaway proxy only to capture the proxy runtime bytecode.
+  const tempProxy = await ERC1967Proxy.deploy(implementationAddress, "0x");
   await tempProxy.waitForDeployment();
-
   const proxyBytecode = await ethers.provider.getCode(await tempProxy.getAddress());
+
+  // Install proxy code at the fixed address.
   await ethers.provider.send("hardhat_setCode", [targetAddress, proxyBytecode]);
 
-  const storageSlots = [
-    "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
-    "0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00",
-    "0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300",
-    "0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199301",
-    "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "0x0000000000000000000000000000000000000000000000000000000000000001",
-    "0x0000000000000000000000000000000000000000000000000000000000000002",
-    "0x0000000000000000000000000000000000000000000000000000000000000003",
-    "0x0000000000000000000000000000000000000000000000000000000000000004",
-    "0x0000000000000000000000000000000000000000000000000000000000000005",
-    "0x0000000000000000000000000000000000000000000000000000000000000006",
-    "0x0000000000000000000000000000000000000000000000000000000000000007",
-    "0x0000000000000000000000000000000000000000000000000000000000000008",
-    "0x0000000000000000000000000000000000000000000000000000000000000009",
-    "0x000000000000000000000000000000000000000000000000000000000000000a",
-  ];
+  // Point the ERC1967 implementation slot at our implementation.
+  const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+  await ethers.provider.send("hardhat_setStorageAt", [
+    targetAddress,
+    IMPL_SLOT,
+    ethers.zeroPadValue(implementationAddress, 32),
+  ]);
 
-  const tempAddress = await tempProxy.getAddress();
-  for (const slot of storageSlots) {
-    const value = await ethers.provider.getStorage(tempAddress, slot);
-    if (value !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
-      await ethers.provider.send("hardhat_setStorageAt", [targetAddress, slot, value]);
-    }
-  }
+  // Initialize the proxy in place (fresh storage at the target address).
+  const [signer] = await ethers.getSigners();
+  const tx = await signer.sendTransaction({ to: targetAddress, data: initData });
+  await tx.wait();
 }
 
 describe("PubliclyAllowed Tests", function () {
@@ -49,13 +46,18 @@ describe("PubliclyAllowed Tests", function () {
   let testContract: any;
 
   before(async function () {
+    // Multiple test files deploy TaskManager at the same hardcoded address within
+    // the same Hardhat network process; reset so `initialize` sees fresh storage
+    // (hardhat_setCode/hardhat_setStorageAt below only work on the Hardhat network).
+    await ethers.provider.send("hardhat_reset", []);
+
     const [owner] = await ethers.getSigners();
 
     const TaskManager = await ethers.getContractFactory("TaskManager");
     const taskManagerImpl = await TaskManager.deploy();
     await taskManagerImpl.waitForDeployment();
 
-    const initData = TaskManager.interface.encodeFunctionData("initialize", [owner.address]);
+    const initData = TaskManager.interface.encodeFunctionData("initialize", [owner.address, 0]);
     await deployProxyAtAddress(TASK_MANAGER_ADDRESS, await taskManagerImpl.getAddress(), initData);
     taskManager = TaskManager.attach(TASK_MANAGER_ADDRESS);
 
@@ -64,16 +66,22 @@ describe("PubliclyAllowed Tests", function () {
     await aclImpl.waitForDeployment();
 
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address]);
+    const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address, 0]);
     const aclProxy = await ERC1967Proxy.deploy(await aclImpl.getAddress(), aclInitData);
     await aclProxy.waitForDeployment();
 
     const PlaintextsStorage = await ethers.getContractFactory("PlaintextsStorage");
     const psImpl = await PlaintextsStorage.deploy();
     await psImpl.waitForDeployment();
-    const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address]);
+    const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address, 0]);
     const psProxy = await ERC1967Proxy.deploy(await psImpl.getAddress(), psInitData);
     await psProxy.waitForDeployment();
+
+    // `initialize` only grants DEFAULT_ADMIN_ROLE; mirror the deploy script and give the admin
+    // every role, so the fixture stays correct when a contract gains a new one.
+    await grantAllRoles(taskManager, owner, undefined, false);
+    await grantAllRoles(ACL.attach(await aclProxy.getAddress()), owner, undefined, false);
+    await grantAllRoles(PlaintextsStorage.attach(await psProxy.getAddress()), owner, undefined, false);
 
     await taskManager.setACLContract(await aclProxy.getAddress());
     await taskManager.setPlaintextsStorage(await psProxy.getAddress());
