@@ -256,11 +256,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         // sentinel, not a safe default. Seed the fail-closed value so a migrated proxy is safe by
         // construction rather than by whatever the deploy script gets around to setting.
         //
-        // A proxy arriving from the pre-roles TaskManager already holds real signers in those
-        // slots and is left untouched: its `initialize` set both to address(1), so neither can
-        // legitimately be zero there. `isEnabled`, `acl` and `plaintextsStorage` are deliberately
-        // not touched - the first is already true on a live proxy (migrating must not pause it),
-        // and the latter two have no safe default and must be set via CONFIG_MANAGER_ROLE.
+        // Zero is also a legitimate configured state - the debug bypass at L789/L861 - so a proxy
+        // deliberately running with verification off is flipped fail-closed here and has to re-set
+        // it after migrating. `isEnabled`, `acl` and `plaintextsStorage` are deliberately not
+        // touched: the first is already true on a live proxy (migrating must not pause it), and the
+        // latter two have no safe default and must be set via CONFIG_MANAGER_ROLE.
         if (verifierSigner == address(0)) verifierSigner = address(1);
         if (decryptResultSigner == address(0)) decryptResultSigner = address(1);
     }
