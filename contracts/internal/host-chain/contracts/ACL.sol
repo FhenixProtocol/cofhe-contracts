@@ -131,6 +131,11 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     ///      migration with no follow-up grant would leave it permanently un-upgradeable.
     /// @param initialAdmin  Address receiving DEFAULT_ADMIN_ROLE and UPGRADER_ROLE.
     /// @param initialDelay  Delay enforced on subsequent default-admin transfers.
+    /// @dev `PermissionedUpgradeable` has no initializer call here on purpose: its only
+    ///      init work is writing the EIP-712 name/version, and {PermissionedUpgradeable}
+    ///      overrides `_EIP712Name`/`_EIP712Version` to return them from code, so that
+    ///      storage is never read. Writing it would be dead state on every migration.
+    /// @custom:oz-upgrades-unsafe-allow missing-initializer-call
     /// @custom:oz-upgrades-validate-as-initializer
     function initializeV2(address initialAdmin, uint48 initialDelay) public reinitializer(2) {
         LegacyOwnable.requireLegacyOwner(msg.sender);
