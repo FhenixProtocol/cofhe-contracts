@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 /* solhint-disable one-contract-per-file */
 pragma solidity >=0.8.25 <0.9.0;
-import {ACL, Permission} from "./ACL.sol";
 import {LegacyOwnable} from "./LegacyOwnable.sol";
+import {ACL, ACP} from "./ACL.sol";
 import {PlaintextsStorage} from "./PlaintextsStorage.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {ITaskManager, FunctionId, Utils, EncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
+import {ITaskManager, FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
 
 
 error DecryptionResultNotReady(uint256 ctHash);
@@ -850,31 +850,56 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         return result;
     }
 
-    /// @dev `onlyIfEnabled` for the same reason as the other intake paths: this is the only one that
-    ///      was not behind the kill-switch, so a disabled TaskManager still accepted inputs - and
-    ///      still emitted `InputVerified`, which off-chain services relay to the CommitmentRegistry.
-    function verifyInput(EncryptedInput memory input, address sender) external onlyIfEnabled onlyAccessListed returns (uint256) {
-        int32 securityZone = int32(uint32(input.securityZone));
-
+    /// @notice Verify a batch of encrypted inputs that share a single signature.
+    /// @dev The only input-verification entry point: a single input is a batch of one.
+    ///      The verifier signs the whole batch with one signature over
+    ///      keccak256(h_0 || h_1 || ... || h_n), where each h_i is the per-input
+    ///      message hash
+    ///      keccak256(ctHash || utype || securityZone || sender || chainid || contractAddress).
+    ///      The batch is bound to the consuming contract (`msg.sender`), so it
+    ///      cannot be replayed into a different contract.
+    ///      Inputs are processed in order; the returned hashes line up with `inputs`.
+    ///      Emits one `InputVerified` per input, in input order — the same event
+    ///      the single-input flow emitted, so the commitment relay reads a batch
+    ///      as N independent verified inputs and needs no batch-aware decoding.
+    /// @param inputs The encrypted inputs to verify (no per-input signature —
+    ///        the batch is authenticated by the single `signature` argument).
+    /// @param sender The account the inputs are bound to.
+    /// @param signature The single ECDSA signature covering the whole batch.
+    /// @return appendedHashes The metadata-appended ct hashes, in input order.
+    function batchVerifyInputs(
+        UnsignedEncryptedInput[] memory inputs,
+        address sender,
+        bytes memory signature
+    ) external onlyAccessListed returns (uint256[] memory) {
+        uint256 len = inputs.length;
         // When signer is set to 0 address we skip this logic to be able to support debug use cases.
         // In debug use cases we assume that the verifier is not necessarily running.
         if (verifierSigner != address(0)) {
-            if (!isValidSecurityZone(securityZone)) {
-                revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
+            for (uint256 i = 0; i < len; i++) {
+                int32 securityZone = int32(uint32(inputs[i].securityZone));
+                if (!isValidSecurityZone(securityZone)) {
+                    revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
+                }
             }
 
-            address signer = extractSigner(input, sender);
+            address signer = extractBatchSigner(inputs, sender, msg.sender, signature);
             if (signer != verifierSigner) {
                 revert InvalidSigner(signer, verifierSigner);
             }
         }
 
-        uint256 appendedHash = TMCommon.appendMetadata(input.ctHash, securityZone, input.utype, false);
+        uint256[] memory appendedHashes = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            int32 securityZone = int32(uint32(inputs[i].securityZone));
+            appendedHashes[i] =
+                TMCommon.appendMetadata(inputs[i].ctHash, securityZone, inputs[i].utype, false);
+            emit InputVerified(appendedHashes[i], bytes32(inputs[i].ctHash));
+        }
 
-        emit InputVerified(appendedHash, bytes32(input.ctHash));
+        acl.batchAllowTransient(appendedHashes, msg.sender, address(this));
 
-        acl.allowTransient(appendedHash, msg.sender, address(this));
-        return appendedHash;
+        return appendedHashes;
     }
 
     function allow(uint256 ctHash, address account) external {
@@ -887,6 +912,14 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
 
     function allowTransient(uint256 ctHash, address account) external {
         acl.allowTransient(ctHash, account, msg.sender);
+    }
+
+    function shareCtHash(uint256 ctHash, address receiver) external {
+        acl.shareCtHash(ctHash, msg.sender, receiver);
+    }
+
+    function receiveCtHash(uint256 ctHash, address expectedSharer) external {
+        acl.receiveCtHash(ctHash, expectedSharer, msg.sender);
     }
 
     function allowForDecryption(uint256 ctHash) external {
@@ -903,18 +936,49 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         return acl.globalAllowed(ctHash);
     }
 
-    function extractSigner(EncryptedInput memory input, address sender) private view returns (address) {
-        bytes memory combined = abi.encodePacked(
-            input.ctHash,
-            input.utype,
-            input.securityZone,
-            sender,
-            block.chainid
+    /// @dev Per-input message hash folded into the batch digest:
+    ///      keccak256(ctHash || utype || securityZone || sender || chainid || contractAddress).
+    function inputMessageHash(
+        uint256 ctHash,
+        uint8 utype,
+        uint8 securityZone,
+        address sender,
+        address contractAddress
+    ) private view returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                ctHash,
+                utype,
+                securityZone,
+                sender,
+                block.chainid,
+                contractAddress
+            )
         );
+    }
 
-        bytes32 expectedHash = keccak256(combined);
+    /// @dev Recover the signer of a batch from the single signature over
+    ///      keccak256(h_0 || h_1 || ... || h_n), where each h_i is `inputMessageHash`.
+    function extractBatchSigner(
+        UnsignedEncryptedInput[] memory inputs,
+        address sender,
+        address contractAddress,
+        bytes memory signature
+    ) private view returns (address) {
+        uint256 len = inputs.length;
+        // One allocation of 32*len bytes, each hash written in place, so the
+        // buffer is not reallocated and recopied once per input.
+        bytes memory concatenatedHashes = new bytes(len * 32);
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 h = inputMessageHash(inputs[i].ctHash, inputs[i].utype, inputs[i].securityZone, sender, contractAddress);
+            assembly ("memory-safe") {
+                mstore(add(add(concatenatedHashes, 32), mul(i, 32)), h)
+            }
+        }
 
-        address signer = ECDSA.recover(expectedHash, input.signature);
+        bytes32 batchHash = keccak256(concatenatedHashes);
+
+        address signer = ECDSA.recover(batchHash, signature);
         if (signer == address(0)) {
             revert InvalidSignature();
         }
@@ -985,7 +1049,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         plaintextsStorage = PlaintextsStorage(_plaintextsStorageAddress);
     }
 
-    function isAllowedWithPermission(Permission memory permission, uint256 handle) public view returns (bool) {
-        return acl.isAllowedWithPermission(permission, handle);
+    /// @notice ACP scope-checked access, forwarded to the ACL.
+    function isAllowedWithPermission(ACP memory acp, uint256 handle) public view returns (bool) {
+        return acl.isAllowedWithPermission(acp, handle);
     }
 }

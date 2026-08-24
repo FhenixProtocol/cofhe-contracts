@@ -8,55 +8,11 @@ struct EncryptedInput {
     bytes signature;
 }
 
-struct InEbool {
+struct UnsignedEncryptedInput {
     uint256 ctHash;
     uint8 securityZone;
     uint8 utype;
-    bytes signature;
 }
-
-struct InEuint8 {
-    uint256 ctHash;
-    uint8 securityZone;
-    uint8 utype;
-    bytes signature;
-}
-
-struct InEuint16 {
-    uint256 ctHash;
-    uint8 securityZone;
-    uint8 utype;
-    bytes signature;
-}
-
-struct InEuint32 {
-    uint256 ctHash;
-    uint8 securityZone;
-    uint8 utype;
-    bytes signature;
-}
-
-struct InEuint64 {
-    uint256 ctHash;
-    uint8 securityZone;
-    uint8 utype;
-    bytes signature;
-}
-
-struct InEuint128 {
-    uint256 ctHash;
-    uint8 securityZone;
-    uint8 utype;
-    bytes signature;
-}
-
-struct InEaddress {
-    uint256 ctHash;
-    uint8 securityZone;
-    uint8 utype;
-    bytes signature;
-}
-
 
 // Order is set as in fheos/precompiles/types/types.go
 enum FunctionId {
@@ -98,13 +54,15 @@ interface ITaskManager {
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedInputs, uint256[] memory extraInputs) external returns (uint256);
     function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external returns (uint256);
 
-    function verifyInput(EncryptedInput memory input, address sender) external returns (uint256);
+    function batchVerifyInputs(UnsignedEncryptedInput[] memory inputs, address sender, bytes memory signature) external returns (uint256[] memory);
 
     function allow(uint256 ctHash, address account) external;
-    function isAllowed(uint256 ctHash, address account) external returns (bool);
+    function isAllowed(uint256 ctHash, address account) external view returns (bool);
     function isPubliclyAllowed(uint256 ctHash) external view returns (bool);
     function allowGlobal(uint256 ctHash) external;
     function allowTransient(uint256 ctHash, address account) external;
+    function shareCtHash(uint256 ctHash, address receiver) external;
+    function receiveCtHash(uint256 ctHash, address expectedSharer) external;
     function getDecryptResultSafe(uint256 ctHash) external view returns (uint256, bool);
     function getDecryptResult(uint256 ctHash) external view returns (uint256);
 
@@ -167,69 +125,6 @@ library Utils {
         return "";
     }
 
-    function inputFromEbool(InEbool memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EBOOL_TFHE,
-            signature: input.signature
-        });
-    }
-
-    function inputFromEuint8(InEuint8 memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EUINT8_TFHE,
-            signature: input.signature
-        });
-    }
-
-    function inputFromEuint16(InEuint16 memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EUINT16_TFHE,
-            signature: input.signature
-        });
-    }
-
-    function inputFromEuint32(InEuint32 memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EUINT32_TFHE,
-            signature: input.signature
-        });
-    }
-
-    function inputFromEuint64(InEuint64 memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EUINT64_TFHE,
-            signature: input.signature
-        });
-    }
-
-    function inputFromEuint128(InEuint128 memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EUINT128_TFHE,
-            signature: input.signature
-        });
-    }
-
-    function inputFromEaddress(InEaddress memory input) internal pure returns (EncryptedInput memory) {
-        return EncryptedInput({
-            ctHash: input.ctHash,
-            securityZone: input.securityZone,
-            utype: EADDRESS_TFHE,
-            signature: input.signature
-        });
-    }
-
     function inputFromBytes(bytes memory data, uint8 expected) internal pure returns (EncryptedInput memory) {
         EncryptedInput memory v;
         (
@@ -244,6 +139,26 @@ library Utils {
 
         expectUtype(v.utype, expected);
         return v;
+    }
+
+    function batchInputEntryFromBytes(bytes memory data, uint8 expected) internal pure returns (UnsignedEncryptedInput memory) {
+        UnsignedEncryptedInput memory v;
+        (
+            v.ctHash,
+            v.securityZone,
+            v.utype
+        ) = abi.decode(data, (uint256, uint8, uint8));
+
+        expectUtype(v.utype, expected);
+        return v;
+    }
+
+    function batchInputsFromBytes(bytes[] memory data, uint8 expected) internal pure returns (UnsignedEncryptedInput[] memory) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](data.length);
+        for (uint256 i = 0; i < data.length; i++) {
+            inputs[i] = batchInputEntryFromBytes(data[i], expected);
+        }
+        return inputs;
     }
 
     function inputFromHashAndProof(

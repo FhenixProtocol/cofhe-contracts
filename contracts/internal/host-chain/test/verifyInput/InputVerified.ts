@@ -77,9 +77,31 @@ async function deployTm(factoryName: string) {
     return { tm, owner };
 }
 
+const EUINT32_TFHE = 4;
+
+// topic0 of the event the commitment relay subscribes to. Hard-coded here the
+// same way slim-listener hard-codes it, so a change to the event's shape fails
+// this test instead of silently turning the relay into a no-op.
+const INPUT_VERIFIED_TOPIC = ethers.id("InputVerified(uint256,bytes32)");
+
 function expectedCommitment(ctHash: bigint): string {
     return ethers.toBeHex(ctHash, 32);
 }
+
+function makeInput(ctHash: bigint, securityZone = 0) {
+    return { ctHash, securityZone, utype: EUINT32_TFHE, signature: "0x" };
+}
+
+/** The InputVerified logs of a receipt, decoded, in emission order. */
+function inputVerifiedLogs(tm: any, receipt: any) {
+    return receipt.logs
+        .filter((log: any) => log.topics[0] === INPUT_VERIFIED_TOPIC)
+        .map((log: any) => tm.interface.parseLog(log));
+}
+
+// verifierSigner is 0 here, so batchVerifyInputs takes the debug path and the
+// signature argument is ignored — these tests target emission, not verification.
+const NO_SIGNATURE = "0x";
 
 describe("TaskManager InputVerified event", function () {
     let tm: any;
@@ -91,10 +113,10 @@ describe("TaskManager InputVerified event", function () {
 
     it("emits InputVerified with the appended handle and contract-computed commitment", async function () {
         const ctHash = ethers.toBigInt(ethers.keccak256(ethers.toUtf8Bytes("ciphertext-bytes")));
-        const input = { ctHash, securityZone: 0, utype: 4, signature: "0x" };
+        const inputs = [makeInput(ctHash)];
 
-        const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
-        await expect(tm.verifyInput(input, owner.address))
+        const [expectedHandle] = await tm.batchVerifyInputs.staticCall(inputs, owner.address, NO_SIGNATURE);
+        await expect(tm.batchVerifyInputs(inputs, owner.address, NO_SIGNATURE))
             .to.emit(tm, "InputVerified")
             .withArgs(expectedHandle, expectedCommitment(ctHash));
         // Known-answer vector shared with teecryptor's layout guard — the commitment
@@ -104,16 +126,36 @@ describe("TaskManager InputVerified event", function () {
         );
     });
 
+    it("emits one event per input of a batch, in input order", async function () {
+        const ctHashes = [0xaaaan << 16n, 0xbbbbn << 16n, 0xccccn << 16n];
+        const inputs = ctHashes.map((ctHash) => makeInput(ctHash));
+
+        const expectedHandles = await tm.batchVerifyInputs.staticCall(inputs, owner.address, NO_SIGNATURE);
+        const receipt = await (await tm.batchVerifyInputs(inputs, owner.address, NO_SIGNATURE)).wait();
+
+        // One log per input, each with its own logIndex — the relay derives an
+        // event id from (blockNumber, logIndex), so a batch yields N distinct ids.
+        const events = inputVerifiedLogs(tm, receipt);
+        expect(events.length).to.equal(inputs.length);
+        events.forEach((event: any, i: number) => {
+            expect(event.args.ctHash).to.equal(expectedHandles[i]);
+            expect(event.args.commitment).to.equal(expectedCommitment(ctHashes[i]));
+        });
+    });
+
     it("emits the raw ctHash for any zone, with the zone pinned in handle byte 31", async function () {
         const ctHash = ethers.toBigInt(ethers.keccak256(ethers.toUtf8Bytes("other-bytes")));
-        const input = { ctHash, securityZone: 1, utype: 4, signature: "0x" };
+        const inputs = [makeInput(ctHash, 0), makeInput(ctHash, 1)];
 
-        const expectedHandle = await tm.verifyInput.staticCall(input, owner.address);
-        await expect(tm.verifyInput(input, owner.address))
-            .to.emit(tm, "InputVerified")
-            .withArgs(expectedHandle, expectedCommitment(ctHash));
+        const receipt = await (await tm.batchVerifyInputs(inputs, owner.address, NO_SIGNATURE)).wait();
+
+        const events = inputVerifiedLogs(tm, receipt);
         // Zone is not in the commitment value; it is bound by the lookup key —
-        // the appended handle carries the zone in its last byte.
-        expect(expectedHandle & 0xffn).to.equal(1n);
+        // the appended handle carries the zone in its last byte. The same
+        // ciphertext on two zones therefore shares a commitment but not a handle.
+        expect(events.map((event: any) => event.args.ctHash & 0xffn)).to.deep.equal([0n, 1n]);
+        for (const event of events) {
+            expect(event.args.commitment).to.equal(expectedCommitment(ctHash));
+        }
     });
 });
