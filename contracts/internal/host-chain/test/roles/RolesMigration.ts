@@ -18,6 +18,17 @@ import { migrateToRoles, preflight, resolveProxies } from "../../tasks/upgradeTo
 const IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
+/**
+ * Slots holding the *fixture* TaskManager's `acl` and `plaintextsStorage` pointers.
+ *
+ * These are DeterministicTM's positions, not production's. It packs `initialized` (bool),
+ * `securityZoneMax` and `securityZoneMin` (int32 each) and `aggregator` (address) all into slot 0 -
+ * 9 bytes of the first three still leaves room for the 20-byte address - and declares no
+ * `randomCounter`, so its pointers sit two slots below TaskManager's, where the committed
+ * storage-layout snapshot puts `acl` at 3 and `plaintextsStorage` at 5.
+ */
+const FIXTURE_POINTER_SLOTS = { acl: 1, plaintextsStorage: 3 } as const;
+
 /** Asserts a promise rejects with a message matching `matcher`. */
 async function expectRejection(promise: Promise<unknown>, matcher: RegExp | string) {
   try {
@@ -139,7 +150,7 @@ describe("Migration to role-based access control", function () {
 
     beforeEach(async function () {
       slotsBeforeMigration = {};
-      for (const slot of [3, 5]) {
+      for (const slot of Object.values(FIXTURE_POINTER_SLOTS)) {
         slotsBeforeMigration[slot] = await ethers.provider.getStorage(addresses.taskManager, slot);
       }
 
@@ -195,20 +206,23 @@ describe("Migration to role-based access control", function () {
     });
 
     it("does not disturb the TaskManager's ACL / PlaintextsStorage slots", async function () {
-      // What the migration must never do is move these pointers. Asserting on `acl()` directly
-      // would only measure the fixture: DeterministicTM omits `randomCounter` and puts its
-      // aggregator at slot 1, so every slot after it sits one lower than in TaskManager - the
-      // documented, intentional bootstrap incompatibility that `task:upgradeTM` skips layout
-      // validation for. The production path is pre-roles TaskManager -> TaskManager, which
-      // declares the same state variables in the same order (only `unusedAggregator` was renamed
-      // `_aggregator`), so the pointers stay at slots 3 and 5.
+      // What the migration must never do is move these pointers, and initializeV2 promises not to
+      // touch them. Reading them back through the new ABI cannot show that here - `acl()` and
+      // `plaintextsStorage()` read the production slots 3 and 5, and the fixture stores its
+      // pointers two slots lower, the documented bootstrap layout incompatibility that
+      // `task:upgradeTM` skips layout validation for. So assert on the slots the fixture really
+      // uses, and pin what they hold first.
       //
-      // The invariant that holds either way, and the one initializeV2 promises, is that the
-      // migration writes neither slot.
-      for (const slot of [3, 5]) {
-        expect(await ethers.provider.getStorage(addresses.taskManager, slot)).to.equal(
-          slotsBeforeMigration[slot],
-        );
+      // That precondition is the whole point. Aimed at the production slots this assertion
+      // compared 0x0 to 0x0 - slot 5 is untouched in the fixture and slot 3 is its
+      // `plaintextsStorage` rather than the `acl` it was believed to be - so it would have passed
+      // over an initializeV2 that zero-wrote either pointer.
+      for (const [name, slot] of Object.entries(FIXTURE_POINTER_SLOTS)) {
+        const expected = ethers
+          .zeroPadValue(addresses[name as keyof typeof FIXTURE_POINTER_SLOTS], 32)
+          .toLowerCase();
+        expect(slotsBeforeMigration[slot]).to.equal(expected);
+        expect(await ethers.provider.getStorage(addresses.taskManager, slot)).to.equal(expected);
       }
     });
 
@@ -260,6 +274,35 @@ describe("Migration to role-based access control", function () {
         expect(await ethers.provider.getStorage(addresses.acl, IMPLEMENTATION_SLOT)).to.equal(
           implementation,
         );
+      });
+
+      it("does not bump the version again", async function () {
+        // `version` is a uint8 tracking the implementation generation. A resume or repair run
+        // upgrades nothing, so bumping it would decouple it from the deployed implementation for
+        // every off-chain reader - and walk a checked counter toward its revert ceiling.
+        const version = await taskManager.getVersion();
+
+        await quiet(() => migrateToRoles(hre, addresses, legacyOwner, 0));
+
+        expect(await taskManager.getVersion()).to.equal(version);
+      });
+
+      it("repairs share-registry grants it finds missing", async function () {
+        // The ACL pointer being set is not proof the registry is usable: a run that died between
+        // deployProxy and grantAllRoles leaves it with no UPGRADER_ROLE holder, i.e. permanently
+        // un-upgradeable. Taking the pointer as "already wired" and moving on would log success
+        // over exactly that state.
+        const registry = (await ethers.getContractFactory("ACPShareRegistry")).attach(
+          await acl.shareRegistry(),
+        ) as any;
+        const upgraderRole = await registry.UPGRADER_ROLE();
+
+        await registry.connect(legacyOwner).revokeRole(upgraderRole, legacyOwner.address);
+        expect(await registry.hasRole(upgraderRole, legacyOwner.address)).to.be.false;
+
+        await quiet(() => migrateToRoles(hre, addresses, legacyOwner, 0));
+
+        expect(await registry.hasRole(upgraderRole, legacyOwner.address)).to.be.true;
       });
 
       it("refuses once the default admin is no longer the signer", async function () {

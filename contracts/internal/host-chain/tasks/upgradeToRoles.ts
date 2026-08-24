@@ -203,7 +203,7 @@ async function migrateProxy(
   signer: any,
   adminDelay: number,
 ) {
-  const { ethers } = hre;
+  const { ethers, upgrades } = hre as any;
   console.log(chalk.bold.blue(`-----------------------${state.label}-------------------------`));
 
   const factory = await ethers.getContractFactory(state.factoryName, signer);
@@ -244,6 +244,26 @@ async function migrateProxy(
       );
     }
     console.log(chalk.green(`Upgraded ${state.label}; default admin is now ${admin}`));
+
+    // Raw deploy + upgradeToAndCall leaves the proxy unknown to the OpenZeppelin manifest, so a
+    // later `upgrades.*` call on it has nothing to diff against. Register it now that the new
+    // implementation is confirmed behind the proxy - same forceImport that task:upgradeTM does
+    // before validating. Only on this path: on the skip path below, the implementation was put
+    // there by something else and need not match this factory, and forceImport does not check.
+    //
+    // Non-fatal. The migration has already landed on-chain at this point, so failing here would
+    // report a successful upgrade as a failure. Note the manifest is local and gitignored - the
+    // durable layout baseline is the committed storage-layout-snapshot.json.
+    try {
+      await upgrades.forceImport(state.address, factory, { kind: "uups" });
+      console.log(chalk.dim(`Registered ${state.label} in the OpenZeppelin manifest`));
+    } catch (error: any) {
+      console.log(
+        chalk.yellow(
+          `Could not register ${state.label} in the OpenZeppelin manifest: ${error?.message ?? error}`,
+        ),
+      );
+    }
   }
 
   // initializeV2 already grants the roles each implementation declares today, so this is normally
@@ -258,8 +278,8 @@ async function migrateProxy(
  * Deploys the ACP infrastructure and registers it in the ACL, skipping whatever is already wired.
  *
  * Note the ACPShareRegistry initializer takes the admin only: it extends AccessControlUpgradeable,
- * not AccessControlDefaultAdminRulesUpgradeable, so there is no transfer delay to seed. Passing a
- * delay here - as the shared `getProxyContract` helper in deploy/deploy.ts does - reverts.
+ * not AccessControlDefaultAdminRulesUpgradeable, so there is no transfer delay to seed. Passing one
+ * reverts, which is what used to break the equivalent bringup in deploy/deploy.ts.
  */
 async function setupACP(hre: HardhatRuntimeEnvironment, aclProxy: any, signer: any) {
   const { ethers, upgrades } = hre as any;
@@ -297,6 +317,25 @@ async function setupACP(hre: HardhatRuntimeEnvironment, aclProxy: any, signer: a
     console.log(chalk.green("Set share registry in ACL"));
   } else {
     console.log(chalk.yellow("ACL already has a share registry:", shareRegistry));
+
+    // Re-check the grants, for the same reason migrateProxy does on its own skip path: a run that
+    // died between deployProxy and grantAllRoles leaves a registry with no UPGRADER_ROLE holder,
+    // and skipping straight past it on the strength of the ACL pointer would report "already
+    // wired" over a registry that can never be upgraded again.
+    const registry = (
+      await ethers.getContractFactory("ACPShareRegistry", signer)
+    ).attach(shareRegistry) as any;
+    if (await registry.hasRole(await registry.DEFAULT_ADMIN_ROLE(), signer.address)) {
+      await grantAllRoles(registry, signer);
+    } else {
+      // A registry wired by a different admin is not this run's to repair, and grantRole would
+      // revert. Say so instead - the ACP wiring itself is present either way.
+      console.log(
+        chalk.yellow(
+          `Signer ${signer.address} is not the share registry's admin - leaving its grants alone`,
+        ),
+      );
+    }
   }
 
   console.log("");
@@ -377,11 +416,17 @@ function aggregatorWallets(ethers: any): any[] {
  * matched against the configured signers and the committed aggregator wallets, because which
  * account deployed a given chain is not something this task can assume - deploy/deploy.ts picks
  * between the two sets at deploy time via TM_ADMIN_ADDRESS.
+ *
+ * `allowUnmatched` backs `--onlyvalidate`: a dry run should not need the production key in hand
+ * just to check that the new implementations are upgrade-safe. With no match it falls back to the
+ * legacy owner as an address-only stand-in, which is all preflight reads and all a run that sends
+ * no transactions can use.
  */
 async function resolveLegacySigner(
   hre: HardhatRuntimeEnvironment,
   key: string,
   taskManagerAddress: string,
+  allowUnmatched = false,
 ) {
   const { ethers } = hre;
   if (key !== "") {
@@ -394,6 +439,15 @@ async function resolveLegacySigner(
     (candidate: any) => candidate.address.toLowerCase() === legacyOwner.toLowerCase(),
   );
   if (!match) {
+    if (allowUnmatched) {
+      console.log(
+        chalk.yellow(
+          `No configured signer matches the legacy owner ${legacyOwner}. Continuing read-only - ` +
+            `this is enough to validate, but a real run needs --key.`,
+        ),
+      );
+      return { address: legacyOwner };
+    }
     throw new Error(
       `The TaskManager's legacy owner is ${legacyOwner}, and no configured signer matches it. ` +
         `Available: ${candidates.map((c: any) => c.address).join(", ")}. Pass --key with the ` +
@@ -450,14 +504,26 @@ export async function migrateToRoles(
 
   const [aclState, plaintextsState, taskManagerState] = states;
 
+  // migrateProxy upgrades exactly when the proxy has no default admin yet, so this is also the
+  // answer to "will the TaskManager implementation change in this run".
+  const taskManagerWasPreRoles = taskManagerState.defaultAdmin === null;
+
   const acl = await migrateProxy(hre, aclState, signer, adminDelay);
   await setupACP(hre, acl, signer);
   const plaintexts = await migrateProxy(hre, plaintextsState, signer, adminDelay);
   const taskManager = await migrateProxy(hre, taskManagerState, signer, adminDelay);
 
-  const incTx = await taskManager.incVersion();
-  await incTx.wait();
-  console.log(chalk.green("Bumped TaskManager version"));
+  // Guarded, unlike task:upgradeTM's unconditional bump - that task always upgrades, this one is
+  // resumable. `version` is a uint8 tracking the implementation generation, so bumping it on a
+  // resume or repair run that upgraded nothing decouples it from the deployed implementation for
+  // every off-chain consumer reading it, and walks a checked counter toward its revert ceiling.
+  if (taskManagerWasPreRoles) {
+    const incTx = await taskManager.incVersion();
+    await incTx.wait();
+    console.log(chalk.green("Bumped TaskManager version"));
+  } else {
+    console.log(chalk.yellow("TaskManager was already role-based - leaving its version alone"));
+  }
   console.log("");
 
   await report(hre, taskManager, acl, plaintexts);
@@ -477,9 +543,16 @@ task("task:upgradeToRoles")
     // Resolve the proxies first: it verifies there is a TaskManager at this address at all, which
     // otherwise surfaces as the far more confusing "legacy owner is 0x0 and no signer matches it".
     const addresses = await resolveProxies(hre, taskArguments.taskmanager);
-    const signer = await resolveLegacySigner(hre, taskArguments.key, taskArguments.taskmanager);
+    const signer = await resolveLegacySigner(
+      hre,
+      taskArguments.key,
+      taskArguments.taskmanager,
+      taskArguments.onlyvalidate,
+    );
 
-    if (hre.network.name.includes("localfhenix")) {
+    // Skipped under --onlyvalidate: funding sends a transaction, which that flag promises not to
+    // do, and the stand-in signer it may have returned is an address with no key behind it anyway.
+    if (hre.network.name.includes("localfhenix") && !taskArguments.onlyvalidate) {
       if ((await ethers.provider.getBalance(signer.address)).toString() === "0") {
         console.log(chalk.green("Funding account:", signer.address));
         await (hre as any).fhenixjs.getFunds(signer.address);
