@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **ACP infrastructure setup no longer silently skips the share registry** — the role-based access control change gave `getProxyContract` a new `adminDelay` parameter and updated the `ACL` and `PlaintextsStorage` call sites, but not the `ACPShareRegistry` one inside `ACPInfrastructureSetup`. Its two arguments landed in the wrong slots, `contractName` arrived as `undefined`, and `ethers.getContractFactory` threw `Cannot read properties of undefined (reading 'formatJson')`. The surrounding `try`/`catch` logged the error and returned it rather than rethrowing, so the deploy still exited successfully with `setShareRegistry` never called — leaving ACL without a share registry and failing every `withACP()` decrypt at `sealOutput`. `ACPInfrastructureSetup` now takes `adminDelay` and forwards the signer and delay. Note that `tsc --noEmit` flags the original call as `TS2554: Expected 3 arguments, but got 2`; hardhat's ts-node transpiles without type-checking, which is why it shipped.
+
 ## v0.1.5 - 2026-08-16
 
 ### Added

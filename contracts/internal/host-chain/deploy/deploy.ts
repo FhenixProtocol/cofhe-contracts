@@ -181,7 +181,7 @@ async function ACLSetup(
  * @param aclContract The ACL proxy contract
  * @param ownerSigner The ACL owner (allowed to call the address setters)
  */
-async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any) {
+async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminDelay: number) {
   try {
     const revokerFactory = await ethers.getContractFactory("ACPTimestampRevoker");
     const revoker = await revokerFactory.deploy();
@@ -200,7 +200,8 @@ async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any) {
     );
 
     const { ProxyAddress: shareRegistryAddress } = await getProxyContract(
-      ownerSigner.address,
+      ownerSigner,
+      adminDelay,
       "ACPShareRegistry",
     );
     const registryTx = await aclContract
@@ -441,7 +442,7 @@ const func: DeployFunction = async function () {
   await ACLSetup(TMProxyContract, adminSigner, aclContract);
 
   console.log(chalk.bold.blue("----------------------ACP infrastructure--------------------"));
-  await ACPInfrastructureSetup(aclContract, aggregatorSigners[0]);
+  await ACPInfrastructureSetup(aclContract, aggregatorSigners[0], adminDelay);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
