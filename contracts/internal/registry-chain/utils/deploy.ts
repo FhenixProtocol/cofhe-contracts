@@ -54,17 +54,22 @@ export async function grantAllRoles(
       (fragment: any) =>
         fragment.type === "function" &&
         fragment.inputs.length === 0 &&
-        /^[A-Z0-9_]+_ROLE$/.test(fragment.name),
+        /^[A-Z0-9_]+_ROLE$/.test(fragment.name) &&
+        fragment.name !== "DEFAULT_ADMIN_ROLE",
     )
     .map((fragment: any) => fragment.name);
 
   // Discovering roles from the ABI means an ABI that no longer exposes them - a stale typechain
   // build, the wrong factory, a renamed constant - silently grants nothing and returns success,
   // leaving the proxy with no UPGRADER_ROLE holder and a clean deploy log. Fail loudly instead.
+  // DEFAULT_ADMIN_ROLE is excluded from this count on purpose: it always matches the *_ROLE
+  // pattern via the inherited AccessControl getter, so counting it made this guard unreachable -
+  // an ABI missing every grantable role (e.g. UPGRADER_ROLE) still passed with length 1.
   if (roleNames.length === 0) {
     throw new Error(
-      `grantAllRoles found no *_ROLE constants on this contract's ABI, so it would grant nothing. ` +
-        `Expected at least UPGRADER_ROLE. Recompile, or check the factory being passed in.`,
+      `grantAllRoles found no grantable *_ROLE constants on this contract's ABI (excluding ` +
+        `DEFAULT_ADMIN_ROLE), so it would grant nothing. Expected at least UPGRADER_ROLE. ` +
+        `Recompile, or check the factory being passed in.`,
     );
   }
 
