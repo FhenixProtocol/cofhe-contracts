@@ -2,7 +2,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
-import { getDefaultAdmin, requireDefaultAdminIsSignerOrUnset } from "../../utils/roles";
+import { getDefaultAdmin, grantAllRoles, requireDefaultAdminIsSignerOrUnset } from "../../utils/roles";
 
 const { ethers } = hre;
 
@@ -333,6 +333,60 @@ describe("Role-based access control", function () {
           address: owner.address.toUpperCase().replace("0X", "0x"),
         }),
       ).to.not.throw();
+    });
+  });
+  // grantAllRoles must fail loudly on an ABI that only exposes DEFAULT_ADMIN_ROLE - the state a
+  // stale typechain build, the wrong factory, or a renamed constant produces. Before the
+  // DEFAULT_ADMIN_ROLE exclusion, this guard was unreachable: DEFAULT_ADMIN_ROLE always matches
+  // the *_ROLE pattern via the inherited getter, so roleNames.length was never 0, and a proxy
+  // could end up deployed with no UPGRADER_ROLE holder while the script logged success.
+  describe("grantAllRoles rejects a stale or mismatched ABI", function () {
+    function fakeContract(roleFragmentNames: string[]) {
+      const DEFAULT_ADMIN_ROLE_VALUE = ethers.ZeroHash;
+      const granted = new Set<string>();
+
+      const fragments = roleFragmentNames.map((name) => ({
+        type: "function",
+        name,
+        inputs: [] as unknown[],
+      }));
+
+      const contract: any = {
+        interface: { fragments },
+        DEFAULT_ADMIN_ROLE: async () => DEFAULT_ADMIN_ROLE_VALUE,
+        hasRole: async (role: string, account: string) => granted.has(`${role}:${account}`),
+        grantRole: async (role: string, account: string) => {
+          granted.add(`${role}:${account}`);
+          return { wait: async () => {} };
+        },
+      };
+      for (const name of roleFragmentNames) {
+        contract[name] = async () =>
+          name === "DEFAULT_ADMIN_ROLE"
+            ? DEFAULT_ADMIN_ROLE_VALUE
+            : `0x${Buffer.from(name).toString("hex").padStart(64, "0")}`;
+      }
+      contract.connect = () => contract;
+      return contract;
+    }
+
+    it("throws when the ABI exposes only DEFAULT_ADMIN_ROLE", async function () {
+      const contract = fakeContract(["DEFAULT_ADMIN_ROLE"]);
+      let thrown: Error | undefined;
+      try {
+        await grantAllRoles(contract, owner, undefined, false);
+      } catch (err) {
+        thrown = err as Error;
+      }
+      expect(thrown, "grantAllRoles should have thrown").to.not.equal(undefined);
+      expect(thrown!.message).to.match(/no grantable \*_ROLE constants/);
+    });
+
+    it("still grants every non-admin role when the ABI is healthy", async function () {
+      const contract = fakeContract(["DEFAULT_ADMIN_ROLE", "UPGRADER_ROLE", "PAUSER_ROLE"]);
+      await grantAllRoles(contract, owner, undefined, false);
+      expect(await contract.hasRole(await contract.UPGRADER_ROLE(), owner.address)).to.equal(true);
+      expect(await contract.hasRole(await contract.PAUSER_ROLE(), owner.address)).to.equal(true);
     });
   });
 });
