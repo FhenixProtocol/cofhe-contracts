@@ -1,10 +1,21 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity >=0.8.25 <0.9.0;
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
+import {LegacyOwnable} from "./LegacyOwnable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 
-contract PlaintextsStorage is UUPSUpgradeable, OwnableUpgradeable {
+contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /// @dev Reserves the namespace this contract used while it inherited OwnableUpgradeable.
+    ///      Already-deployed proxies still hold an owner there; keeping the declaration marks
+    ///      that storage as taken so a later upgrade cannot silently reuse it.
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
+    struct OwnableStorage {
+        address _owner;
+    }
+
     struct PlaintextResult {
         bool existenceIndicator;
         uint256 result;
@@ -40,10 +51,24 @@ contract PlaintextsStorage is UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
+    function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __UUPSUpgradeable_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
+    ///      Callable only by the owner the pre-roles implementation left behind - see
+    ///      {LegacyOwnable} for why that is the only authority available in this window.
+    ///      Grants UPGRADER_ROLE too: there is no upgrade task for this proxy, so a hand-rolled
+    ///      migration with no follow-up grant would leave it permanently un-upgradeable.
+    /// @param initialAdmin  Address receiving DEFAULT_ADMIN_ROLE and UPGRADER_ROLE.
+    /// @param initialDelay  Delay enforced on subsequent default-admin transfers.
+    /// @custom:oz-upgrades-validate-as-initializer
+    function initializeV2(address initialAdmin, uint48 initialDelay) public reinitializer(2) {
+        LegacyOwnable.requireLegacyOwner(msg.sender);
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+        _grantRole(UPGRADER_ROLE, initialAdmin);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 }

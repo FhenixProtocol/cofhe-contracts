@@ -29,7 +29,8 @@ const config: HardhatUserConfig = {
     },
     arbitrumSepolia: {
       chainId: 421614,
-      url: "https://little-convincing-fog.arbitrum-sepolia.quiknode.pro/e925be62bdfa8faab560daa332c0c95e26189870/",
+      // Keyed provider endpoints must come from the environment — public repo, keyless default only.
+      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://arbitrum-sepolia-rpc.publicnode.com",
       accounts: process.env.KEY ? [process.env.KEY] : [],
     },
   },

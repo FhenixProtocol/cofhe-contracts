@@ -3,7 +3,7 @@
 
 pragma solidity >=0.8.25 <0.9.0;
 
-import {FunctionId, ITaskManager, Utils, EncryptedInput, InEbool, InEuint8, InEuint16, InEuint32, InEuint64, InEuint128, InEaddress} from "./ICofhe.sol";
+import {FunctionId, ITaskManager, Utils, EncryptedInput, UnsignedEncryptedInput} from "./ICofhe.sol";
 
 type ebool is bytes32;
 type euint8 is bytes32;
@@ -20,6 +20,14 @@ type externalEuint32 is bytes32;
 type externalEuint64 is bytes32;
 type externalEuint128 is bytes32;
 type externalEaddress is bytes32;
+
+type sharedEbool is bytes32;
+type sharedEuint8 is bytes32;
+type sharedEuint16 is bytes32;
+type sharedEuint32 is bytes32;
+type sharedEuint64 is bytes32;
+type sharedEuint128 is bytes32;
+type sharedEaddress is bytes32;
 
 // ================================
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
@@ -202,8 +210,21 @@ library Impl {
         return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0)));
     }
 
+    /// @dev A single input is a batch of one: the signature must cover
+    ///      keccak256(h_0), the batch digest `batchVerifyInputs` rebuilds for a
+    ///      one-element batch.
     function verifyInput(EncryptedInput memory input) internal returns (bytes32) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).verifyInput(input, msg.sender));
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](1);
+        inputs[0] = UnsignedEncryptedInput(input.ctHash, input.securityZone, input.utype);
+        return verifyBatchInputs(inputs, input.signature)[0];
+    }
+
+    function verifyBatchInputs(UnsignedEncryptedInput[] memory inputs, bytes memory signature) internal returns (bytes32[] memory hashes) {
+        uint256[] memory handles = ITaskManager(TASK_MANAGER_ADDRESS).batchVerifyInputs(inputs, msg.sender, signature);
+        // uint256[] and bytes32[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            hashes := handles
+        }
     }
 
     /// @notice Generates a random value of a given type with the given seed, for the provided securityZone
@@ -2465,25 +2486,16 @@ library FHE {
         return randomEuint128(0);
     }
 
-    /// @notice Verifies and converts an inEbool input to an ebool encrypted type
+    /// @notice Verifies and converts an ABI-encoded encrypted input to an ebool encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An ebool containing the verified encrypted value
-    function asEbool(InEbool memory value) internal returns (ebool) {
-        Utils.expectUtype(value.utype, Utils.EBOOL_TFHE);
-        return ebool.wrap(Impl.verifyInput(Utils.inputFromEbool(value)));
-    }
-
-    /// @notice Verifies and converts an InEbool input in bytes format to an ebool encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
+    /// @param value The ABI-encoded (ctHash, securityZone, utype, signature) input
     /// @return An ebool containing the verified encrypted value
     function asEbool(bytes memory value) internal returns (ebool) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EBOOL_TFHE);
         return ebool.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEbool input in hash+proof format to an ebool encrypted type
+    /// @notice Verifies and converts an externalEbool handle and its proof to an ebool encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
@@ -2493,25 +2505,16 @@ library FHE {
         return ebool.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint8 input to an euint8 encrypted type
+    /// @notice Verifies and converts an ABI-encoded encrypted input to an euint8 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An euint8 containing the verified encrypted value
-    function asEuint8(InEuint8 memory value) internal returns (euint8) {
-        Utils.expectUtype(value.utype, Utils.EUINT8_TFHE);
-        return euint8.wrap(Impl.verifyInput(Utils.inputFromEuint8(value)));
-    }
-
-    /// @notice Verifies and converts an InEuint8 input in bytes format to an euint8 encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
+    /// @param value The ABI-encoded (ctHash, securityZone, utype, signature) input
     /// @return An euint8 containing the verified encrypted value
     function asEuint8(bytes memory value) internal returns (euint8) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT8_TFHE);
         return euint8.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint8 input in hash+proof format to an euint8 encrypted type
+    /// @notice Verifies and converts an externalEuint8 handle and its proof to an euint8 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
@@ -2521,25 +2524,16 @@ library FHE {
         return euint8.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint16 input to an euint16 encrypted type
+    /// @notice Verifies and converts an ABI-encoded encrypted input to an euint16 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An euint16 containing the verified encrypted value
-    function asEuint16(InEuint16 memory value) internal returns (euint16) {
-        Utils.expectUtype(value.utype, Utils.EUINT16_TFHE);
-        return euint16.wrap(Impl.verifyInput(Utils.inputFromEuint16(value)));
-    }
-
-    /// @notice Verifies and converts an InEuint16 input in bytes format to an euint16 encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
+    /// @param value The ABI-encoded (ctHash, securityZone, utype, signature) input
     /// @return An euint16 containing the verified encrypted value
     function asEuint16(bytes memory value) internal returns (euint16) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT16_TFHE);
         return euint16.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint16 input in hash+proof format to an euint16 encrypted type
+    /// @notice Verifies and converts an externalEuint16 handle and its proof to an euint16 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
@@ -2549,25 +2543,16 @@ library FHE {
         return euint16.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint32 input to an euint32 encrypted type
+    /// @notice Verifies and converts an ABI-encoded encrypted input to an euint32 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An euint32 containing the verified encrypted value
-    function asEuint32(InEuint32 memory value) internal returns (euint32) {
-        Utils.expectUtype(value.utype, Utils.EUINT32_TFHE);
-        return euint32.wrap(Impl.verifyInput(Utils.inputFromEuint32(value)));
-    }
-
-    /// @notice Verifies and converts an InEuint32 input in bytes format to an euint32 encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
+    /// @param value The ABI-encoded (ctHash, securityZone, utype, signature) input
     /// @return An euint32 containing the verified encrypted value
     function asEuint32(bytes memory value) internal returns (euint32) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT32_TFHE);
         return euint32.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint32 input in hash+proof format to an euint32 encrypted type
+    /// @notice Verifies and converts an externalEuint32 handle and its proof to an euint32 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
@@ -2577,25 +2562,16 @@ library FHE {
         return euint32.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint64 input to an euint64 encrypted type
+    /// @notice Verifies and converts an ABI-encoded encrypted input to an euint64 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An euint64 containing the verified encrypted value
-    function asEuint64(InEuint64 memory value) internal returns (euint64) {
-        Utils.expectUtype(value.utype, Utils.EUINT64_TFHE);
-        return euint64.wrap(Impl.verifyInput(Utils.inputFromEuint64(value)));
-    }
-
-    /// @notice Verifies and converts an InEuint64 input in bytes format to an euint64 encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
+    /// @param value The ABI-encoded (ctHash, securityZone, utype, signature) input
     /// @return An euint64 containing the verified encrypted value
     function asEuint64(bytes memory value) internal returns (euint64) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT64_TFHE);
         return euint64.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint64 input in hash+proof format to an euint64 encrypted type
+    /// @notice Verifies and converts an externalEuint64 handle and its proof to an euint64 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
@@ -2605,25 +2581,16 @@ library FHE {
         return euint64.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint128 input to an euint128 encrypted type
+    /// @notice Verifies and converts an ABI-encoded encrypted input to an euint128 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An euint128 containing the verified encrypted value
-    function asEuint128(InEuint128 memory value) internal returns (euint128) {
-        Utils.expectUtype(value.utype, Utils.EUINT128_TFHE);
-        return euint128.wrap(Impl.verifyInput(Utils.inputFromEuint128(value)));
-    }
-
-    /// @notice Verifies and converts an InEuint128 input in bytes format to an euint128 encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
+    /// @param value The ABI-encoded (ctHash, securityZone, utype, signature) input
     /// @return An euint128 containing the verified encrypted value
     function asEuint128(bytes memory value) internal returns (euint128) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EUINT128_TFHE);
         return euint128.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEuint128 input in hash+proof format to an euint128 encrypted type
+    /// @notice Verifies and converts an externalEuint128 handle and its proof to an euint128 encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
@@ -2633,25 +2600,16 @@ library FHE {
         return euint128.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEaddress input to an eaddress encrypted type
+    /// @notice Verifies and converts an ABI-encoded encrypted input to an eaddress encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
-    /// @return An eaddress containing the verified encrypted value
-    function asEaddress(InEaddress memory value) internal returns (eaddress) {
-        Utils.expectUtype(value.utype, Utils.EADDRESS_TFHE);
-        return eaddress.wrap(Impl.verifyInput(Utils.inputFromEaddress(value)));
-    }
-
-    /// @notice Verifies and converts an InEaddress input in bytes format to an eaddress encrypted type
-    /// @dev Verifies the input signature and security parameters before converting to the encrypted type
-    /// @param value The input value containing hash, type, security zone and signature
+    /// @param value The ABI-encoded (ctHash, securityZone, utype, signature) input
     /// @return An eaddress containing the verified encrypted value
     function asEaddress(bytes memory value) internal returns (eaddress) {
         EncryptedInput memory input = Utils.inputFromBytes(value, Utils.EADDRESS_TFHE);
         return eaddress.wrap(Impl.verifyInput(input));
     }
 
-    /// @notice Verifies and converts an InEaddress input in hash+proof format to an eaddress encrypted type
+    /// @notice Verifies and converts an externalEaddress handle and its proof to an eaddress encrypted type
     /// @dev Verifies the input signature and security parameters before converting to the encrypted type
     /// @param hash The hash of the encrypted input
     /// @param proof The proof containing the signature
@@ -2659,6 +2617,174 @@ library FHE {
     function asEaddress(externalEaddress hash, bytes memory proof) internal returns (eaddress) {
         EncryptedInput memory input = Utils.inputFromHashAndProof(externalEaddress.unwrap(hash), proof, Utils.EADDRESS_TFHE);
         return eaddress.wrap(Impl.verifyInput(input));
+    }
+
+    // ********** BATCH INPUT VERIFICATION ************* //
+    // Each `asE*s` verifies a batch of inputs authenticated by a SINGLE
+    // signature over keccak256(h_0 || ... || h_n), where each h_i is the same
+    // per-input message hash used by the single-input `asE*` functions. Outputs
+    // are returned in input order. Inputs are the `external*` ciphertext handles;
+    // as with the single-input `external*` overloads, securityZone is 0.
+
+    /// @notice Verifies a batch of externalEbool inputs sharing one signature.
+    function asEbools(externalEbool[] memory values, bytes memory signature) internal returns (ebool[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            inputs[i] = UnsignedEncryptedInput(uint256(externalEbool.unwrap(values[i])), 0, Utils.EBOOL_TFHE);
+        }
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and ebool[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of ABI-encoded (uint256 ctHash, uint8 securityZone, uint8 utype) ebool inputs sharing one signature.
+    function asEbools(bytes[] memory values, bytes memory signature) internal returns (ebool[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = Utils.batchInputsFromBytes(values, Utils.EBOOL_TFHE);
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and ebool[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of externalEuint8 inputs sharing one signature.
+    function asEuint8s(externalEuint8[] memory values, bytes memory signature) internal returns (euint8[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            inputs[i] = UnsignedEncryptedInput(uint256(externalEuint8.unwrap(values[i])), 0, Utils.EUINT8_TFHE);
+        }
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint8[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of ABI-encoded (uint256 ctHash, uint8 securityZone, uint8 utype) euint8 inputs sharing one signature.
+    function asEuint8s(bytes[] memory values, bytes memory signature) internal returns (euint8[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = Utils.batchInputsFromBytes(values, Utils.EUINT8_TFHE);
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint8[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of externalEuint16 inputs sharing one signature.
+    function asEuint16s(externalEuint16[] memory values, bytes memory signature) internal returns (euint16[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            inputs[i] = UnsignedEncryptedInput(uint256(externalEuint16.unwrap(values[i])), 0, Utils.EUINT16_TFHE);
+        }
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint16[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of ABI-encoded (uint256 ctHash, uint8 securityZone, uint8 utype) euint16 inputs sharing one signature.
+    function asEuint16s(bytes[] memory values, bytes memory signature) internal returns (euint16[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = Utils.batchInputsFromBytes(values, Utils.EUINT16_TFHE);
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint16[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of externalEuint32 inputs sharing one signature.
+    function asEuint32s(externalEuint32[] memory values, bytes memory signature) internal returns (euint32[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            inputs[i] = UnsignedEncryptedInput(uint256(externalEuint32.unwrap(values[i])), 0, Utils.EUINT32_TFHE);
+        }
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint32[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of ABI-encoded (uint256 ctHash, uint8 securityZone, uint8 utype) euint32 inputs sharing one signature.
+    function asEuint32s(bytes[] memory values, bytes memory signature) internal returns (euint32[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = Utils.batchInputsFromBytes(values, Utils.EUINT32_TFHE);
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint32[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of externalEuint64 inputs sharing one signature.
+    function asEuint64s(externalEuint64[] memory values, bytes memory signature) internal returns (euint64[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            inputs[i] = UnsignedEncryptedInput(uint256(externalEuint64.unwrap(values[i])), 0, Utils.EUINT64_TFHE);
+        }
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint64[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of ABI-encoded (uint256 ctHash, uint8 securityZone, uint8 utype) euint64 inputs sharing one signature.
+    function asEuint64s(bytes[] memory values, bytes memory signature) internal returns (euint64[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = Utils.batchInputsFromBytes(values, Utils.EUINT64_TFHE);
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint64[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of externalEuint128 inputs sharing one signature.
+    function asEuint128s(externalEuint128[] memory values, bytes memory signature) internal returns (euint128[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            inputs[i] = UnsignedEncryptedInput(uint256(externalEuint128.unwrap(values[i])), 0, Utils.EUINT128_TFHE);
+        }
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint128[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of ABI-encoded (uint256 ctHash, uint8 securityZone, uint8 utype) euint128 inputs sharing one signature.
+    function asEuint128s(bytes[] memory values, bytes memory signature) internal returns (euint128[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = Utils.batchInputsFromBytes(values, Utils.EUINT128_TFHE);
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and euint128[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of externalEaddress inputs sharing one signature.
+    function asEaddresses(externalEaddress[] memory values, bytes memory signature) internal returns (eaddress[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = new UnsignedEncryptedInput[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            inputs[i] = UnsignedEncryptedInput(uint256(externalEaddress.unwrap(values[i])), 0, Utils.EADDRESS_TFHE);
+        }
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and eaddress[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
+    }
+
+    /// @notice Verifies a batch of ABI-encoded (uint256 ctHash, uint8 securityZone, uint8 utype) eaddress inputs sharing one signature.
+    function asEaddresses(bytes[] memory values, bytes memory signature) internal returns (eaddress[] memory result) {
+        UnsignedEncryptedInput[] memory inputs = Utils.batchInputsFromBytes(values, Utils.EADDRESS_TFHE);
+        bytes32[] memory hashes = Impl.verifyBatchInputs(inputs, signature);
+        // bytes32[] and eaddress[] have identical memory layout, so reinterpret in place instead of copying.
+        assembly ("memory-safe") {
+            result := hashes
+        }
     }
 
     // ********** TYPE CASTING ************* //
@@ -3318,6 +3444,254 @@ library FHE {
     function allowTransient(eaddress ctHash, address account) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(eaddress.unwrap(ctHash)), account);
     }
+
+    // ********** SHARE / RECEIVE ************* //
+
+    /// @notice Grants `receiver` transient access to the ciphertext and directs it at `receiver`
+    ///         for the duration of this transaction.
+    /// @dev Reverts with SenderNotAllowed unless this contract is itself allowed on `ctHash`.
+    /// @param ctHash The value to share
+    /// @param receiver The contract the value is being handed to
+    /// @return A sharedEbool carrying the handle and the permission to use it
+    function shareEbool(ebool ctHash, address receiver) internal returns (sharedEbool) {
+        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(ebool.unwrap(ctHash)), receiver);
+        return sharedEbool.wrap(ebool.unwrap(ctHash));
+    }
+
+    /// @notice Consumes a share that arrived as an argument to the enclosing function.
+    /// @dev This is an internal function, so it is inlined into the receiving contract and
+    ///      `msg.sender` is that contract's caller — the sharer is resolved automatically.
+    ///      Reverts with NotShared if no share is pending, or UnexpectedSharer if the pending
+    ///      share came from a party other than the caller.
+    /// @param shared The value received as a parameter
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEboolParam(sharedEbool shared) internal returns (ebool) {
+        bytes32 handle = sharedEbool.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        return ebool.wrap(handle);
+    }
+
+    /// @notice Consumes a share that arrived as the return value of a call this contract made.
+    /// @param shared The value returned by the call
+    /// @param callee MUST be the address called in the same expression. Passing any other
+    ///        address checks who created the share rather than who handed it over.
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEboolFromCall(sharedEbool shared, address callee) internal returns (ebool) {
+        bytes32 handle = sharedEbool.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        return ebool.wrap(handle);
+    }
+
+    /// @notice Grants `receiver` transient access to the ciphertext and directs it at `receiver`
+    ///         for the duration of this transaction.
+    /// @dev Reverts with SenderNotAllowed unless this contract is itself allowed on `ctHash`.
+    /// @param ctHash The value to share
+    /// @param receiver The contract the value is being handed to
+    /// @return A sharedEuint8 carrying the handle and the permission to use it
+    function shareEuint8(euint8 ctHash, address receiver) internal returns (sharedEuint8) {
+        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint8.unwrap(ctHash)), receiver);
+        return sharedEuint8.wrap(euint8.unwrap(ctHash));
+    }
+
+    /// @notice Consumes a share that arrived as an argument to the enclosing function.
+    /// @dev This is an internal function, so it is inlined into the receiving contract and
+    ///      `msg.sender` is that contract's caller — the sharer is resolved automatically.
+    ///      Reverts with NotShared if no share is pending, or UnexpectedSharer if the pending
+    ///      share came from a party other than the caller.
+    /// @param shared The value received as a parameter
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint8Param(sharedEuint8 shared) internal returns (euint8) {
+        bytes32 handle = sharedEuint8.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        return euint8.wrap(handle);
+    }
+
+    /// @notice Consumes a share that arrived as the return value of a call this contract made.
+    /// @param shared The value returned by the call
+    /// @param callee MUST be the address called in the same expression. Passing any other
+    ///        address checks who created the share rather than who handed it over.
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint8FromCall(sharedEuint8 shared, address callee) internal returns (euint8) {
+        bytes32 handle = sharedEuint8.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        return euint8.wrap(handle);
+    }
+
+    /// @notice Grants `receiver` transient access to the ciphertext and directs it at `receiver`
+    ///         for the duration of this transaction.
+    /// @dev Reverts with SenderNotAllowed unless this contract is itself allowed on `ctHash`.
+    /// @param ctHash The value to share
+    /// @param receiver The contract the value is being handed to
+    /// @return A sharedEuint16 carrying the handle and the permission to use it
+    function shareEuint16(euint16 ctHash, address receiver) internal returns (sharedEuint16) {
+        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint16.unwrap(ctHash)), receiver);
+        return sharedEuint16.wrap(euint16.unwrap(ctHash));
+    }
+
+    /// @notice Consumes a share that arrived as an argument to the enclosing function.
+    /// @dev This is an internal function, so it is inlined into the receiving contract and
+    ///      `msg.sender` is that contract's caller — the sharer is resolved automatically.
+    ///      Reverts with NotShared if no share is pending, or UnexpectedSharer if the pending
+    ///      share came from a party other than the caller.
+    /// @param shared The value received as a parameter
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint16Param(sharedEuint16 shared) internal returns (euint16) {
+        bytes32 handle = sharedEuint16.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        return euint16.wrap(handle);
+    }
+
+    /// @notice Consumes a share that arrived as the return value of a call this contract made.
+    /// @param shared The value returned by the call
+    /// @param callee MUST be the address called in the same expression. Passing any other
+    ///        address checks who created the share rather than who handed it over.
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint16FromCall(sharedEuint16 shared, address callee) internal returns (euint16) {
+        bytes32 handle = sharedEuint16.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        return euint16.wrap(handle);
+    }
+
+    /// @notice Grants `receiver` transient access to the ciphertext and directs it at `receiver`
+    ///         for the duration of this transaction.
+    /// @dev Reverts with SenderNotAllowed unless this contract is itself allowed on `ctHash`.
+    /// @param ctHash The value to share
+    /// @param receiver The contract the value is being handed to
+    /// @return A sharedEuint32 carrying the handle and the permission to use it
+    function shareEuint32(euint32 ctHash, address receiver) internal returns (sharedEuint32) {
+        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint32.unwrap(ctHash)), receiver);
+        return sharedEuint32.wrap(euint32.unwrap(ctHash));
+    }
+
+    /// @notice Consumes a share that arrived as an argument to the enclosing function.
+    /// @dev This is an internal function, so it is inlined into the receiving contract and
+    ///      `msg.sender` is that contract's caller — the sharer is resolved automatically.
+    ///      Reverts with NotShared if no share is pending, or UnexpectedSharer if the pending
+    ///      share came from a party other than the caller.
+    /// @param shared The value received as a parameter
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint32Param(sharedEuint32 shared) internal returns (euint32) {
+        bytes32 handle = sharedEuint32.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        return euint32.wrap(handle);
+    }
+
+    /// @notice Consumes a share that arrived as the return value of a call this contract made.
+    /// @param shared The value returned by the call
+    /// @param callee MUST be the address called in the same expression. Passing any other
+    ///        address checks who created the share rather than who handed it over.
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint32FromCall(sharedEuint32 shared, address callee) internal returns (euint32) {
+        bytes32 handle = sharedEuint32.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        return euint32.wrap(handle);
+    }
+
+    /// @notice Grants `receiver` transient access to the ciphertext and directs it at `receiver`
+    ///         for the duration of this transaction.
+    /// @dev Reverts with SenderNotAllowed unless this contract is itself allowed on `ctHash`.
+    /// @param ctHash The value to share
+    /// @param receiver The contract the value is being handed to
+    /// @return A sharedEuint64 carrying the handle and the permission to use it
+    function shareEuint64(euint64 ctHash, address receiver) internal returns (sharedEuint64) {
+        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint64.unwrap(ctHash)), receiver);
+        return sharedEuint64.wrap(euint64.unwrap(ctHash));
+    }
+
+    /// @notice Consumes a share that arrived as an argument to the enclosing function.
+    /// @dev This is an internal function, so it is inlined into the receiving contract and
+    ///      `msg.sender` is that contract's caller — the sharer is resolved automatically.
+    ///      Reverts with NotShared if no share is pending, or UnexpectedSharer if the pending
+    ///      share came from a party other than the caller.
+    /// @param shared The value received as a parameter
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint64Param(sharedEuint64 shared) internal returns (euint64) {
+        bytes32 handle = sharedEuint64.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        return euint64.wrap(handle);
+    }
+
+    /// @notice Consumes a share that arrived as the return value of a call this contract made.
+    /// @param shared The value returned by the call
+    /// @param callee MUST be the address called in the same expression. Passing any other
+    ///        address checks who created the share rather than who handed it over.
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint64FromCall(sharedEuint64 shared, address callee) internal returns (euint64) {
+        bytes32 handle = sharedEuint64.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        return euint64.wrap(handle);
+    }
+
+    /// @notice Grants `receiver` transient access to the ciphertext and directs it at `receiver`
+    ///         for the duration of this transaction.
+    /// @dev Reverts with SenderNotAllowed unless this contract is itself allowed on `ctHash`.
+    /// @param ctHash The value to share
+    /// @param receiver The contract the value is being handed to
+    /// @return A sharedEuint128 carrying the handle and the permission to use it
+    function shareEuint128(euint128 ctHash, address receiver) internal returns (sharedEuint128) {
+        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint128.unwrap(ctHash)), receiver);
+        return sharedEuint128.wrap(euint128.unwrap(ctHash));
+    }
+
+    /// @notice Consumes a share that arrived as an argument to the enclosing function.
+    /// @dev This is an internal function, so it is inlined into the receiving contract and
+    ///      `msg.sender` is that contract's caller — the sharer is resolved automatically.
+    ///      Reverts with NotShared if no share is pending, or UnexpectedSharer if the pending
+    ///      share came from a party other than the caller.
+    /// @param shared The value received as a parameter
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint128Param(sharedEuint128 shared) internal returns (euint128) {
+        bytes32 handle = sharedEuint128.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        return euint128.wrap(handle);
+    }
+
+    /// @notice Consumes a share that arrived as the return value of a call this contract made.
+    /// @param shared The value returned by the call
+    /// @param callee MUST be the address called in the same expression. Passing any other
+    ///        address checks who created the share rather than who handed it over.
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEuint128FromCall(sharedEuint128 shared, address callee) internal returns (euint128) {
+        bytes32 handle = sharedEuint128.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        return euint128.wrap(handle);
+    }
+
+    /// @notice Grants `receiver` transient access to the ciphertext and directs it at `receiver`
+    ///         for the duration of this transaction.
+    /// @dev Reverts with SenderNotAllowed unless this contract is itself allowed on `ctHash`.
+    /// @param ctHash The value to share
+    /// @param receiver The contract the value is being handed to
+    /// @return A sharedEaddress carrying the handle and the permission to use it
+    function shareEaddress(eaddress ctHash, address receiver) internal returns (sharedEaddress) {
+        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(eaddress.unwrap(ctHash)), receiver);
+        return sharedEaddress.wrap(eaddress.unwrap(ctHash));
+    }
+
+    /// @notice Consumes a share that arrived as an argument to the enclosing function.
+    /// @dev This is an internal function, so it is inlined into the receiving contract and
+    ///      `msg.sender` is that contract's caller — the sharer is resolved automatically.
+    ///      Reverts with NotShared if no share is pending, or UnexpectedSharer if the pending
+    ///      share came from a party other than the caller.
+    /// @param shared The value received as a parameter
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEaddressParam(sharedEaddress shared) internal returns (eaddress) {
+        bytes32 handle = sharedEaddress.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        return eaddress.wrap(handle);
+    }
+
+    /// @notice Consumes a share that arrived as the return value of a call this contract made.
+    /// @param shared The value returned by the call
+    /// @param callee MUST be the address called in the same expression. Passing any other
+    ///        address checks who created the share rather than who handed it over.
+    /// @return The usable handle, with transient access for the rest of this transaction
+    function receiveEaddressFromCall(sharedEaddress shared, address callee) internal returns (eaddress) {
+        bytes32 handle = sharedEaddress.unwrap(shared);
+        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        return eaddress.wrap(handle);
+    }
+
 
     // ********** PUBLISH DECRYPT RESULT ************* //
 

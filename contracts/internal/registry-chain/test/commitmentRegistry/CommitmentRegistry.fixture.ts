@@ -3,23 +3,28 @@ const { ethers } = hre;
 import { upgrades } from "hardhat";
 import { BaseContract } from "ethers";
 
+import { grantAllRoles } from "../../utils/deploy";
+
 export interface CommitmentRegistryFixture {
   registry: BaseContract;
-  owner: any;
+  admin: any;
   poster: any;
   otherAccount: any;
 }
 
 export async function deployCommitmentRegistryFixture(): Promise<CommitmentRegistryFixture> {
-  const [owner, poster, otherAccount] = await ethers.getSigners();
+  const [admin, poster, otherAccount] = await ethers.getSigners();
 
   const CommitmentRegistry = await ethers.getContractFactory("CommitmentRegistry");
   const deployed = await upgrades.deployProxy(
     CommitmentRegistry,
-    [owner.address, poster.address],
+    [admin.address, 0, poster.address],
     { kind: "uups", initializer: "initialize" },
   );
   const registry = await deployed.waitForDeployment();
 
-  return { registry, owner, poster, otherAccount };
+  // `initialize` only grants DEFAULT_ADMIN_ROLE, mirroring what the deploy script does.
+  await grantAllRoles(registry, admin);
+
+  return { registry, admin, poster, otherAccount };
 }

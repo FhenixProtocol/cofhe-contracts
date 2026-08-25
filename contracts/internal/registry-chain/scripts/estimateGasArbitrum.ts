@@ -1,4 +1,5 @@
 import hre from "hardhat";
+import { grantAllRoles } from "../utils/deploy";
 const { ethers, upgrades } = hre;
 
 const NODE_INTERFACE_ADDRESS = "0x00000000000000000000000000000000000000C8";
@@ -24,13 +25,16 @@ async function main() {
   // Deploy
   console.log("\n--- Deploying CommitmentRegistry ---");
   const Factory = await ethers.getContractFactory("CommitmentRegistry");
-  const proxy = await upgrades.deployProxy(Factory, [signer.address, signer.address], {
+  const proxy = await upgrades.deployProxy(Factory, [signer.address, 0, signer.address], {
     kind: "uups",
     initializer: "initialize",
   });
   await proxy.waitForDeployment();
   const registryAddress = await proxy.getAddress();
   console.log(`Deployed at: ${registryAddress}`);
+
+  // `initialize` only grants DEFAULT_ADMIN_ROLE; setVersionStatus needs VERSION_MANAGER_ROLE.
+  await grantAllRoles(proxy, signer);
 
   // Activate a version
   const version = ethers.keccak256(ethers.toUtf8Bytes("gas-test-v1"));
