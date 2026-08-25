@@ -3743,6 +3743,8 @@ library FHE {
     function allowForDecryption(eaddress ctHash) internal {
         ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(eaddress.unwrap(ctHash)));
     }
+
+
     // ********** PUBLISH DECRYPT RESULT ************* //
 
     /// @notice Publish a signed decrypt result to the chain
