@@ -266,6 +266,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     }
 
     function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
+        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, minSZ, maxSZ);
         securityZoneMin = minSZ;
         securityZoneMax = maxSZ;
     }
@@ -280,6 +281,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
 
     function incVersion() public onlyRole(UPGRADER_ROLE) {
         version++;
+        emit VersionIncremented(version);
     }
 
     function _authorizeUpgrade(
@@ -300,6 +302,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     event AccessListEnabledSet(bool enabled);
     event AccessGranted(address indexed account);
     event AccessRevoked(address indexed account);
+    event ACLContractChanged(address indexed oldACL, address indexed newACL);
+    event PlaintextsStorageChanged(address indexed oldStorage, address indexed newStorage);
+    event SecurityZonesChanged(int32 oldMin, int32 oldMax, int32 newMin, int32 newMax);
+    event EnabledSet(bool enabled);
+    event VersionIncremented(uint8 newVersion);
 
     struct Task {
         address creator;
@@ -364,10 +371,12 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
 
     function enable() external onlyRole(PAUSER_ROLE) {
         isEnabled = true;
+        emit EnabledSet(true);
     }
 
     function disable() external onlyRole(PAUSER_ROLE) {
         isEnabled = false;
+        emit EnabledSet(false);
     }
 
     function enableAccessList() external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
@@ -1014,6 +1023,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (securityZone < securityZoneMin) {
             revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
         }
+        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, securityZoneMin, securityZone);
         securityZoneMax = securityZone;
     }
 
@@ -1021,6 +1031,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (securityZone > securityZoneMax) {
             revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
         }
+        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, securityZone, securityZoneMax);
         securityZoneMin = securityZone;
     }
 
@@ -1034,6 +1045,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (_aclAddress == address(0)) {
             revert InvalidAddress();
         }
+        emit ACLContractChanged(address(acl), _aclAddress);
         acl = ACL(_aclAddress);
     }
 
@@ -1046,6 +1058,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (_plaintextsStorageAddress == address(0)) {
             revert InvalidAddress();
         }
+        emit PlaintextsStorageChanged(address(plaintextsStorage), _plaintextsStorageAddress);
         plaintextsStorage = PlaintextsStorage(_plaintextsStorageAddress);
     }
 
