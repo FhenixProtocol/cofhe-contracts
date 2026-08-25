@@ -3,9 +3,10 @@ pragma solidity >=0.8.25 <0.9.0;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
-import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
+import {LegacyOwnable} from "./LegacyOwnable.sol";
+import {PermissionedUpgradeable, ACP, SCOPE_GLOBAL, SCOPE_CONTRACT, SCOPE_HANDLES} from "./Permissioned.sol";
 
 /**
  * @title  ACL
@@ -14,7 +15,22 @@ import {PermissionedUpgradeable, Permission} from "./Permissioned.sol";
  *         By defining and enforcing these permissions, the ACL ensures that encrypted data remains secure while still being usable
  *         within authorized contexts.
  */
-contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeable {
+contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, PermissionedUpgradeable {
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /// @dev Reserves the namespaces this contract used while it inherited Ownable2StepUpgradeable.
+    ///      Already-deployed proxies still hold an owner there; keeping the declarations marks
+    ///      that storage as taken so a later upgrade cannot silently reuse it.
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
+    struct OwnableStorage {
+        address _owner;
+    }
+
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable2Step
+    struct Ownable2StepStorage {
+        address _pendingOwner;
+    }
+
     /// @notice Returned if the delegatee contract is already delegatee for sender & delegator addresses.
     error AlreadyDelegated();
 
@@ -29,6 +45,17 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     /// @param sender   Sender address.
     error DirectAllowForbidden(address sender);
 
+    /// @notice         Returned when no share is pending at (handle, receiver).
+    /// @param handle   Handle.
+    /// @param receiver Address attempting to claim the share.
+    error NotShared(uint256 handle, address receiver);
+
+    /// @notice         Returned when the pending share was created by someone other than the
+    ///                 party the receiver named.
+    /// @param expected Sharer the receiver named.
+    /// @param actual   Sharer that actually created the share.
+    error UnexpectedSharer(address expected, address actual);
+
     /// @notice             Emitted when a list of handles is allowed for decryption.
     /// @param handlesList  List of handles allowed for decryption.
     event AllowedForDecryption(uint256[] handlesList);
@@ -39,12 +66,25 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     /// @param contractAddress  Contract address.
     event NewDelegation(address indexed sender, address indexed delegatee, address indexed contractAddress);
 
+    /// @notice                 Emitted when the default revoker contract address is updated.
+    /// @param oldAddress       Previous address.
+    /// @param newAddress       New address (zero = unset).
+    event DefaultRevokerContractUpdated(address oldAddress, address newAddress);
+
+    /// @notice                 Emitted when the share registry address is updated.
+    /// @param oldAddress       Previous address.
+    /// @param newAddress       New address (zero = unset).
+    event ShareRegistryUpdated(address oldAddress, address newAddress);
+
     /// @custom:storage-location erc7201:cofhe.storage.ACL
     struct ACLStorage {
         mapping(uint256 handle => bool isGlobal) globalHandles;
         mapping(uint256 handle => mapping(address account => bool isAllowed)) persistedAllowedPairs;
         mapping(uint256 => bool) allowedForDecryption;
         mapping(address account => mapping(address delegatee => mapping(address contractAddress => bool isDelegate))) delegates;
+        // ACP infrastructure addresses served to SDKs (appended fields — do not reorder)
+        address defaultRevokerContract;
+        address shareRegistry;
     }
 
     /// @notice Name of the contract.
@@ -65,6 +105,10 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
     /// @dev keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACL")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ACL_SLOT = keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACL")) - 1)) & ~bytes32(uint256(0xff));
 
+    /// @dev Domain separator for share slots. Share keys are derived from a longer preimage than
+    ///      transient allowance keys and carry this prefix, so the two key spaces cannot alias.
+    bytes32 private constant SHARE_DOMAIN = keccak256("cofhe.acl.share");
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -72,11 +116,31 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /**
      * @notice              Initializes the contract.
-     * @param initialOwner  Initial owner address.
+     * @param initialAdmin  Initial admin address.
+     * @param initialDelay  Initial delay for the default admin transfer.
      */
-    function initialize(address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
+    function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __PermissionedUpgradeable_init();
+    }
+
+    /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
+    ///      Callable only by the owner the pre-roles implementation left behind - see
+    ///      {LegacyOwnable} for why that is the only authority available in this window.
+    ///      Grants UPGRADER_ROLE too: there is no upgrade task for this proxy, so a hand-rolled
+    ///      migration with no follow-up grant would leave it permanently un-upgradeable.
+    /// @param initialAdmin  Address receiving DEFAULT_ADMIN_ROLE and UPGRADER_ROLE.
+    /// @param initialDelay  Delay enforced on subsequent default-admin transfers.
+    /// @dev `PermissionedUpgradeable` has no initializer call here on purpose: its only
+    ///      init work is writing the EIP-712 name/version, and {PermissionedUpgradeable}
+    ///      overrides `_EIP712Name`/`_EIP712Version` to return them from code, so that
+    ///      storage is never read. Writing it would be dead state on every migration.
+    /// @custom:oz-upgrades-unsafe-allow missing-initializer-call
+    /// @custom:oz-upgrades-validate-as-initializer
+    function initializeV2(address initialAdmin, uint48 initialDelay) public reinitializer(2) {
+        LegacyOwnable.requireLegacyOwner(msg.sender);
+        __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
+        _grantRole(UPGRADER_ROLE, initialAdmin);
     }
 
     /**
@@ -158,14 +222,143 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         if (!isAllowed(handle, requester) && requester != TASK_MANAGER_ADDRESS) {
             revert SenderNotAllowed(requester);
         }
-        
-        bytes32 key = keccak256(abi.encodePacked(handle, account));
+
+        _allowTransient(handle, account);
+    }
+
+    /**
+     * @notice              Allows the use of every handle in `handles` by address `account` for this transaction.
+     * @dev                 Batch form of allowTransient(), so a caller verifying many handles pays for one
+     *                      call instead of one per handle.
+     * @dev                 The caller must be the Task Manager contract.
+     * @dev                 The requester must be allowed to use every handle for batchAllowTransient()
+     *                      to succeed. If not, batchAllowTransient() reverts.
+     * @param handles       List of handles.
+     * @param account       Address of the account.
+     * @param requester     Address of the requester.
+     */
+    function batchAllowTransient(uint256[] memory handles, address account, address requester) public virtual {
+        if (msg.sender != TASK_MANAGER_ADDRESS) {
+            revert DirectAllowForbidden(msg.sender);
+        }
+
+        // The Task Manager is exempt from the isAllowed() requirement (same as in
+        // allowTransient()), so hoist the comparison and skip the lookup entirely.
+        bool requesterIsTaskManager = requester == TASK_MANAGER_ADDRESS;
+        uint256 len = handles.length;
+
+        for (uint256 k = 0; k < len; k++) {
+            uint256 handle = handles[k];
+            if (!requesterIsTaskManager && !isAllowed(handle, requester)) {
+                revert SenderNotAllowed(requester);
+            }
+            _allowTransient(handle, account);
+        }
+    }
+
+    /**
+     * @dev                 Marks `handle` usable by `account` for this transaction and appends the key to
+     *                      the transient key list, whose length lives in transient slot 0.
+     * @param handle        Handle.
+     * @param account       Address of the account.
+     */
+    function _allowTransient(uint256 handle, address account) internal {
+        _tstoreTracked(keccak256(abi.encodePacked(handle, account)), 1);
+    }
+
+    /**
+     * @dev                 Writes `value` to transient slot `key` and appends `key` to the transient key
+     *                      list, whose length lives in transient slot 0. Every transient write must go
+     *                      through here so cleanTransientStorage() clears allowances and share slots
+     *                      together. receiveCtHash() does not re-check the receiver's own grant, so it
+     *                      relies on "a live share slot implies a live allowance for the receiver" —
+     *                      which only holds while both ride the same cleanup path. Clearing one without
+     *                      the other hands back an unusable handle, surfacing later as an opaque
+     *                      ACLNotAllowed rather than a share-related error.
+     * @param key           Transient slot to write.
+     * @param value         Value to store.
+     */
+    function _tstoreTracked(bytes32 key, uint256 value) private {
         assembly {
-            tstore(key, 1)
+            tstore(key, value)
             let length := tload(0)
             let lengthPlusOne := add(length, 1)
             tstore(lengthPlusOne, key)
             tstore(0, lengthPlusOne)
+        }
+    }
+
+    /**
+     * @dev                 Transient slot holding the sharer of a share directed at `receiver`.
+     * @param handle        Handle.
+     * @param receiver      Address the share is directed at.
+     */
+    function _shareKey(uint256 handle, address receiver) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(SHARE_DOMAIN, handle, receiver));
+    }
+
+    /**
+     * @notice              Grants `receiver` transient access to `handle` and records `sharer` as the
+     *                      party handing it over, for the duration of this transaction.
+     * @dev                 The caller must be the Task Manager contract.
+     * @dev                 Stricter than allowTransient(): there is no TASK_MANAGER_ADDRESS bypass.
+     *                      Nothing shares on the Task Manager's own behalf, so the sharer must
+     *                      genuinely hold the handle.
+     * @param handle        Handle.
+     * @param sharer        Address handing the handle over.
+     * @param receiver      Address the handle is being handed to.
+     */
+    function shareCtHash(uint256 handle, address sharer, address receiver) public virtual {
+        if (msg.sender != TASK_MANAGER_ADDRESS) {
+            revert DirectAllowForbidden(msg.sender);
+        }
+
+        if (!isAllowed(handle, sharer)) {
+            revert SenderNotAllowed(sharer);
+        }
+
+        // Capability, then provenance. `sharer` is a clean uint160 cast, so the tload in
+        // receiveCtHash() needs no masking.
+        _allowTransient(handle, receiver);
+        _tstoreTracked(_shareKey(handle, receiver), uint256(uint160(sharer)));
+    }
+
+    /**
+     * @notice                  Consumes the share directed at `receiver` for `handle`.
+     * @dev                     The caller must be the Task Manager contract.
+     * @dev                     The slot is cleared before the checks run. A reverting claim rolls the
+     *                          clear back with its own frame, so a failed claim leaves the share
+     *                          available to its intended receiver.
+     * @param handle            Handle.
+     * @param expectedSharer    Sharer the receiver names. Required, so a share cannot be consumed
+     *                          without naming who it came from.
+     * @param receiver          Address claiming the share.
+     */
+    function receiveCtHash(uint256 handle, address expectedSharer, address receiver) public virtual {
+        if (msg.sender != TASK_MANAGER_ADDRESS) {
+            revert DirectAllowForbidden(msg.sender);
+        }
+
+        bytes32 shareKey = _shareKey(handle, receiver);
+        address sharer;
+        assembly {
+            sharer := tload(shareKey)
+            tstore(shareKey, 0)
+        }
+
+        if (sharer == address(0)) {
+            revert NotShared(handle, receiver);
+        }
+
+        if (sharer != expectedSharer) {
+            revert UnexpectedSharer(expectedSharer, sharer);
+        }
+
+        // Unreachable today — a live slot implies a live sharer grant, since allowances are never
+        // revoked and cleanTransientStorage() drops slots and allowances together, so NotShared fires
+        // first. Kept so decoupling those cannot silently return provenance without real access.
+        if (!isAllowed(handle, sharer)) {
+            revert SenderNotAllowed(sharer);
         }
     }
 
@@ -325,10 +518,10 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
 
     /**
      * @dev Should revert when `msg.sender` is not authorized to upgrade the contract.
-     *      Empty implementation since authorization is handled by onlyOwner modifier.
+     *      Empty implementation since authorization is handled by onlyRole(UPGRADER_ROLE) modifier.
      */
     /* solhint-disable-next-line no-empty-blocks */
-    function _authorizeUpgrade(address _newImplementation) internal virtual override onlyOwner {}
+    function _authorizeUpgrade(address _newImplementation) internal virtual override onlyRole(UPGRADER_ROLE) {}
 
     /**
      * @dev                         Returns the ACL storage location.
@@ -340,11 +533,76 @@ contract ACL is UUPSUpgradeable, Ownable2StepUpgradeable, PermissionedUpgradeabl
         }
     }
 
-    function isAllowedWithPermission(Permission memory permission, uint256 handle) public view withPermission(permission) returns (bool) {
-        return isAllowed(handle, permission.issuer);
+    // ---------------------------------------------------------------------------
+    // ACP (Permit V3) — scope-checked access
+    // ---------------------------------------------------------------------------
+    //
+    // Structure validity (expiration / signatures / revocation) and the EIP-712
+    // domain live on this contract, inherited from PermissionedUpgradeable —
+    // `withPermission` and `checkPermissionValidity` are the entry points.
+
+    /// @notice         Default revoker contract for newly created ACPs, served to SDKs.
+    /// @return address The default revoker contract address (zero = unset).
+    function defaultRevokerContract() public view virtual returns (address) {
+        return _getACLStorage().defaultRevokerContract;
     }
 
-    function checkPermitValidity(Permission memory permission) public view withPermission(permission) returns (bool) {
-        return true;
+    /// @notice         The ACPShareRegistry address, served to SDKs.
+    /// @return address The share registry address (zero = sharing not available on this chain).
+    function shareRegistry() public view virtual returns (address) {
+        return _getACLStorage().shareRegistry;
+    }
+
+    /// @notice             Sets the default revoker contract address.
+    /// @param newAddress   The new address (zero = unset).
+    function setDefaultRevokerContract(address newAddress) external virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+        ACLStorage storage $ = _getACLStorage();
+        emit DefaultRevokerContractUpdated($.defaultRevokerContract, newAddress);
+        $.defaultRevokerContract = newAddress;
+    }
+
+    /// @notice             Sets the share registry address.
+    /// @param newAddress   The new address (zero = unset).
+    function setShareRegistry(address newAddress) external virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+        ACLStorage storage $ = _getACLStorage();
+        emit ShareRegistryUpdated($.shareRegistry, newAddress);
+        $.shareRegistry = newAddress;
+    }
+
+    /// @notice ACP access check — the scope table.
+    ///
+    ///         | condition                                          | result |
+    ///         |----------------------------------------------------|--------|
+    ///         | permission structure invalid (expired/sig/revoked) | REVERT |
+    ///         | issuer does NOT have access to handle              | false  |
+    ///         | scope == SCOPE_GLOBAL                              | true   |
+    ///         | scope == SCOPE_CONTRACT, a contract may read handle| true   |
+    ///         | scope == SCOPE_HANDLES, handles contains handle    | true   |
+    ///         | otherwise                                          | false  |
+    ///
+    /// @dev Scopes narrow the issuer's existing access, never widen it.
+    ///      Contract scope intersects the EXISTING allowances
+    ///      (populated via FHE.allow/allowThis) — no new data structures.
+    function isAllowedWithPermission(ACP memory acp, uint256 handle) public view withPermission(acp) returns (bool) {
+        // Scopes narrow the issuer's existing access, never widen it
+        if (!isAllowed(handle, acp.issuer)) return false;
+
+        if (acp.scope == SCOPE_GLOBAL) return true;
+
+        if (acp.scope == SCOPE_CONTRACT) {
+            for (uint256 i = 0; i < acp.contracts.length; i++) {
+                if (isAllowed(handle, acp.contracts[i])) return true;
+            }
+            return false;
+        }
+
+        if (acp.scope == SCOPE_HANDLES) {
+            for (uint256 i = 0; i < acp.handles.length; i++) {
+                if (acp.handles[i] == bytes32(handle)) return true;
+            }
+            return false;
+        }
+
+        return false;
     }
 }

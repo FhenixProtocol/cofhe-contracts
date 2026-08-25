@@ -1,0 +1,392 @@
+import { expect } from "chai";
+import hre from "hardhat";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { deployOnChainFixture } from "../onChain/OnChain.fixture";
+import { getDefaultAdmin, grantAllRoles, requireDefaultAdminIsSignerOrUnset } from "../../utils/roles";
+
+const { ethers } = hre;
+
+const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+
+/**
+ * Every `*_ROLE` constant the contract declares, other than DEFAULT_ADMIN_ROLE.
+ *
+ * Asserts the list is non-empty here rather than at each call site: a caller that loops over an
+ * empty list runs zero assertions and passes, so an ABI regression would turn these tests green
+ * instead of red.
+ */
+function declaredRoleNames(contract: any): string[] {
+  const names = contract.interface.fragments
+    .filter(
+      (fragment: any) =>
+        fragment.type === "function" &&
+        fragment.inputs.length === 0 &&
+        /^[A-Z0-9_]+_ROLE$/.test(fragment.name) &&
+        fragment.name !== "DEFAULT_ADMIN_ROLE",
+    )
+    .map((fragment: any) => (fragment as any).name);
+  expect(names.length, "declaredRoleNames found no *_ROLE constants").to.be.greaterThan(0);
+  return names;
+}
+
+describe("Role-based access control", function () {
+  let owner: HardhatEthersSigner;
+  let other: HardhatEthersSigner;
+  let taskManager: any;
+  let acl: any;
+  let plaintextsStorage: any;
+
+  before(async function () {
+    await deployOnChainFixture();
+    [owner, other] = await ethers.getSigners();
+    taskManager = await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS);
+    acl = await ethers.getContractAt("ACL", await taskManager.acl());
+    plaintextsStorage = await ethers.getContractAt(
+      "PlaintextsStorage",
+      await taskManager.plaintextsStorage(),
+    );
+  });
+
+  // The deploy scripts grant every declared role to the admin wallet. Asserting it here means a
+  // role added to a contract without a matching grant fails the suite rather than the deployment.
+  describe("admin wallet holds every declared role", function () {
+    it("on TaskManager", async function () {
+      for (const roleName of declaredRoleNames(taskManager)) {
+        expect(await taskManager.hasRole(await taskManager[roleName](), owner.address), roleName)
+          .to.equal(true);
+      }
+    });
+
+    it("on ACL", async function () {
+      for (const roleName of declaredRoleNames(acl)) {
+        expect(await acl.hasRole(await acl[roleName](), owner.address), roleName).to.equal(true);
+      }
+    });
+
+    it("on PlaintextsStorage", async function () {
+      for (const roleName of declaredRoleNames(plaintextsStorage)) {
+        expect(
+          await plaintextsStorage.hasRole(await plaintextsStorage[roleName](), owner.address),
+          roleName,
+        ).to.equal(true);
+      }
+    });
+  });
+
+  describe("default admin", function () {
+    it("is the admin wallet on every contract", async function () {
+      expect(await taskManager.defaultAdmin()).to.equal(owner.address);
+      expect(await acl.defaultAdmin()).to.equal(owner.address);
+      expect(await plaintextsStorage.defaultAdmin()).to.equal(owner.address);
+    });
+
+    it("does not grant operational roles to anyone else", async function () {
+      for (const contract of [taskManager, acl, plaintextsStorage]) {
+        for (const roleName of declaredRoleNames(contract)) {
+          expect(await contract.hasRole(await contract[roleName](), other.address), roleName)
+            .to.equal(false);
+        }
+      }
+    });
+  });
+
+  // UPGRADER_ROLE is the one role with no other caller in the system, so it is the easiest to
+  // forget to grant - and forgetting it leaves the proxy permanently un-upgradeable.
+  describe("UPGRADER_ROLE gates upgrades", function () {
+    it("lets a holder upgrade TaskManager", async function () {
+      const TaskManager = await ethers.getContractFactory("TaskManager");
+      const newImpl = await TaskManager.deploy();
+      await newImpl.waitForDeployment();
+
+      await expect(taskManager.connect(owner).upgradeToAndCall(await newImpl.getAddress(), "0x"))
+        .to.not.be.reverted;
+    });
+
+    it("rejects a non-holder", async function () {
+      const TaskManager = await ethers.getContractFactory("TaskManager");
+      const newImpl = await TaskManager.deploy();
+      await newImpl.waitForDeployment();
+
+      await expect(taskManager.connect(other).upgradeToAndCall(await newImpl.getAddress(), "0x"))
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(other.address, await taskManager.UPGRADER_ROLE());
+    });
+
+    it("gates ACL and PlaintextsStorage upgrades too", async function () {
+      const ACL = await ethers.getContractFactory("ACL");
+      const newAclImpl = await ACL.deploy();
+      await newAclImpl.waitForDeployment();
+      await expect(acl.connect(other).upgradeToAndCall(await newAclImpl.getAddress(), "0x"))
+        .to.be.revertedWithCustomError(acl, "AccessControlUnauthorizedAccount")
+        .withArgs(other.address, await acl.UPGRADER_ROLE());
+      await expect(acl.connect(owner).upgradeToAndCall(await newAclImpl.getAddress(), "0x"))
+        .to.not.be.reverted;
+
+      const PlaintextsStorage = await ethers.getContractFactory("PlaintextsStorage");
+      const newPsImpl = await PlaintextsStorage.deploy();
+      await newPsImpl.waitForDeployment();
+      await expect(
+        plaintextsStorage.connect(other).upgradeToAndCall(await newPsImpl.getAddress(), "0x"),
+      )
+        .to.be.revertedWithCustomError(plaintextsStorage, "AccessControlUnauthorizedAccount")
+        .withArgs(other.address, await plaintextsStorage.UPGRADER_ROLE());
+      await expect(
+        plaintextsStorage.connect(owner).upgradeToAndCall(await newPsImpl.getAddress(), "0x"),
+      ).to.not.be.reverted;
+    });
+  });
+
+  // Each setter is bound to its own role, so revoking one must not disturb the others.
+  describe("roles are independent", function () {
+    it("revoking PAUSER_ROLE does not affect CONFIG_MANAGER_ROLE", async function () {
+      const pauserRole = await taskManager.PAUSER_ROLE();
+      await taskManager.connect(owner).revokeRole(pauserRole, owner.address);
+
+      await expect(taskManager.connect(owner).disable())
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(owner.address, pauserRole);
+      // setACLContract is the CONFIG_MANAGER_ROLE call - incVersion is UPGRADER_ROLE, so using it
+      // here would leave CONFIG_MANAGER_ROLE untested despite the name.
+      await expect(taskManager.connect(owner).setACLContract(await acl.getAddress()))
+        .to.not.be.reverted;
+
+      await taskManager.connect(owner).grantRole(pauserRole, owner.address);
+    });
+
+    it("does not let DEFAULT_ADMIN_ROLE stand in for an operational role", async function () {
+      const securityZoneRole = await taskManager.SECURITY_ZONE_MANAGER_ROLE();
+      await taskManager.connect(owner).revokeRole(securityZoneRole, owner.address);
+
+      expect(await taskManager.defaultAdmin()).to.equal(owner.address);
+      await expect(taskManager.connect(owner).setSecurityZones(-1, 1))
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(owner.address, securityZoneRole);
+
+      await taskManager.connect(owner).grantRole(securityZoneRole, owner.address);
+    });
+  });
+
+  // initializeV2 exists to migrate proxies coming from the pre-roles Ownable implementation. It
+  // cannot be onlyRole-gated (there is no role holder yet), so it is gated on the owner the old
+  // implementation left behind. A proxy that never ran an Ownable implementation has a zero legacy
+  // owner and rejects the call outright.
+  describe("initializeV2 cannot hijack an initialized proxy", function () {
+    it("reverts on TaskManager", async function () {
+      await expect(taskManager.connect(other).initializeV2(other.address, 0))
+        .to.be.revertedWithCustomError(taskManager, "NotLegacyOwner")
+        .withArgs(other.address, ethers.ZeroAddress);
+    });
+
+    it("reverts on ACL", async function () {
+      await expect(acl.connect(other).initializeV2(other.address, 0))
+        .to.be.revertedWithCustomError(acl, "NotLegacyOwner")
+        .withArgs(other.address, ethers.ZeroAddress);
+    });
+
+    it("reverts on PlaintextsStorage", async function () {
+      await expect(plaintextsStorage.connect(other).initializeV2(other.address, 0))
+        .to.be.revertedWithCustomError(plaintextsStorage, "NotLegacyOwner")
+        .withArgs(other.address, ethers.ZeroAddress);
+    });
+  });
+
+  // The dangerous state is not the already-migrated proxy above - it is the window a real migration
+  // opens. A proxy coming off the Ownable implementation has `_initialized == 1`, so
+  // `reinitializer(2)` passes, and a zero AccessControl namespace, so the inherited `_grantRole`
+  // guard does not fire either. Reproduce that state exactly: bootstrap on DeterministicTM, then
+  // `upgradeToAndCall(TaskManager, "0x")` - the non-atomic upgrade the deploy scripts avoid but
+  // that a Safe or a manual `cast send` would produce.
+  describe("initializeV2 during a non-atomic migration", function () {
+    let migrating: any;
+    let legacyOwner: HardhatEthersSigner;
+
+    beforeEach(async function () {
+      [, , legacyOwner] = await ethers.getSigners();
+
+      const DeterministicTM = await ethers.getContractFactory("DeterministicTM");
+      const legacyImpl = await DeterministicTM.deploy();
+      await legacyImpl.waitForDeployment();
+
+      const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
+      const proxy = await ERC1967Proxy.deploy(
+        await legacyImpl.getAddress(),
+        DeterministicTM.interface.encodeFunctionData("initialize", [legacyOwner.address]),
+      );
+      await proxy.waitForDeployment();
+
+      const TaskManager = await ethers.getContractFactory("TaskManager");
+      const newImpl = await TaskManager.deploy();
+      await newImpl.waitForDeployment();
+
+      // Deliberately no migration calldata - this is the gap being tested.
+      const legacyProxy = DeterministicTM.attach(await proxy.getAddress()) as any;
+      await legacyProxy.connect(legacyOwner).upgradeToAndCall(await newImpl.getAddress(), "0x");
+
+      migrating = TaskManager.attach(await proxy.getAddress());
+    });
+
+    it("leaves the proxy with no default admin", async function () {
+      expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
+    });
+
+    it("rejects a stranger claiming DEFAULT_ADMIN_ROLE", async function () {
+      await expect(migrating.connect(other).initializeV2(other.address, 0))
+        .to.be.revertedWithCustomError(migrating, "NotLegacyOwner")
+        .withArgs(other.address, legacyOwner.address);
+      expect(await migrating.defaultAdmin()).to.equal(ethers.ZeroAddress);
+      expect(await migrating.hasRole(await migrating.DEFAULT_ADMIN_ROLE(), other.address))
+        .to.equal(false);
+    });
+
+    it("lets the legacy owner complete the migration", async function () {
+      await expect(migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0))
+        .to.not.be.reverted;
+      expect(await migrating.defaultAdmin()).to.equal(legacyOwner.address);
+    });
+
+    // The bootstrap stub's layout stops at slot 3, so TaskManager's signer slots read as zero -
+    // which is the verification-*disabled* sentinel. initializeV2 must reseed them, otherwise a
+    // migrated-but-not-yet-configured proxy accepts unsigned inputs and unsigned decrypt results.
+    // Pinning it here means a future layout shift fails CI rather than a testnet.
+    it("leaves both signers fail-closed, not in debug mode", async function () {
+      expect(await migrating.verifierSigner()).to.equal(ethers.ZeroAddress);
+      expect(await migrating.decryptResultSigner()).to.equal(ethers.ZeroAddress);
+
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+
+      expect(await migrating.verifierSigner()).to.equal("0x0000000000000000000000000000000000000001");
+      expect(await migrating.decryptResultSigner()).to.equal("0x0000000000000000000000000000000000000001");
+    });
+
+    // Intake stays shut until an operator explicitly enables it, and the unconfigured contract
+    // addresses stay zero - they have no safe default and must come from CONFIG_MANAGER_ROLE.
+    it("does not auto-enable intake or invent contract addresses", async function () {
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+      expect(await migrating.isEnabled()).to.equal(false);
+      expect(await migrating.acl()).to.equal(ethers.ZeroAddress);
+      expect(await migrating.plaintextsStorage()).to.equal(ethers.ZeroAddress);
+    });
+
+    // A Safe or a manual `cast send` performs the migration with no follow-up grant script, so
+    // initializeV2 has to leave a usable contract - above all an UPGRADER_ROLE holder, without
+    // which the proxy is bricked permanently.
+    it("grants the operational roles, so the proxy is not bricked", async function () {
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+      for (const roleName of declaredRoleNames(migrating)) {
+        expect(
+          await migrating.hasRole(await migrating[roleName](), legacyOwner.address),
+          roleName,
+        ).to.equal(true);
+      }
+    });
+
+    it("cannot be replayed once migrated", async function () {
+      await migrating.connect(legacyOwner).initializeV2(legacyOwner.address, 0);
+      await expect(migrating.connect(legacyOwner).initializeV2(other.address, 0))
+        .to.be.revertedWithCustomError(migrating, "InvalidInitialization");
+    });
+  });
+
+  // The seeding above must not touch a proxy migrating from the pre-roles TaskManager: those slots
+  // hold real, live values there (its `initialize` set both signers to address(1)), and overwriting
+  // them would reject every genuine input until an operator re-ran the setters.
+  describe("initializeV2 does not clobber a configured proxy", function () {
+    it("leaves an already-migrated proxy's signers and ACL untouched", async function () {
+      const verifier = await taskManager.verifierSigner();
+      const decrypt = await taskManager.decryptResultSigner();
+      const aclAddress = await taskManager.acl();
+      const enabled = await taskManager.isEnabled();
+
+      await expect(taskManager.connect(owner).initializeV2(owner.address, 0)).to.be.reverted;
+
+      expect(await taskManager.verifierSigner()).to.equal(verifier);
+      expect(await taskManager.decryptResultSigner()).to.equal(decrypt);
+      expect(await taskManager.acl()).to.equal(aclAddress);
+      expect(await taskManager.isEnabled()).to.equal(enabled);
+    });
+  });
+
+  // The deploy scripts upgrade and then grant roles, which need UPGRADER_ROLE and
+  // DEFAULT_ADMIN_ROLE respectively. A signer holding only the former would land the
+  // implementation swap and then revert on the grants, leaving the proxy on new code with no
+  // operational roles. `requireDefaultAdminIsSignerOrUnset` is the pre-flight check for that.
+  describe("deploy-time default-admin guard", function () {
+    it("passes when the signer is the default admin", async function () {
+      const currentDefaultAdmin = await getDefaultAdmin(taskManager, ethers.ZeroAddress);
+      expect(currentDefaultAdmin).to.equal(owner.address);
+      expect(() => requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, owner)).to.not.throw();
+    });
+
+    it("passes when the proxy has no default admin yet", function () {
+      expect(() => requireDefaultAdminIsSignerOrUnset(null, other)).to.not.throw();
+    });
+
+    it("throws when the default admin is someone else", async function () {
+      const currentDefaultAdmin = await getDefaultAdmin(taskManager, ethers.ZeroAddress);
+      expect(() => requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, other))
+        .to.throw(/Refusing to upgrade: default admin is/);
+    });
+
+    it("compares addresses case-insensitively", function () {
+      expect(() =>
+        requireDefaultAdminIsSignerOrUnset(owner.address.toLowerCase(), {
+          address: owner.address.toUpperCase().replace("0X", "0x"),
+        }),
+      ).to.not.throw();
+    });
+  });
+  // grantAllRoles must fail loudly on an ABI that only exposes DEFAULT_ADMIN_ROLE - the state a
+  // stale typechain build, the wrong factory, or a renamed constant produces. Before the
+  // DEFAULT_ADMIN_ROLE exclusion, this guard was unreachable: DEFAULT_ADMIN_ROLE always matches
+  // the *_ROLE pattern via the inherited getter, so roleNames.length was never 0, and a proxy
+  // could end up deployed with no UPGRADER_ROLE holder while the script logged success.
+  describe("grantAllRoles rejects a stale or mismatched ABI", function () {
+    function fakeContract(roleFragmentNames: string[]) {
+      const DEFAULT_ADMIN_ROLE_VALUE = ethers.ZeroHash;
+      const granted = new Set<string>();
+
+      const fragments = roleFragmentNames.map((name) => ({
+        type: "function",
+        name,
+        inputs: [] as unknown[],
+      }));
+
+      const contract: any = {
+        interface: { fragments },
+        DEFAULT_ADMIN_ROLE: async () => DEFAULT_ADMIN_ROLE_VALUE,
+        hasRole: async (role: string, account: string) => granted.has(`${role}:${account}`),
+        grantRole: async (role: string, account: string) => {
+          granted.add(`${role}:${account}`);
+          return { wait: async () => {} };
+        },
+      };
+      for (const name of roleFragmentNames) {
+        contract[name] = async () =>
+          name === "DEFAULT_ADMIN_ROLE"
+            ? DEFAULT_ADMIN_ROLE_VALUE
+            : `0x${Buffer.from(name).toString("hex").padStart(64, "0")}`;
+      }
+      contract.connect = () => contract;
+      return contract;
+    }
+
+    it("throws when the ABI exposes only DEFAULT_ADMIN_ROLE", async function () {
+      const contract = fakeContract(["DEFAULT_ADMIN_ROLE"]);
+      let thrown: Error | undefined;
+      try {
+        await grantAllRoles(contract, owner, undefined, false);
+      } catch (err) {
+        thrown = err as Error;
+      }
+      expect(thrown, "grantAllRoles should have thrown").to.not.equal(undefined);
+      expect(thrown!.message).to.match(/no grantable \*_ROLE constants/);
+    });
+
+    it("still grants every non-admin role when the ABI is healthy", async function () {
+      const contract = fakeContract(["DEFAULT_ADMIN_ROLE", "UPGRADER_ROLE", "PAUSER_ROLE"]);
+      await grantAllRoles(contract, owner, undefined, false);
+      expect(await contract.hasRole(await contract.UPGRADER_ROLE(), owner.address)).to.equal(true);
+      expect(await contract.hasRole(await contract.PAUSER_ROLE(), owner.address)).to.equal(true);
+    });
+  });
+});

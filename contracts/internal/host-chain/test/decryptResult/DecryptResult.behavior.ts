@@ -708,7 +708,7 @@ export function shouldBehaveLikeDecryptResult(): void {
 
       await expect(
         taskManager.connect(otherAccount).setDecryptResultSigner(newSigner)
-      ).to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount");
     });
   });
 
@@ -736,7 +736,7 @@ export function shouldBehaveLikeDecryptResult(): void {
 
       await expect(
         taskManager.connect(otherAccount).setVerifierSigner(newSigner)
-      ).to.be.revertedWithCustomError(taskManager, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount");
     });
   });
 
