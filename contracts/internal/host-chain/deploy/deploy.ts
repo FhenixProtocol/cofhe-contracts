@@ -25,13 +25,22 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
  * @param adminSigner The admin account, which becomes the default admin and holds every role
  * @param adminDelay The default-admin transfer delay to initialize with
  * @param contractName The name of the contract to deploy
+ * @param initializerArgs Arguments forwarded to `initialize`. Defaults to
+ *        `(address, uint48)` which matches TaskManager / ACL / PlaintextsStorage.
+ *        ACPShareRegistry takes only `address` — passing the default pair fails
+ *        at encodeFunctionData before a tx is even sent.
  * @returns The proxy contract and its address
  */
-async function getProxyContract(adminSigner: any, adminDelay: number, contractName: string) {
+async function getProxyContract(
+  adminSigner: any,
+  adminDelay: number,
+  contractName: string,
+  initializerArgs: unknown[] = [adminSigner.address, adminDelay],
+) {
   const TaskManager = await ethers.getContractFactory(contractName);
   const ProxyContract = await upgrades.deployProxy(
     TaskManager,
-    [adminSigner.address, adminDelay],
+    initializerArgs,
     { kind: "uups", initializer: "initialize" },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
@@ -203,6 +212,7 @@ async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminD
       ownerSigner,
       adminDelay,
       "ACPShareRegistry",
+      [ownerSigner.address],
     );
     const registryTx = await aclContract
       .connect(ownerSigner)
@@ -211,7 +221,7 @@ async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminD
     console.log(chalk.green("Successfully set share registry in ACL"));
   } catch (e) {
     console.error(chalk.red(`Failed ACP infrastructure setup: ${e}`));
-    return e;
+    throw e;
   }
   console.log("\n");
 }
@@ -442,7 +452,7 @@ const func: DeployFunction = async function () {
   await ACLSetup(TMProxyContract, adminSigner, aclContract);
 
   console.log(chalk.bold.blue("----------------------ACP infrastructure--------------------"));
-  await ACPInfrastructureSetup(aclContract, aggregatorSigners[0], adminDelay);
+  await ACPInfrastructureSetup(aclContract, adminSigner, adminDelay);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
