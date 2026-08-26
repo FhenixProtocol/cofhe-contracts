@@ -1,41 +1,47 @@
 import { expect } from "chai";
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { TaskManager } from "../../types";
 import { deployOnChainFixture, TASK_MANAGER_ADDRESS } from "../onChain/OnChain.fixture";
 
 const { ethers } = hre;
 
-// The range the fixture initializes the TaskManager with.
+// The bounds this suite starts from. Set explicitly in `before` rather than assumed from the
+// fixture, so the expected event arguments and the on-chain state have one source.
 const BASELINE_MIN = -128;
 const BASELINE_MAX = 127;
 
 /**
  * Every privileged entry point that mutates TaskManager configuration must announce itself, so
  * off-chain monitoring can alert on administrative changes. These tests pin the payloads: each
- * event carries both the value being replaced and the value replacing it, which is what lets an
- * alert be read without a follow-up RPC call.
+ * event carries the value replacing the old one, and where a before-value exists it is carried
+ * too, which is what lets an alert be read without a follow-up RPC call.
  */
 describe("TaskManager admin change events", function () {
-  let taskManager: any;
+  let taskManager: TaskManager;
   let admin: HardhatEthersSigner;
   let other: HardhatEthersSigner;
   let originalAcl: string;
   let originalPlaintextsStorage: string;
+  let snapshot: string;
 
   before(async function () {
     await deployOnChainFixture();
     [admin, other] = await ethers.getSigners();
-    taskManager = await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS);
+    taskManager = (await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS)) as unknown as TaskManager;
     originalAcl = await taskManager.acl();
     originalPlaintextsStorage = await taskManager.plaintextsStorage();
+    await taskManager.connect(admin).setSecurityZones(BASELINE_MIN, BASELINE_MAX);
   });
 
-  // Restore the fixture's configuration so the tests are order-independent.
+  beforeEach(async function () {
+    snapshot = await ethers.provider.send("evm_snapshot", []);
+  });
+
+  // Roll the chain back rather than replaying setters: `version` only ever increases, so no
+  // sequence of admin calls can restore it.
   afterEach(async function () {
-    await taskManager.connect(admin).setACLContract(originalAcl);
-    await taskManager.connect(admin).setPlaintextsStorage(originalPlaintextsStorage);
-    await taskManager.connect(admin).setSecurityZones(BASELINE_MIN, BASELINE_MAX);
-    await taskManager.connect(admin).enable();
+    await ethers.provider.send("evm_revert", [snapshot]);
   });
 
   it("reports which ACL contract replaced which", async function () {
@@ -66,6 +72,11 @@ describe("TaskManager admin change events", function () {
     await expect(taskManager.connect(admin).setSecurityZoneMax(64))
       .to.emit(taskManager, "SecurityZonesChanged")
       .withArgs(BASELINE_MIN, BASELINE_MAX, BASELINE_MIN, 64);
+  });
+
+  it("rejects an inverted range rather than announcing it as a normal change", async function () {
+    await expect(taskManager.connect(admin).setSecurityZones(10, 5))
+      .to.be.revertedWithCustomError(taskManager, "InvalidSecurityZone");
   });
 
   it("announces the kill switch being thrown", async function () {

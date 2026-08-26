@@ -282,9 +282,19 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     event VersionIncremented(uint8 newVersion);
 
     function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
-        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, minSZ, maxSZ);
-        securityZoneMin = minSZ;
-        securityZoneMax = maxSZ;
+        _setSecurityZones(minSZ, maxSZ);
+    }
+
+    /// @dev The single write path for the security zone bounds. Rejecting an inverted range here
+    ///      is what stops `setSecurityZones(10, 5)` from looking like an ordinary admin change
+    ///      while silently reverting every task intake that follows.
+    function _setSecurityZones(int32 newMin, int32 newMax) private {
+        if (newMin > newMax) {
+            revert InvalidSecurityZone(newMin, newMin, newMax);
+        }
+        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, newMin, newMax);
+        securityZoneMin = newMin;
+        securityZoneMax = newMax;
     }
 
     function isInitialized() public view returns (bool) {
@@ -1020,19 +1030,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     }
 
     function setSecurityZoneMax(int32 securityZone) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
-        if (securityZone < securityZoneMin) {
-            revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-        }
-        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, securityZoneMin, securityZone);
-        securityZoneMax = securityZone;
+        _setSecurityZones(securityZoneMin, securityZone);
     }
 
     function setSecurityZoneMin(int32 securityZone) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
-        if (securityZone > securityZoneMax) {
-            revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-        }
-        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, securityZone, securityZoneMax);
-        securityZoneMin = securityZone;
+        _setSecurityZones(securityZone, securityZoneMax);
     }
 
     /// @notice Point the TaskManager at an ACL contract
