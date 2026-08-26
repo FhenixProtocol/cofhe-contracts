@@ -79,8 +79,8 @@ export async function getDefaultAdmin(proxy: any, zeroAddress: string): Promise<
 }
 
 /**
- * True when the target network is a local dev chain, where the committed dev defaults (zero
- * signers, zero admin delay, `wallets.json` keys) are acceptable.
+ * True when the target network is a local dev chain, where the dev defaults (zero
+ * signers, zero admin delay, the .env AGGREGATOR_KEY wallet) are acceptable.
  */
 export function isLocalNetwork(hre: any) {
   const name: string | undefined = hre?.network?.name;
