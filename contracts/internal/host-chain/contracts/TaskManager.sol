@@ -265,7 +265,8 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (decryptResultSigner == address(0)) decryptResultSigner = address(1);
     }
 
-    // Events
+    // Events. Administrative change events are declared on ITaskManager so they ship in the
+    // published ABI; they are inherited here and emitted below.
     event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
     event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
     event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
@@ -275,11 +276,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     event AccessListEnabledSet(bool enabled);
     event AccessGranted(address indexed account);
     event AccessRevoked(address indexed account);
-    event ACLContractChanged(address indexed oldACL, address indexed newACL);
-    event PlaintextsStorageChanged(address indexed oldStorage, address indexed newStorage);
-    event SecurityZonesChanged(int32 oldMin, int32 oldMax, int32 newMin, int32 newMax);
-    event EnabledSet(bool enabled);
-    event VersionIncremented(uint8 newVersion);
 
     function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
         emit SecurityZonesChanged(securityZoneMin, securityZoneMax, minSZ, maxSZ);
