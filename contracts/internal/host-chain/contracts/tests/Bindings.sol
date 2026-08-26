@@ -9,10 +9,16 @@ import {FHE, ebool, euint8, euint16, euint32, euint64, euint128, eaddress} from 
  *
  * Handles are content-addressed -- TaskManager derives them as
  * keccak256(operands || funcId) with no nonce -- so `ea.div(eb)` and `FHE.div(ea, eb)`
- * must produce the same handle. A forwarder that calls the wrong FHE function, or
- * swaps its operands, yields a different handle and reverts here.
+ * must produce the same handle. A forwarder that calls a different FHE function, or
+ * swaps its operands, generally yields a different handle and reverts here.
  *
- * Operands must stay distinct at the call site so an operand swap is observable.
+ * Generally, not always: ops that TaskManager or FHE.sol rewrites in terms of another op share a
+ * handle with it. `square` is hashed as `mul` over a duplicated operand, so `square` and
+ * `mul(x, x)` are indistinguishable here. Those are caught by the delegation check instead.
+ *
+ * Operands must stay distinct and non-zero at the call site: distinct so an operand swap is
+ * observable, non-zero because FHE.asEbool(euintN) is ne(value, asEuintN(0)) and a zero operand
+ * would collide with that internal constant.
  * `unwrap` is the built-in value-type unwrap, never the Bindings one, so the
  * assertion never depends on a forwarder it is testing.
  */

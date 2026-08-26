@@ -7,7 +7,12 @@
  * that calls the wrong FHE function, or swaps its operands, produces a different handle and the
  * fixture reverts with the op name.
  *
- * Operands are distinct in every call so an operand swap is observable.
+ * Operands are distinct and non-zero in every call so an operand swap is observable and neither
+ * collides with the zero constant that FHE.asEbool builds internally.
+ *
+ * Two ops are invisible here and are covered only by the delegation check: `square`, which
+ * TaskManager rewrites to `mul` with a duplicated operand, and any op whose FHE implementation is
+ * defined in terms of another op.
  */
 
 import { expect } from "chai";
@@ -15,7 +20,9 @@ import hre from "hardhat";
 import type { Contract } from "ethers";
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
 
-// Distinct so a swapped-operand forwarder changes the keccak preimage.
+// Distinct so a swapped-operand forwarder changes the keccak preimage, and both non-zero:
+// FHE.asEbool(euintN) is implemented as ne(value, asEuintN(0)), so an operand of 0 would BE that
+// internal constant and make `ea.ne(eb)` and `ea.toBool()` pin the same handle.
 const ADDR_A = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 const ADDR_B = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 
@@ -35,23 +42,23 @@ describe("FHE.sol method bindings", function () {
   });
 
   it("euint8 bindings delegate to the same handle", async function () {
-    await expect(bindings.bindings8(1, 0)).to.not.be.reverted;
+    await expect(bindings.bindings8(3, 5)).to.not.be.reverted;
   });
 
   it("euint16 bindings delegate to the same handle", async function () {
-    await expect(bindings.bindings16(1, 0)).to.not.be.reverted;
+    await expect(bindings.bindings16(3, 5)).to.not.be.reverted;
   });
 
   it("euint32 bindings delegate to the same handle", async function () {
-    await expect(bindings.bindings32(1, 0)).to.not.be.reverted;
+    await expect(bindings.bindings32(3, 5)).to.not.be.reverted;
   });
 
   it("euint64 bindings delegate to the same handle", async function () {
-    await expect(bindings.bindings64(1, 0)).to.not.be.reverted;
+    await expect(bindings.bindings64(3, 5)).to.not.be.reverted;
   });
 
   it("euint128 bindings delegate to the same handle", async function () {
-    await expect(bindings.bindings128(1, 0)).to.not.be.reverted;
+    await expect(bindings.bindings128(3, 5)).to.not.be.reverted;
   });
 
   it("eaddress bindings delegate to the same handle", async function () {
