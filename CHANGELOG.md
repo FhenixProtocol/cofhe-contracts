@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+- **Admin change events on `TaskManager`** — `ACLContractChanged`, `PlaintextsStorageChanged`, `SecurityZonesChanged`, `EnabledSet` and `VersionIncremented`, covering the eight privileged setters that previously changed configuration silently. Payloads carry the old value alongside the new one where a previous value exists, so an alert reads without a follow-up RPC call. Needs a TaskManager implementation upgrade; no storage changes.
+
 ### Fixed
+- **`TaskManager.setSecurityZones` rejects an inverted range.** `setSecurityZones(10, 5)` used to store cleanly and then revert every task intake with `InvalidSecurityZone`. All three security-zone setters now share one validated write path.
 - **ACP infrastructure setup no longer silently skips the share registry** — the role-based access control change gave `getProxyContract` a new `adminDelay` parameter and updated the `ACL` and `PlaintextsStorage` call sites, but not the `ACPShareRegistry` one inside `ACPInfrastructureSetup`. Its two arguments landed in the wrong slots, `contractName` arrived as `undefined`, and `ethers.getContractFactory` threw `Cannot read properties of undefined (reading 'formatJson')`. The surrounding `try`/`catch` logged the error and returned it rather than rethrowing, so the deploy still exited successfully with `setShareRegistry` never called — leaving ACL without a share registry and failing every `withACP()` decrypt at `sealOutput`. `ACPInfrastructureSetup` now takes `adminDelay` and forwards the signer and delay. Note that `tsc --noEmit` flags the original call as `TS2554: Expected 3 arguments, but got 2`; hardhat's ts-node transpiles without type-checking, which is why it shipped.
 
 ## v0.1.5 - 2026-08-16

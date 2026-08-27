@@ -265,9 +265,36 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (decryptResultSigner == address(0)) decryptResultSigner = address(1);
     }
 
+    // Events
+    event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
+    event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
+    event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
+    event InputVerified(uint256 indexed ctHash, bytes32 commitment);
+    event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
+    event VerifierSignerChanged(address indexed oldSigner, address indexed newSigner);
+    event AccessListEnabledSet(bool enabled);
+    event AccessGranted(address indexed account);
+    event AccessRevoked(address indexed account);
+    event ACLContractChanged(address indexed oldACL, address indexed newACL);
+    event PlaintextsStorageChanged(address indexed oldStorage, address indexed newStorage);
+    event SecurityZonesChanged(int32 oldMin, int32 oldMax, int32 newMin, int32 newMax);
+    event EnabledSet(bool enabled);
+    event VersionIncremented(uint8 newVersion);
+
     function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
-        securityZoneMin = minSZ;
-        securityZoneMax = maxSZ;
+        _setSecurityZones(minSZ, maxSZ);
+    }
+
+    /// @dev The single write path for the security zone bounds. Rejecting an inverted range here
+    ///      is what stops `setSecurityZones(10, 5)` from looking like an ordinary admin change
+    ///      while silently reverting every task intake that follows.
+    function _setSecurityZones(int32 newMin, int32 newMax) private {
+        if (newMin > newMax) {
+            revert InvalidSecurityZone(newMin, newMin, newMax);
+        }
+        emit SecurityZonesChanged(securityZoneMin, securityZoneMax, newMin, newMax);
+        securityZoneMin = newMin;
+        securityZoneMax = newMax;
     }
 
     function isInitialized() public view returns (bool) {
@@ -280,6 +307,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
 
     function incVersion() public onlyRole(UPGRADER_ROLE) {
         version++;
+        emit VersionIncremented(version);
     }
 
     function _authorizeUpgrade(
@@ -289,17 +317,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // Errors
     // Returned when the handle is not allowed in the ACL for the account.
     error ACLNotAllowed(uint256 handle, address account);
-
-    // Events
-    event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
-    event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
-    event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
-    event InputVerified(uint256 indexed ctHash, bytes32 commitment);
-    event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
-    event VerifierSignerChanged(address indexed oldSigner, address indexed newSigner);
-    event AccessListEnabledSet(bool enabled);
-    event AccessGranted(address indexed account);
-    event AccessRevoked(address indexed account);
 
     struct Task {
         address creator;
@@ -364,10 +381,12 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
 
     function enable() external onlyRole(PAUSER_ROLE) {
         isEnabled = true;
+        emit EnabledSet(true);
     }
 
     function disable() external onlyRole(PAUSER_ROLE) {
         isEnabled = false;
+        emit EnabledSet(false);
     }
 
     function enableAccessList() external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
@@ -1011,17 +1030,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     }
 
     function setSecurityZoneMax(int32 securityZone) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
-        if (securityZone < securityZoneMin) {
-            revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-        }
-        securityZoneMax = securityZone;
+        _setSecurityZones(securityZoneMin, securityZone);
     }
 
     function setSecurityZoneMin(int32 securityZone) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
-        if (securityZone > securityZoneMax) {
-            revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-        }
-        securityZoneMin = securityZone;
+        _setSecurityZones(securityZone, securityZoneMax);
     }
 
     /// @notice Point the TaskManager at an ACL contract
@@ -1034,6 +1047,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (_aclAddress == address(0)) {
             revert InvalidAddress();
         }
+        emit ACLContractChanged(address(acl), _aclAddress);
         acl = ACL(_aclAddress);
     }
 
@@ -1046,6 +1060,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (_plaintextsStorageAddress == address(0)) {
             revert InvalidAddress();
         }
+        emit PlaintextsStorageChanged(address(plaintextsStorage), _plaintextsStorageAddress);
         plaintextsStorage = PlaintextsStorage(_plaintextsStorageAddress);
     }
 
