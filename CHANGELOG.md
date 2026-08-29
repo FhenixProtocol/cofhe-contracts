@@ -2,8 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+- **Admin change events on `TaskManager`** — `ACLContractChanged`, `PlaintextsStorageChanged`, `SecurityZonesChanged`, `EnabledSet` and `VersionIncremented`, covering the eight privileged setters that previously changed configuration silently. Payloads carry the old value alongside the new one where a previous value exists, so an alert reads without a follow-up RPC call. Needs a TaskManager implementation upgrade; no storage changes.
+
 ### Fixed
 - **ACP infrastructure setup no longer silently skips the share registry** — the role-based access control change gave `getProxyContract` a new `adminDelay` parameter and updated the `ACL` and `PlaintextsStorage` call sites, but not the `ACPShareRegistry` one inside `ACPInfrastructureSetup`. Its two arguments landed in the wrong slots, `contractName` arrived as `undefined`, and `ethers.getContractFactory` threw `Cannot read properties of undefined (reading 'formatJson')`. The surrounding `try`/`catch` logged the error and returned it rather than rethrowing, so the deploy still exited successfully with `setShareRegistry` never called — leaving ACL without a share registry and failing every `withACP()` decrypt at `sealOutput`. Passing `adminDelay` through was not enough: `getProxyContract` still encoded `initialize(address, uint48)` against `ACPShareRegistry.initialize(address)`, so ethers threw `types/values length mismatch` before a tx was sent, and the same `return e` still swallowed it. `getProxyContract` now takes an explicit initializer-args list (share registry gets `[admin]`), the catch rethrows, and the setup signs as the real `adminSigner` rather than `wallets.json[0]`. Note that `tsc --noEmit` flags the original two-argument call as `TS2554: Expected 3 arguments, but got 2`; hardhat's ts-node transpiles without type-checking, which is why it shipped.
+- **`TaskManager.setSecurityZones` rejects an inverted range.** `setSecurityZones(10, 5)` used to store cleanly and then revert every task intake with `InvalidSecurityZone`. All three security-zone setters now share one validated write path.
 
 ## v0.1.5 - 2026-08-16
 

@@ -1,10 +1,9 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { config as dotenvConfig } from "dotenv";
-import { join, resolve } from "path";
+import { resolve } from "path";
 import { Contract } from "ethers";
 import chalk from "chalk";
 import hre, { ethers, upgrades } from "hardhat";
-import fs from "fs";
 
 import { deployCreateX } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
@@ -345,30 +344,25 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, adminSigner: any,
   console.log("\n");
 }
 
-interface Wallet {
-  privateKey: string;
-  address: string;
-}
-
-interface WalletList {
-  resultProcessorWallets: Wallet[];
-  verifierListenerWallet: Wallet; 
-}
-
+// The aggregator key comes from the environment, never from a committed file: this repo is
+// public, and a key checked in here once ended up doubling as a live testnet identity.
 function getAggregatorWallets(ethers: any) {
-  const aggregatorWallets = JSON.parse(fs.readFileSync(join(__dirname, '../wallets.json'), 'utf8')) as WalletList;
-  return aggregatorWallets.resultProcessorWallets.map((wallet) =>
-    new ethers.Wallet(wallet.privateKey, ethers.provider)
-  );
+  const key = process.env.AGGREGATOR_KEY;
+  if (!key) {
+    throw new Error(
+      "AGGREGATOR_KEY must be set - the deploy funds it and uses it for the ACP infrastructure setup.",
+    );
+  }
+  return [new ethers.Wallet(key, ethers.provider)];
 }
 
 /**
  * Picks the signer that becomes DEFAULT_ADMIN_ROLE on every proxy this script touches, and the
  * default-admin transfer delay to seed.
  *
- * The fallback is `wallets.json[0]` with a zero delay - a key committed to this repository. That is
- * fine for a local stack and unacceptable anywhere else, so on a non-local network both values must
- * be stated explicitly via TM_ADMIN_ADDRESS / TM_ADMIN_DELAY. TM_ADMIN_ADDRESS is matched against
+ * The fallback is the AGGREGATOR_KEY wallet with a zero delay - a dev key from the local .env. That
+ * is fine for a local stack and unacceptable anywhere else, so on a non-local network both values
+ * must be stated explicitly via TM_ADMIN_ADDRESS / TM_ADMIN_DELAY. TM_ADMIN_ADDRESS is matched against
  * the candidate signers rather than merely recorded: this script has to hold DEFAULT_ADMIN_ROLE to
  * run `grantAllRoles`, so an admin it cannot sign for could not be honoured anyway.
  */
@@ -378,8 +372,8 @@ function resolveAdmin(candidateSigners: any[]) {
 
   if (!local && !requestedAdmin) {
     throw new Error(
-      "TM_ADMIN_ADDRESS must be set on a non-local network. Refusing to make the committed " +
-        "wallets.json key the DEFAULT_ADMIN of these proxies.",
+      "TM_ADMIN_ADDRESS must be set on a non-local network. Refusing to make the dev " +
+        "AGGREGATOR_KEY wallet the DEFAULT_ADMIN of these proxies.",
     );
   }
 
