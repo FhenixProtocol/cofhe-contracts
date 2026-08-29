@@ -56,6 +56,9 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     /// @param actual   Sharer that actually created the share.
     error UnexpectedSharer(address expected, address actual);
 
+    /// @notice Returned when a zero address is provided where a non-zero address is required.
+    error InvalidAddress();
+
     /// @notice             Emitted when a list of handles is allowed for decryption.
     /// @param handlesList  List of handles allowed for decryption.
     event AllowedForDecryption(uint256[] handlesList);
@@ -120,6 +123,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param initialDelay  Initial delay for the default admin transfer.
      */
     function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+        if (initialAdmin == address(0)) revert InvalidAddress();
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __PermissionedUpgradeable_init();
     }
