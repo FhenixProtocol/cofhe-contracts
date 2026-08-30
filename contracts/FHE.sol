@@ -3,7 +3,6 @@
 
 pragma solidity >=0.8.25 <0.9.0;
 
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {FunctionId, ITaskManager, Utils, EncryptedInput, UnsignedEncryptedInput} from "./ICofhe.sol";
 
 type ebool is bytes32;
