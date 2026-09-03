@@ -924,6 +924,17 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       expect(result[1]).to.equal(handles[2]);
     });
 
+    it("should clamp the maximum uint256 limit without overflowing", async function () {
+      await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
+      const handles = Array.from({ length: 3 }, () => randomBytes32());
+      const commitHashes = Array.from({ length: 3 }, () => randomBytes32());
+      const registryAsPoster = this.registry.connect(this.poster);
+      await registryAsPoster.postCommitments(VERSION_1, handles, commitHashes);
+
+      const result = await this.registry.getHandles(VERSION_1, 1, ethers.MaxUint256);
+      expect(result).to.deep.equal(handles.slice(1));
+    });
+
     it("should return handle by index", async function () {
       await this.registry.setVersionStatus(VERSION_1, VersionStatus.Active);
       const handles = Array.from({ length: 5 }, () => randomBytes32());

@@ -249,9 +249,8 @@ contract CommitmentRegistry is UUPSUpgradeable, AccessControlDefaultAdminRulesUp
         bytes32[] storage allHandles = $.handlesByVersion[version];
         uint256 total = allHandles.length;
         if (offset >= total) return new bytes32[](0);
-        uint256 end = offset + limit;
-        if (end > total) end = total;
-        uint256 len = end - offset;
+        uint256 remaining = total - offset;
+        uint256 len = limit < remaining ? limit : remaining;
         bytes32[] memory result = new bytes32[](len);
         for (uint256 i = 0; i < len; ) {
             result[i] = allHandles[offset + i];
