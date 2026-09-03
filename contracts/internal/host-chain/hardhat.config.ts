@@ -17,9 +17,6 @@ import "@openzeppelin/hardhat-upgrades";
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "./.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
-const TESTNET_CHAIN_ID = 8008135;
-const TESTNET_RPC_URL = "https://api.helium.fhenix.zone";
-
 // Keyed provider endpoints must come from the environment (or GitHub secrets in CI) —
 // this is a public repo, so only keyless public RPCs may appear as defaults.
 const SEPOLIA_CHAIN_ID = 11155111;
@@ -30,11 +27,6 @@ const ARBITRUM_SEPOLIA_RPC_URL = process.env.ARBITRUM_SEPOLIA_RPC_URL || "https:
 
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "https://base-sepolia-rpc.publicnode.com"
-
-const testnetConfig = {
-    chainId: TESTNET_CHAIN_ID,
-    url: TESTNET_RPC_URL,
-}
 
 const sepoliaConfig = {
     chainId: SEPOLIA_CHAIN_ID,
@@ -77,25 +69,6 @@ const localfhenixk8sconfig: HttpNetworkUserConfig  = {
   accounts: [process.env.KEY as string, process.env.KEY2 as string, process.env.AGGREGATOR_KEY as string],
 };
 
-function insertAccounts(config: any) {
-  const keys = process.env.KEY;
-  if (!keys) {
-    let mnemonic = process.env.MNEMONIC;
-    if (!mnemonic) {
-      throw new Error("No mnemonic or private key provided, please set MNEMONIC or KEY in your .env file");
-    }
-    config['accounts'] = {
-      count: 10,
-      mnemonic,
-      path: "m/44'/60'/0'/0",
-    }
-  } else {
-    config['accounts'] = [keys];
-  }
-}
-// Select either private keys or mnemonic from .env file or environment variables
-insertAccounts(testnetConfig);
-
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.25',
@@ -120,7 +93,6 @@ const config: HardhatUserConfig = {
     hardhat: {
       allowUnlimitedContractSize: true,
     },
-    testnet: testnetConfig,
     sepolia: sepoliaConfig as HttpNetworkUserConfig,
     arbitrumSepolia: arbitrumSepoliaConfig as HttpNetworkUserConfig,
     baseSepolia: baseSepoliaConfig as HttpNetworkUserConfig,
