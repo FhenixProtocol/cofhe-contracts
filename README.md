@@ -30,17 +30,15 @@ import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 ```solidity
 pragma solidity ^0.8.25;
 
-import {FHE, euint8, InEuint8} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {FHE, euint8, externalEuint8} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract Example {
-    
     euint8 _output;
 
-    function setOutput(InEuint8 calldata _encryptedNumber) public {
-        _output = FHE.asEuint8(_encryptedNumber);
+    function setOutput(externalEuint8 encryptedNumber, bytes calldata inputProof) public {
+        _output = FHE.asEuint8(encryptedNumber, inputProof);
         FHE.allowThis(_output);
     }
-
 }
 ```
 
