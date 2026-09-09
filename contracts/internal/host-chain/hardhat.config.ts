@@ -28,22 +28,25 @@ const ARBITRUM_SEPOLIA_RPC_URL = process.env.ARBITRUM_SEPOLIA_RPC_URL || "https:
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "https://base-sepolia-rpc.publicnode.com"
 
+const configuredAccounts = (...accounts: (string | undefined)[]): string[] =>
+  accounts.filter((account): account is string => Boolean(account));
+
 const sepoliaConfig = {
     chainId: SEPOLIA_CHAIN_ID,
     url: SEPOLIA_RPC_URL,
-    accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    accounts: configuredAccounts(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const arbitrumSepoliaConfig = {
     chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
     url: ARBITRUM_SEPOLIA_RPC_URL,
-    accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    accounts: configuredAccounts(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const baseSepoliaConfig = {
   chainId: BASE_SEPOLIA_CHAIN_ID,
   url: BASE_SEPOLIA_RPC_URL,
-  accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+  accounts: configuredAccounts(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 // Making sure we use different account in localfhenix -
@@ -56,7 +59,7 @@ const localfhenixconfig: HttpNetworkUserConfig  = {
   timeout: 10_000,
   httpHeaders: {},
   url: "http://127.0.0.1:42069",
-  accounts: [process.env.KEY as string, process.env.KEY2 as string, process.env.AGGREGATOR_KEY as string],
+  accounts: configuredAccounts(process.env.KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
 }
 
 const localfhenixk8sconfig: HttpNetworkUserConfig  = {
@@ -66,7 +69,7 @@ const localfhenixk8sconfig: HttpNetworkUserConfig  = {
   timeout: 10_000,
   httpHeaders: {},
   url: "http://hostchain:8547",
-  accounts: [process.env.KEY as string, process.env.KEY2 as string, process.env.AGGREGATOR_KEY as string],
+  accounts: configuredAccounts(process.env.KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
 };
 
 const config: HardhatUserConfig = {
