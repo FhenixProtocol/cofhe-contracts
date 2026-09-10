@@ -18,6 +18,7 @@
 - `grantAllRoles` throws when it finds no roles, instead of granting nothing and reporting success.
 - `TaskManager.setSecurityZones` rejects an inverted range — `setSecurityZones(10, 5)` used to store cleanly, then revert every task intake.
 - ACP infrastructure setup no longer skips the share registry, which left ACL without one and failed every `withACP()` decrypt.
+- Removed a committed deployer private key from the example env files; local stacks fill it in via `make init-cofhe`, live networks set their own `KEY`.
 
 ## v0.2.0 - 2026-08-20 - on testnet-v2 since 2026-08-24
 
