@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-> Everything except the admin change events and the `setSecurityZones` fix is already live on testnet-v2 (2026-08-24), unreleased.
+## v0.3.0 - 2026-09-08
+
+> Live on testnet-v2 since 2026-08-24, except the admin change events and the `setSecurityZones` fix.
 
 ### Added
 - **Admin change events on `TaskManager`** — `ACLContractChanged`, `PlaintextsStorageChanged`, `SecurityZonesChanged`, `EnabledSet` and `VersionIncremented`, covering the privileged setters that previously changed config silently. Needs a TaskManager upgrade.
