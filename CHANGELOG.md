@@ -20,6 +20,7 @@
 - `grantAllRoles` throws when it finds no roles, instead of granting nothing and reporting success.
 - `TaskManager.setSecurityZones` rejects an inverted range — `setSecurityZones(10, 5)` used to store cleanly, then revert every task intake.
 - ACP infrastructure setup no longer skips the share registry, which left ACL without one and failed every `withACP()` decrypt.
+- `ACPShareRegistry.initialize` rejects a zero `initialAdmin` — plain `AccessControlUpgradeable` would otherwise grant `DEFAULT_ADMIN_ROLE` to `address(0)`, leaving the registry permanently unadministrable. Mirrors the guard in `CommitmentRegistry.initialize`.
 
 ## v0.2.0 - 2026-08-20 - on testnet-v2 since 2026-08-24
 
