@@ -15,6 +15,8 @@
     "deploy:deterministicTM": "hardhat compile && hardhat task:deployDeterministicTM",
     "task:upgradeTM": "hardhat task:upgradeTM",
     "deploy:sepolia": "hardhat deploy --network sepolia",
+    "deploy:ethereum": "hardhat deploy --network ethereum",
+    "deploy:arbitrumOne": "hardhat deploy --network arbitrumOne",
     "storage-layout:generate": "hardhat task:storage-layout --network hardhat",
     "storage-layout:check": "hardhat task:storage-layout --network hardhat --check",
     "check:size": "hardhat task:check-contract-size --network hardhat",

@@ -65,6 +65,115 @@ export async function grantAllRoles(
 }
 
 /**
+ * The roles the maintenance wallet holds on the TaskManager.
+ *
+ * Both are narrow by design - see the role notes at the top of TaskManager.sol: their worst case
+ * is availability (halting intake, or moving the security-zone bounds), not disclosure. The four
+ * admin-equivalent roles (UPGRADER, CONFIG_MANAGER, VERIFIER_SIGNER_MANAGER,
+ * DECRYPT_SIGNER_MANAGER) are deliberately absent - those belong with DEFAULT_ADMIN on the Safe.
+ */
+export const MAINTENANCE_ROLES = ["PAUSER_ROLE", "SECURITY_ZONE_MANAGER_ROLE"] as const;
+
+/**
+ * Resolves role names to their on-chain `bytes32` values.
+ *
+ * Throws when the ABI does not declare one, rather than skipping it: a stale build or the wrong
+ * contract would otherwise silently drop a role from a grant, leaving the grantee with less than
+ * it is supposed to have and a clean log - the same failure `grantAllRoles` guards against.
+ *
+ * @param contract  An AccessControl contract instance.
+ * @param roleNames The `*_ROLE` constant names to resolve.
+ */
+export async function resolveRolesByName(
+  contract: any,
+  roleNames: readonly string[],
+): Promise<{ name: string; role: string }[]> {
+  const resolved: { name: string; role: string }[] = [];
+  for (const name of roleNames) {
+    if (typeof contract[name] !== "function") {
+      throw new Error(
+        `${name} is not declared on this contract's ABI, so it cannot be granted or revoked. ` +
+          `Recompile, or check the contract being passed in.`,
+      );
+    }
+    resolved.push({ name, role: await contract[name]() });
+  }
+  return resolved;
+}
+
+/**
+ * Grants named roles to `grantee`, skipping any it already holds.
+ *
+ * Idempotent, so a re-run after a partially applied grant costs nothing and reports the final
+ * state. `adminSigner` must hold DEFAULT_ADMIN_ROLE - every role in {@link MAINTENANCE_ROLES} is
+ * administered by it.
+ *
+ * @param contract    An AccessControl contract instance.
+ * @param adminSigner Signer holding DEFAULT_ADMIN_ROLE; sends the grants.
+ * @param grantee     The account receiving the roles.
+ * @param roleNames   The `*_ROLE` constant names to grant.
+ * @param log         Whether to print each grant.
+ */
+export async function grantRolesByName(
+  contract: any,
+  adminSigner: any,
+  grantee: string,
+  roleNames: readonly string[],
+  log = true,
+) {
+  const connectedContract = contract.connect(adminSigner);
+  for (const { name, role } of await resolveRolesByName(contract, roleNames)) {
+    if (await contract.hasRole(role, grantee)) {
+      if (log) {
+        console.log(chalk.dim(`${grantee} already holds ${name}`));
+      }
+      continue;
+    }
+    const tx = await connectedContract.grantRole(role, grantee);
+    await tx.wait();
+    if (log) {
+      console.log(chalk.green(`Granted ${name} to ${grantee}`));
+    }
+  }
+}
+
+/**
+ * Renounces every role the signer holds on the contract - the mirror of `grantAllRoles`, with
+ * the same ABI-driven role discovery. DEFAULT_ADMIN_ROLE is excluded on purpose: it leaves via
+ * the two-step default-admin transfer, not via renounce.
+ *
+ * @param contract An AccessControl contract instance.
+ * @param signer   The account renouncing its own roles.
+ * @param log      Whether to print each renounce.
+ */
+export async function renounceAllRoles(contract: any, signer: any, log = true) {
+  const connectedContract = contract.connect(signer);
+  const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
+
+  const roleNames: string[] = contract.interface.fragments
+    .filter(
+      (fragment: any) =>
+        fragment.type === "function" &&
+        fragment.inputs.length === 0 &&
+        /^[A-Z0-9_]+_ROLE$/.test(fragment.name) &&
+        fragment.name !== "DEFAULT_ADMIN_ROLE",
+    )
+    .map((fragment: any) => fragment.name);
+
+  for (const roleName of roleNames) {
+    const role = await contract[roleName]();
+    if (role === defaultAdminRole || !(await contract.hasRole(role, signer.address))) {
+      continue;
+    }
+    const tx = await connectedContract.renounceRole(role, signer.address);
+    await tx.wait();
+    if (log) {
+      console.log(chalk.yellow(`Renounced ${roleName} from ${signer.address}`));
+    }
+  }
+}
+
+/**
  * Returns the proxy's current default admin, or null when the proxy has no AccessControl storage
  * yet - either because it still runs a pre-roles (Ownable) implementation, which has no
  * `defaultAdmin()` selector at all, or because it was upgraded without running initializeV2.

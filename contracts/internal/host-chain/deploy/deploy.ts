@@ -10,7 +10,9 @@ import { fundAccount } from "../utils/fund";
 import {
   getDefaultAdmin,
   grantAllRoles,
+  grantRolesByName,
   isLocalNetwork,
+  MAINTENANCE_ROLES,
   requireDefaultAdminIsSignerOrUnset,
   resolveAdminDelay,
 } from "../utils/roles";
@@ -81,15 +83,30 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
     throw e;
   }
 
-  // Open the coprocessor intake kill-switch
-  try {
-    const connectedImplementation = TMProxyContract.connect(adminSigner);
-    const enableTx = await connectedImplementation.enable();
-    await enableTx.wait();
-    console.log(chalk.green("Successfully enabled TaskManager"));
-  } catch (e) {
-    console.error(chalk.red(`Failed enable transaction: ${e}`));
-    throw e;
+  // Open the coprocessor intake kill-switch - except on mainnet, which ships closed.
+  //
+  // A proxy coming off the deterministic bootstrap stub is already disabled: `isEnabled` lives in
+  // slot 7, the stub's storage stops at slot 4, and `initializeV2` deliberately leaves that slot
+  // alone. So skipping the call here is all it takes for a mainnet deployment to end with intake
+  // closed - no explicit `disable()` needed. Going live is a separate, deliberate step by a
+  // PAUSER_ROLE holder (the Safe, or the maintenance wallet) once the configuration is verified.
+  if (isMainnetDeployment()) {
+    console.log(
+      chalk.yellow(
+        "Mainnet deployment - leaving TaskManager DISABLED. Intake stays closed until a " +
+          "PAUSER_ROLE holder calls enable(); see docs/mainnet-deployment.md.",
+      ),
+    );
+  } else {
+    try {
+      const connectedImplementation = TMProxyContract.connect(adminSigner);
+      const enableTx = await connectedImplementation.enable();
+      await enableTx.wait();
+      console.log(chalk.green("Successfully enabled TaskManager"));
+    } catch (e) {
+      console.error(chalk.red(`Failed enable transaction: ${e}`));
+      throw e;
+    }
   }
 
   // Set the security zones
@@ -180,7 +197,7 @@ async function ACLSetup(
  * @param aclContract The ACL proxy contract
  * @param ownerSigner The ACL owner (allowed to call the address setters)
  */
-async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminDelay: number) {
+async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any) {
   try {
     const revokerFactory = await ethers.getContractFactory("ACPTimestampRevoker");
     const revoker = await revokerFactory.deploy();
@@ -198,21 +215,36 @@ async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminD
       chalk.green("Successfully set default revoker contract in ACL"),
     );
 
-    const { ProxyAddress: shareRegistryAddress } = await getProxyContract(
-      ownerSigner,
-      adminDelay,
-      "ACPShareRegistry",
+    // Not via getProxyContract: ACPShareRegistry is plain AccessControl (no default-admin
+    // rules), so its initialize takes only the admin - passing an adminDelay too made the
+    // encode throw, which the old catch-and-return silently swallowed, and every deploy since
+    // shipped without a share registry. `initialize` already grants DEFAULT_ADMIN_ROLE and
+    // UPGRADER_ROLE to the owner.
+    const shareRegistryFactory = await ethers.getContractFactory("ACPShareRegistry");
+    const shareRegistryContract = await upgrades.deployProxy(
+      shareRegistryFactory,
+      [ownerSigner.address],
+      { kind: "uups", initializer: "initialize" },
     );
+    await shareRegistryContract.waitForDeployment();
+    const shareRegistryAddress = await shareRegistryContract.getAddress();
+    console.log(
+      chalk.green("Successfully deployed proxy: ACPShareRegistry to:", shareRegistryAddress),
+    );
+
     const registryTx = await aclContract
       .connect(ownerSigner)
       .setShareRegistry(shareRegistryAddress);
     await registryTx.wait();
     console.log(chalk.green("Successfully set share registry in ACL"));
+    console.log("\n");
+    return shareRegistryContract;
   } catch (e) {
+    // Rethrow like the other setup steps: swallowing this used to turn a half-configured ACP
+    // stack into a successful-looking deploy.
     console.error(chalk.red(`Failed ACP infrastructure setup: ${e}`));
-    return e;
+    throw e;
   }
-  console.log("\n");
 }
 
 /**
@@ -336,14 +368,104 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, adminSigner: any,
 
 // The aggregator key comes from the environment, never from a committed file: this repo is
 // public, and a key checked in here once ended up doubling as a live testnet identity.
+// Mainnet deployments have no aggregator identity at all - there, the deployer signer fills
+// that role and this returns an empty list. The local stack still requires the key: it funds
+// the wallet and the stack expects its address as the result-processor.
 function getAggregatorWallets(ethers: any) {
   const key = process.env.AGGREGATOR_KEY;
   if (!key) {
-    throw new Error(
-      "AGGREGATOR_KEY must be set - the deploy funds it and uses it for the ACP infrastructure setup.",
-    );
+    if (isLocalNetwork(hre)) {
+      throw new Error(
+        "AGGREGATOR_KEY must be set on a local network - the deploy funds it and uses it for the ACP infrastructure setup.",
+      );
+    }
+    console.log(chalk.yellow("AGGREGATOR_KEY not set - the deployer signer will run the ACP infrastructure setup."));
+    return [];
   }
   return [new ethers.Wallet(key, ethers.provider)];
+}
+
+// Chains where a deployment must not end with an EOA holding DEFAULT_ADMIN, and must not end
+// with task intake open.
+const MAINNET_CHAIN_IDS = new Set([1, 42161]);
+
+/** True when deploying to a production chain. */
+function isMainnetDeployment(): boolean {
+  return MAINNET_CHAIN_IDS.has((hre.network.config as any)?.chainId);
+}
+
+/**
+ * Resolves the address that ends up holding DEFAULT_ADMIN and every operational role once the
+ * deployment settles - on mainnet, the Gnosis Safe. Returns null when unset, which is refused on
+ * mainnet chain IDs: without it the deployer EOA would remain the admin of every proxy.
+ */
+function resolveFinalAdmin(ethers: any): string | null {
+  const raw = process.env.SAFE_ADMIN_ADDRESS?.trim();
+  if (raw) {
+    return ethers.getAddress(raw);
+  }
+  if (isMainnetDeployment()) {
+    const chainId = (hre.network.config as any)?.chainId;
+    throw new Error(
+      `SAFE_ADMIN_ADDRESS must be set on chain ${chainId}. Refusing to leave the deployer EOA ` +
+        `as DEFAULT_ADMIN of the mainnet proxies - set it to the Safe that takes over.`,
+    );
+  }
+  return null;
+}
+
+/**
+ * Resolves the maintenance wallet - a hardware wallet that holds only the narrow operational
+ * roles in {@link MAINTENANCE_ROLES}, so day-to-day pausing and security-zone changes do not need
+ * the Safe.
+ *
+ * Required on mainnet, for the same reason SAFE_ADMIN_ADDRESS is: a production chain that ends up
+ * with no maintenance wallet forces every pause through the Safe, and discovering that during an
+ * incident is too late. Optional elsewhere, so the local stack and the test fixtures still run
+ * without one.
+ */
+function resolveMaintenanceAddress(ethers: any): string | null {
+  const raw = process.env.MAINTENANCE_ADDRESS?.trim();
+  if (raw) {
+    return ethers.getAddress(raw);
+  }
+  if (isMainnetDeployment()) {
+    const chainId = (hre.network.config as any)?.chainId;
+    throw new Error(
+      `MAINTENANCE_ADDRESS must be set on chain ${chainId}. Without it the only holder of ` +
+        `PAUSER_ROLE and SECURITY_ZONE_MANAGER_ROLE is the Safe, so pausing intake needs a ` +
+        `multisig round trip.`,
+    );
+  }
+  return null;
+}
+
+/**
+ * Hands every contract over to `finalAdmin`: grants it all operational roles, and moves
+ * DEFAULT_ADMIN over. On the default-admin-rules contracts (`twoStep`) that is the two-step
+ * transfer, completed only when the new admin calls `acceptDefaultAdminTransfer()` after the
+ * admin delay - for a Safe, via `task:acceptAdminAsSafe`. Plain AccessControl contracts
+ * (ACPShareRegistry) have no transfer mechanism and DEFAULT_ADMIN_ROLE is granted directly.
+ * The deployer keeps its own roles until `task:renounceDeployerRoles` runs after the handover,
+ * so a failed acceptance never leaves a contract unmanageable.
+ */
+async function handOverToFinalAdmin(
+  contracts: { name: string; contract: any; admin: any; twoStep: boolean }[],
+  finalAdmin: string,
+) {
+  for (const { name, contract, admin, twoStep } of contracts) {
+    await grantAllRoles(contract, admin, finalAdmin);
+    if (twoStep) {
+      const tx = await contract.connect(admin).beginDefaultAdminTransfer(finalAdmin);
+      await tx.wait();
+      console.log(chalk.green(`${name}: granted all roles to ${finalAdmin} and began the default-admin transfer`));
+    } else {
+      const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
+      const tx = await contract.connect(admin).grantRole(defaultAdminRole, finalAdmin);
+      await tx.wait();
+      console.log(chalk.green(`${name}: granted all roles and DEFAULT_ADMIN_ROLE to ${finalAdmin}`));
+    }
+  }
 }
 
 /**
@@ -419,6 +541,10 @@ const func: DeployFunction = async function () {
   console.log("\n");
 
   const { adminSigner, adminDelay } = resolveAdmin([...aggregatorSigners, signer]);
+  // Resolved before anything deploys, so a missing Safe address fails the run while it is
+  // still a no-op instead of after the proxies exist.
+  const finalAdmin = resolveFinalAdmin(ethers);
+  const maintenanceAddress = resolveMaintenanceAddress(ethers);
 
   const TMProxyAddress = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
@@ -436,12 +562,44 @@ const func: DeployFunction = async function () {
   await ACLSetup(TMProxyContract, adminSigner, aclContract);
 
   console.log(chalk.bold.blue("----------------------ACP infrastructure--------------------"));
-  await ACPInfrastructureSetup(aclContract, aggregatorSigners[0], adminDelay);
+  // Both ACL setters below are onlyRole(DEFAULT_ADMIN_ROLE) and the share registry's initial
+  // admin should be the same account, so this has to be the ACL's admin - never the aggregator.
+  // Preferring the aggregator only ever worked because the local stack leaves TM_ADMIN_ADDRESS
+  // unset, which makes the aggregator the admin by accident.
+  const shareRegistryContract = await ACPInfrastructureSetup(aclContract, adminSigner);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
-  const {ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, adminDelay, "PlaintextsStorage");
+  const {ProxyContract: ptStorageContract, ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, adminDelay, "PlaintextsStorage");
   await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, adminSigner);
+
+  // Before the handover, while the deployer unambiguously still holds DEFAULT_ADMIN_ROLE:
+  // beginDefaultAdminTransfer only schedules, but granting from the Safe afterwards would need a
+  // Safe transaction for what is a one-line grant here.
+  if (maintenanceAddress) {
+    console.log(chalk.bold.blue("---------------------Maintenance wallet---------------------"));
+    await grantRolesByName(TMProxyContract, adminSigner, maintenanceAddress, MAINTENANCE_ROLES);
+    console.log("");
+  }
+
+  if (finalAdmin) {
+    console.log(chalk.bold.blue("----------------------Admin handover-------------------------"));
+    await handOverToFinalAdmin(
+      [
+        { name: "TaskManager", contract: TMProxyContract, admin: adminSigner, twoStep: true },
+        { name: "ACL", contract: aclContract, admin: adminSigner, twoStep: true },
+        { name: "ACPShareRegistry", contract: shareRegistryContract, admin: adminSigner, twoStep: false },
+        { name: "PlaintextsStorage", contract: ptStorageContract, admin: adminSigner, twoStep: true },
+      ],
+      finalAdmin,
+    );
+    console.log(
+      chalk.yellow(
+        `Handover started. After the admin delay (${adminDelay}s), run task:acceptAdminAsSafe ` +
+          `to accept as ${finalAdmin}, then task:renounceDeployerRoles to strip the deployer.`,
+      ),
+    );
+  }
 };
 
 export default func;

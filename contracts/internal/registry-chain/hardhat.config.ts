@@ -33,6 +33,15 @@ const config: HardhatUserConfig = {
       url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://arbitrum-sepolia-rpc.publicnode.com",
       accounts: process.env.KEY ? [process.env.KEY] : [],
     },
+    arbitrumOne: {
+      chainId: 42161,
+      url: process.env.ARBITRUM_ONE_RPC_URL || "https://arbitrum-one-rpc.publicnode.com",
+      accounts: process.env.KEY ? [process.env.KEY] : [],
+    },
+  },
+  etherscan: {
+    // Etherscan API v2 - a single key serves every supported chain.
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
   },
   typechain: { outDir: "types", target: "ethers-v6" },
   gasReporter: {

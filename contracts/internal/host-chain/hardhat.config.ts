@@ -31,6 +31,23 @@ const ARBITRUM_SEPOLIA_RPC_URL = process.env.ARBITRUM_SEPOLIA_RPC_URL || "https:
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "https://base-sepolia-rpc.publicnode.com"
 
+const ETHEREUM_CHAIN_ID = 1;
+const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL || "https://ethereum-rpc.publicnode.com"
+
+const ARBITRUM_ONE_CHAIN_ID = 42161;
+const ARBITRUM_ONE_RPC_URL = process.env.ARBITRUM_ONE_RPC_URL || "https://arbitrum-one-rpc.publicnode.com"
+
+// Hardhat validates every network in this file at config load, not just the one being used, so a
+// key that is irrelevant to the current deployment must drop out of the list rather than become an
+// `undefined` entry - otherwise blanking AGGREGATOR_KEY for a mainnet deploy breaks the localfhenix
+// config and refuses to load at all.
+const accountsFrom = (...keys: (string | undefined)[]): string[] =>
+  keys.filter((key): key is string => Boolean(key && key.trim()));
+
+// Mainnet deploys sign with KEY only - there is no KEY2 / aggregator identity on mainnet.
+const mainnetAccounts = accountsFrom(process.env.KEY);
+
+
 const testnetConfig = {
     chainId: TESTNET_CHAIN_ID,
     url: TESTNET_RPC_URL,
@@ -39,19 +56,31 @@ const testnetConfig = {
 const sepoliaConfig = {
     chainId: SEPOLIA_CHAIN_ID,
     url: SEPOLIA_RPC_URL,
-    accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    accounts: accountsFrom(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const arbitrumSepoliaConfig = {
     chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
     url: ARBITRUM_SEPOLIA_RPC_URL,
-    accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    accounts: accountsFrom(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const baseSepoliaConfig = {
   chainId: BASE_SEPOLIA_CHAIN_ID,
   url: BASE_SEPOLIA_RPC_URL,
-  accounts: [process.env.KEY, process.env.KEY2], // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+  accounts: accountsFrom(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+}
+
+const ethereumConfig = {
+  chainId: ETHEREUM_CHAIN_ID,
+  url: ETHEREUM_RPC_URL,
+  accounts: mainnetAccounts,
+}
+
+const arbitrumOneConfig = {
+  chainId: ARBITRUM_ONE_CHAIN_ID,
+  url: ARBITRUM_ONE_RPC_URL,
+  accounts: mainnetAccounts,
 }
 
 // Making sure we use different account in localfhenix -
@@ -64,7 +93,7 @@ const localfhenixconfig: HttpNetworkUserConfig  = {
   timeout: 10_000,
   httpHeaders: {},
   url: "http://127.0.0.1:42069",
-  accounts: [process.env.KEY as string, process.env.KEY2 as string, process.env.AGGREGATOR_KEY as string],
+  accounts: accountsFrom(process.env.KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
 }
 
 const localfhenixk8sconfig: HttpNetworkUserConfig  = {
@@ -74,7 +103,7 @@ const localfhenixk8sconfig: HttpNetworkUserConfig  = {
   timeout: 10_000,
   httpHeaders: {},
   url: "http://hostchain:8547",
-  accounts: [process.env.KEY as string, process.env.KEY2 as string, process.env.AGGREGATOR_KEY as string],
+  accounts: accountsFrom(process.env.KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
 };
 
 function insertAccounts(config: any) {
@@ -124,8 +153,14 @@ const config: HardhatUserConfig = {
     sepolia: sepoliaConfig as HttpNetworkUserConfig,
     arbitrumSepolia: arbitrumSepoliaConfig as HttpNetworkUserConfig,
     baseSepolia: baseSepoliaConfig as HttpNetworkUserConfig,
+    ethereum: ethereumConfig as HttpNetworkUserConfig,
+    arbitrumOne: arbitrumOneConfig as HttpNetworkUserConfig,
     localfhenix: localfhenixconfig,
     localfhenixk8s: localfhenixk8sconfig,
+  },
+  etherscan: {
+    // Etherscan API v2 - a single key serves every supported chain (Ethereum, Arbitrum One, ...)
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
   },
   typechain: {
     outDir: "types",

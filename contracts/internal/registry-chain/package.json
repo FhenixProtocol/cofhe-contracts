@@ -7,6 +7,9 @@
     "test:gas": "REPORT_GAS=true hardhat test --network hardhat",
     "compile": "hardhat compile",
     "task:deploy": "hardhat run scripts/deploy.ts",
+    "deploy:arbitrumOne": "hardhat run scripts/deploy.ts --network arbitrumOne",
+    "acceptAdminAsSafe:arbitrumOne": "hardhat run scripts/acceptAdminAsSafe.ts --network arbitrumOne",
+    "renounceDeployerRoles:arbitrumOne": "hardhat run scripts/renounceDeployerRoles.ts --network arbitrumOne",
     "clean": "rimraf ./artifacts ./cache ./types ./.openzeppelin/*"
   },
   "author": "Fhenix",
