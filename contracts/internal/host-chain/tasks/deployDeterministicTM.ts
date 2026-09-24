@@ -8,7 +8,7 @@ import { CREATEX_ADDRESS, deployCreateX, isAlreadyDeployed } from "../utils/depl
 import { fundAccount } from "../utils/fund";
 import { deployCreate2ViaCreateX, deployDeterministic, DETERMINISTIC_SALT } from "../utils/deployDeterministic";
 import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
-import { isLocalNetwork } from "../utils/roles";
+import { getDefaultAdmin, isLocalNetwork, resolveAdminDelay } from "../utils/roles";
 import chalk from "chalk";
 import ERC1967ProxyModule from "../ignition/modules/ERC1967Proxy";
 import { HardhatRuntimeEnvironment, TaskArguments } from "hardhat/types";
@@ -182,6 +182,175 @@ async function secureOwnership(
   await acceptTx.wait();
 }
 
+/** Which bootstrap strategy to run. `sponsored` never funds the public bootstrap key. */
+function bootstrapMode(): "direct" | "sponsored" {
+  const raw = (process.env.BOOTSTRAP_MODE ?? "direct").trim().toLowerCase();
+  if (raw !== "direct" && raw !== "sponsored") {
+    throw new Error(`BOOTSTRAP_MODE must be "direct" or "sponsored", got ${JSON.stringify(raw)}.`);
+  }
+  return raw;
+}
+
+/**
+ * Bootstraps the proxy without the bootstrap key ever holding a balance, via EIP-7702.
+ *
+ * The bootstrap key signs an authorization naming {@link BootstrapExecutor} - free, offline, no
+ * gas - and the deployer sends the transaction that carries it. The delegated code then runs with
+ * `msg.sender == BOOTSTRAP_OWNER`, creating the proxy and migrating it off the stub in a single
+ * transaction. Two consequences beyond not needing to fund a swept account: the proxy is never
+ * observable as a live proxy owned by a public key, and any hostile delegation already installed
+ * on that account is replaced in the same transaction.
+ *
+ * Steps 1 and 2 of the runbook collapse into this, so `hardhat deploy` afterwards finds a
+ * TaskManager that has already migrated and skips straight to configuring it.
+ */
+async function bootstrapSponsored(hre: HardhatRuntimeEnvironment) {
+  const { ethers } = hre;
+  const [signer] = await ethers.getSigners();
+
+  const securedOwner = process.env.TM_ADMIN_ADDRESS?.trim();
+  if (!securedOwner) {
+    throw new Error("TM_ADMIN_ADDRESS must be set on a live network.");
+  }
+  const securedOwnerAddress = ethers.getAddress(securedOwner);
+  const adminDelay = resolveAdminDelay(hre);
+
+  const bootstrapKey = process.env.BOOTSTRAP_OWNER_KEY?.trim();
+  if (!bootstrapKey) {
+    throw new Error(
+      `BOOTSTRAP_OWNER_KEY must be set: the key for ${BOOTSTRAP_OWNER}. It signs an EIP-7702 ` +
+        `authorization only - it needs no balance and sends no transaction.`,
+    );
+  }
+  const bootstrapWallet = new ethers.Wallet(bootstrapKey, ethers.provider);
+  if (bootstrapWallet.address !== BOOTSTRAP_OWNER) {
+    throw new Error(
+      `BOOTSTRAP_OWNER_KEY is the key for ${bootstrapWallet.address}, not the canonical ` +
+        `bootstrap owner ${BOOTSTRAP_OWNER}.`,
+    );
+  }
+
+  if (!(await isAlreadyDeployed(hre, CREATEX_ADDRESS))) {
+    throw new Error(`CreateX is not deployed at ${CREATEX_ADDRESS} on this network.`);
+  }
+
+  const taskManagerFactory = await ethers.getContractFactory("TaskManager");
+
+  // Squat / resume check. Unlike the direct path the end state here is a *migrated* proxy, so a
+  // default admin already being set is what "done" looks like.
+  if (await isAlreadyDeployed(hre, EXPECTED_TM_PROXY_ADDRESS)) {
+    const existingAdmin = await getDefaultAdmin(
+      taskManagerFactory.attach(EXPECTED_TM_PROXY_ADDRESS),
+      ethers.ZeroAddress,
+    );
+    if (existingAdmin !== null) {
+      if (existingAdmin.toLowerCase() !== securedOwnerAddress.toLowerCase()) {
+        throw new Error(
+          `Proxy at ${EXPECTED_TM_PROXY_ADDRESS} is already migrated but its default admin is ` +
+            `${existingAdmin}, not TM_ADMIN_ADDRESS (${securedOwnerAddress}). Investigate before ` +
+            `doing anything else.`,
+        );
+      }
+      console.log(chalk.green(`Already bootstrapped and migrated; default admin is ${existingAdmin}.`));
+      return;
+    }
+    const currentOwner = await legacyOwnerOf(hre, EXPECTED_TM_PROXY_ADDRESS);
+    if (currentOwner.toLowerCase() !== BOOTSTRAP_OWNER.toLowerCase()) {
+      throw new Error(
+        `Proxy at ${EXPECTED_TM_PROXY_ADDRESS} exists with owner ${currentOwner}, which is ` +
+          `neither the bootstrap key nor a migrated state - the canonical address may have been ` +
+          `taken over. Do NOT proceed.`,
+      );
+    }
+    console.log(chalk.yellow("Proxy exists and is still on the stub - completing the migration."));
+  }
+
+  // Everything below is paid for by the deployer.
+  console.log(chalk.bold.blue("----------------DeterministicTM implementation--------------"));
+  const dummyFactory = await ethers.getContractFactory("DeterministicTM");
+  await deployCreate2ViaCreateX(
+    hre,
+    signer,
+    EXPECTED_DUMMY_ADDRESS,
+    dummyFactory.bytecode,
+    "DeterministicTM implementation",
+  );
+
+  console.log(chalk.bold.blue("----------------TaskManager implementation------------------"));
+  const implementation = await taskManagerFactory.deploy();
+  await implementation.waitForDeployment();
+  const implementationAddress = await implementation.getAddress();
+  console.log(chalk.green("TaskManager implementation:", implementationAddress));
+
+  console.log(chalk.bold.blue("----------------Bootstrap executor--------------------------"));
+  const executorFactory = await ethers.getContractFactory("BootstrapExecutor");
+  const executor = await executorFactory.deploy(signer.address);
+  await executor.waitForDeployment();
+  const executorAddress = await executor.getAddress();
+  console.log(chalk.green("BootstrapExecutor:", executorAddress, "(sponsor:", signer.address + ")"));
+
+  const initData = dummyFactory.interface.encodeFunctionData("initialize", [BOOTSTRAP_OWNER]);
+  const initCode = ethers.concat([
+    (await ethers.getContractFactory("ERC1967Proxy")).bytecode,
+    ethers.AbiCoder.defaultAbiCoder().encode(["address", "bytes"], [EXPECTED_DUMMY_ADDRESS, initData]),
+  ]);
+  const migrationData = taskManagerFactory.interface.encodeFunctionData("initializeV2", [
+    securedOwnerAddress,
+    adminDelay,
+  ]);
+
+  console.log(chalk.bold.blue("----------------Sponsored bootstrap (EIP-7702)--------------"));
+  const chainId = (await ethers.provider.getNetwork()).chainId;
+  // The authorization is valid only against the account's current nonce, and applying it consumes
+  // one, so anything sent from the bootstrap account between signing and inclusion invalidates it.
+  // Read it as late as possible and let the post-checks catch the rest.
+  const authorization = await bootstrapWallet.authorize({
+    address: executorAddress,
+    chainId,
+    nonce: await ethers.provider.getTransactionCount(BOOTSTRAP_OWNER),
+  });
+  console.log(chalk.dim(`Authorization signed by ${BOOTSTRAP_OWNER} -> ${executorAddress}`));
+
+  const tx = await signer.sendTransaction({
+    type: 4,
+    to: BOOTSTRAP_OWNER,
+    data: executor.interface.encodeFunctionData("bootstrap", [
+      CREATEX_ADDRESS,
+      DETERMINISTIC_SALT,
+      initCode,
+      EXPECTED_TM_PROXY_ADDRESS,
+      implementationAddress,
+      migrationData,
+    ]),
+    authorizationList: [authorization],
+  } as any);
+  console.log(chalk.dim("sponsored bootstrap broadcast:", tx.hash));
+  await tx.wait();
+
+  if (!(await isAlreadyDeployed(hre, EXPECTED_TM_PROXY_ADDRESS))) {
+    throw new Error(`Transaction confirmed but there is no code at ${EXPECTED_TM_PROXY_ADDRESS}.`);
+  }
+  const admin = await getDefaultAdmin(
+    taskManagerFactory.attach(EXPECTED_TM_PROXY_ADDRESS),
+    ethers.ZeroAddress,
+  );
+  if (admin?.toLowerCase() !== securedOwnerAddress.toLowerCase()) {
+    throw new Error(
+      `CRITICAL: the proxy at ${EXPECTED_TM_PROXY_ADDRESS} reports default admin ${admin ?? "none"}, ` +
+        `expected ${securedOwnerAddress}. Investigate immediately.`,
+    );
+  }
+  console.log(
+    chalk.green(
+      `Bootstrapped and migrated in one transaction. TaskManager at ${EXPECTED_TM_PROXY_ADDRESS}, ` +
+        `default admin ${admin}. The bootstrap key was never funded.`,
+    ),
+  );
+  console.log(
+    chalk.yellow("Steps 1 and 2 of the runbook are both done - continue with `hardhat deploy`."),
+  );
+}
+
 /**
  * Bootstraps the deterministic TaskManager proxy on a live network and immediately secures it.
  *
@@ -208,6 +377,12 @@ async function secureOwnership(
  */
 async function deployDeterministicTMRemote(hre: HardhatRuntimeEnvironment) {
   const { ethers } = hre;
+
+  if (bootstrapMode() === "sponsored") {
+    await bootstrapSponsored(hre);
+    return;
+  }
+
   const [signer] = await ethers.getSigners();
 
   const securedOwner = process.env.TM_ADMIN_ADDRESS?.trim();

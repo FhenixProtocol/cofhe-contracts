@@ -3,9 +3,10 @@ const { ethers } = hre;
 import { Wallet, BaseContract } from "ethers";
 
 import { grantAllRoles } from "../../utils/roles";
+import { taskManagerAddress } from "../../utils/taskManagerAddress";
 
 // The hardcoded TaskManager address that ACL and PlaintextsStorage expect
-const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+const TASK_MANAGER_ADDRESS = taskManagerAddress();
 
 export interface DecryptResultFixture {
   taskManager: BaseContract;

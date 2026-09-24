@@ -2,13 +2,14 @@ import hre from "hardhat";
 import { expect } from "chai";
 
 import { grantAllRoles } from "../../utils/roles";
+import { taskManagerAddress } from "../../utils/taskManagerAddress";
 
 const { ethers } = hre;
 
 // ACL.allowTransient (and DeterministicACL.allowTransient) require msg.sender to equal
 // the compile-time TASK_MANAGER_ADDRESS constant, so the TM proxy must be deployed at
 // this fixed address. Mirrors deployProxyAtAddress from test/publiclyAllowed/PubliclyAllowed.ts.
-const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+const TASK_MANAGER_ADDRESS = taskManagerAddress();
 
 /**
  * Install a UUPS proxy's runtime bytecode at a fixed address and initialize it in place.

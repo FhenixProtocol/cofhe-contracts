@@ -6,12 +6,13 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { renounceAllRoles } from "../utils/roles";
+import { taskManagerAddress } from "../utils/taskManagerAddress";
 
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
 // The canonical TaskManager proxy - the root all other host-chain contracts are discovered from.
-const TM_PROXY_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+const TM_PROXY_ADDRESS = taskManagerAddress();
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();

@@ -16,6 +16,7 @@ import {
   requireDefaultAdminIsSignerOrUnset,
   resolveAdminDelay,
 } from "../utils/roles";
+import { taskManagerAddress } from "../utils/taskManagerAddress";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -546,7 +547,7 @@ const func: DeployFunction = async function () {
   const finalAdmin = resolveFinalAdmin(ethers);
   const maintenanceAddress = resolveMaintenanceAddress(ethers);
 
-  const TMProxyAddress = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+  const TMProxyAddress = taskManagerAddress();
 
   // Headline in chalk blue, with length of 60
   console.log(chalk.bold.blue("-----------------------TaskManager--------------------------"));

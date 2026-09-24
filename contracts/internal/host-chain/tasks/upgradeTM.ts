@@ -10,6 +10,7 @@ import {
   requireDefaultAdminIsSignerOrUnset,
   resolveAdminDelay,
 } from "../utils/roles";
+import { taskManagerAddress } from "../utils/taskManagerAddress";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -160,7 +161,7 @@ task("task:upgradeTM")
     console.log(chalk.green(`Balance of account: ${signer.address}`, await ethers.provider.getBalance(signer.address)));
 
     const TMFactory = await ethers.getContractFactory("TaskManager");
-    const TMProxyContract = TMFactory.attach("0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9") as Contract;
+    const TMProxyContract = TMFactory.attach(taskManagerAddress()) as Contract;
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     
 

@@ -3,10 +3,11 @@ import hre from "hardhat";
 const { ethers } = hre;
 import { Wallet } from "ethers";
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
+import { taskManagerAddress } from "../../utils/taskManagerAddress";
 
 // TaskManager is deployed at this fixed address by the fixture (ACL/PlaintextsStorage
 // hardcode it, and ACL.allowTransient requires msg.sender to equal it).
-const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+const TASK_MANAGER_ADDRESS = taskManagerAddress();
 
 // euint8, within the fixture's configured security-zone range (-128..127).
 const EUINT8 = 2;

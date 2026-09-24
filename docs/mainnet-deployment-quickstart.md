@@ -36,6 +36,7 @@ The last two are enforced only on chain IDs 1 and 42161; everywhere else they ar
 |---|---|
 | `SAFE_OWNER_KEY` | Lets step 3 execute **through** the Safe directly. Only works on threshold-1 Safes; the helper refuses anything higher. Unset (a real multisig, or a hardware-held owner key) makes step 3 write a Safe Transaction Builder batch instead. |
 | `SAFE_BATCH_OUT` | Overrides where that batch file is written. Default: `safe-batches/<network>-<slug>-<unix>.json`. |
+| `BOOTSTRAP_MODE` | `direct` (default) or `sponsored`. See step 1 — `sponsored` never funds the bootstrap account. |
 | `ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL` | Keyed RPC endpoints. Keyless public defaults are used when unset. |
 | `ETHERSCAN_API_KEY` | Etherscan API v2 — one key serves both chains, for `hardhat verify`. |
 
@@ -58,6 +59,10 @@ pnpm install && pnpm compile
 npx hardhat task:deployDeterministicTM --network <net>
 ```
 
+Two modes, selected by `BOOTSTRAP_MODE`.
+
+#### `direct` (default)
+
 Deploys the `DeterministicTM` implementation and the canonical proxy through CreateX, then secures
 it. Three transactions, because `DeterministicTM` is `Ownable2Step` and `transferOwnership` only
 *nominates*:
@@ -74,6 +79,41 @@ Idempotent and resumable: an already-secured proxy is left alone, one still owne
 key has its handover completed, and any **other** owner aborts loudly as a possible squat.
 
 Ends with `... and secured: owner is <TM_ADMIN_ADDRESS>`. Anything else — stop and investigate.
+
+This mode requires the bootstrap account to hold a small balance. **On Ethereum mainnet it cannot**:
+that account carries a hostile EIP-7702 delegation whose receive path forwards any incoming value
+out inside the funding transaction itself, so it can never be funded by a plain transfer.
+
+#### `sponsored` — use this on Ethereum
+
+```bash
+BOOTSTRAP_MODE=sponsored npx hardhat task:deployDeterministicTM --network <net>
+```
+
+The bootstrap key signs an **EIP-7702 authorization** — free, offline, no balance, no transaction —
+naming a `BootstrapExecutor` deployed by your deployer. The deployer then sends **one** transaction
+carrying that authorization. Delegated code runs with `msg.sender == BOOTSTRAP_OWNER`, so in a
+single transaction it:
+
+1. creates the proxy via `CreateX.deployCreate2`, and
+2. calls `upgradeToAndCall(taskManagerImpl, initializeV2(TM_ADMIN_ADDRESS, TM_ADMIN_DELAY))`
+
+`onlyOwner` on the stub and `initializeV2`'s legacy-owner check are both satisfied by that same
+`msg.sender`. Three consequences:
+
+- the bootstrap account never holds or spends anything, so there is nothing to sweep;
+- there is **no window** in which a live proxy is owned by the public key, so the private-mempool
+  requirement for this step goes away;
+- any hostile delegation already on that account is replaced in the same transaction.
+
+**This mode also performs the migration, so it covers step 2's `upgradeTM` as well.** Run
+`hardhat deploy` afterwards as usual — it finds an already-migrated TaskManager and goes straight
+to configuring it.
+
+One caveat: an EIP-7702 authorization is bound to the authority account's current nonce, and
+applying it consumes one. If anything touches that account between signing and inclusion, the
+authorization goes stale and the task must be re-run. It reads the nonce immediately before
+signing and verifies `defaultAdmin()` afterwards.
 
 ### 2. Deploy and configure everything
 
