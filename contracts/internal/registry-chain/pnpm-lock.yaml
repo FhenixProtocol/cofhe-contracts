@@ -5,10 +5,10 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  serialize-javascript: ^7.0.5
-  tmp: ^0.2.6
+  mocha>serialize-javascript: ^7.0.5
+  solc>tmp: ^0.2.6
   ws@^8: ^8.21.0
-  cookie: ^0.7.0
+  '@sentry/node>cookie': ^0.7.0
 
 importers:
 

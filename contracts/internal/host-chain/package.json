@@ -62,14 +62,17 @@
     "typechain": "^8.3.2",
     "typescript": "^5.9.3"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "packageManager": "pnpm@9.12.1+sha512.e5a7e52a4183a02d5931057f7a0dbff9d5e9ce3161e33fa68ae392125b79282a8a8a470a51dfc8a0ed86221442eb2fb57019b0990ed24fab519bf0e1bc5ccfc4",
   "pnpm": {
     "overrides": {
       "hardhat-deploy>axios": "^1.20.0",
-      "serialize-javascript": "^7.0.5",
-      "tmp": "^0.2.6",
+      "mocha>serialize-javascript": "^7.0.5",
+      "solc>tmp": "^0.2.6",
       "ws@^8": "^8.21.0",
-      "cookie": "^0.7.0",
+      "@sentry/node>cookie": "^0.7.0",
       "lodash": "^4.18.1"
     }
   }
