@@ -35,7 +35,7 @@ Arbitrum note: the numbers are L2 execution gas. Arbitrum also charges an L1 dat
 
 ### FHERC20 transfer (whole transaction)
 
-The reference `FHERC20` from `FhenixProtocol/fhenix-confidential-contracts` at `5138cb8`, deployed on each fork, with an encrypted input amount (`InEuint64`). Gas is the full transaction: 21,000 base + calldata + execution, measured the same way for a plain ERC20 baseline. On Arbitrum, add the L1 data fee for the calldata.
+The reference `FHERC20` (its test harness) from `FhenixProtocol/fhenix-confidential-contracts` at `5138cb8`, deployed on each fork, with an encrypted input amount (`InEuint64`) where the call takes one. Gas is the full transaction: 21,000 base + calldata + execution. On Arbitrum, add the L1 data fee for the calldata.
 
 | Action | Gas (full transaction) |
 |---|---|
@@ -46,6 +46,21 @@ The reference `FHERC20` from `FhenixProtocol/fhenix-confidential-contracts` at `
 | `setOperator` (one-time approval) | 46,700 |
 | Baseline: plain OpenZeppelin ERC20 `transfer` to an existing holder | 34,500 |
 | Baseline: plain OpenZeppelin ERC20 `transfer` to a new holder | 51,600 |
+
+### ERC20Confidential transfer (whole transaction)
+
+`ERC20Confidential` (hybrid public + confidential balances; its mock, linked to `ERC20ConfidentialLib`) from `FhenixProtocol/fhenix-confidential-contracts` at `5138cb8`, deployed on each fork, with an encrypted input amount (`InEuint64`) where the call takes one. Gas is the full transaction: 21,000 base + calldata + execution. On Arbitrum, add the L1 data fee for the calldata.
+
+| Action | Gas (full transaction) |
+|---|---|
+| `confidentialTransfer` to an existing holder | 430,000 |
+| `confidentialTransfer` to a new holder (no balance yet) | 482,900 |
+| `confidentialTransferFrom` by an operator | 433,800 |
+| `confidentialTransfer` to an existing holder, with an observer set | 508,900 |
+| `shield` (public balance → confidential balance) | 407,900 |
+| `setOperator` (one-time approval) | 46,800 |
+| Public ERC20 `transfer` on the same token, to an existing holder | 34,900 |
+| Public ERC20 `transfer` on the same token, to a new holder | 52,000 |
 
 ### Arithmetic
 

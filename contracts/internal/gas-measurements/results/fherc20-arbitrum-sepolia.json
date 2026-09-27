@@ -1,8 +1,7 @@
 {
   "aclImpl": "0xB78000d9c885e37e66633fAFb7E712C26d52D27F",
   "chain": "arbitrumSepolia",
-  "fherc20Commit": "5138cb8644b19b24a75caf3f383a17457e823e16",
-  "forkBlock": 313291187,
+  "forkBlock": 313294291,
   "plaintextsStorageImpl": "0xcF19Bc30d7914ac6C28854355bf18190aC31bFC8",
   "rows": {
     "erc20TransferToHolder": 34468,
@@ -10,8 +9,9 @@
     "setOperator": 46661,
     "transferAgain": 421530,
     "transferFromByOperator": 424798,
-    "transferToHolder": 421518,
+    "transferToHolder": 421530,
     "transferToNewHolder": 474401
   },
+  "sourceCommit": "5138cb8644b19b24a75caf3f383a17457e823e16",
   "tmImpl": "0xd5A90bcFa4DB735D2385FCd8B980b01d9cAbC1BE"
 }

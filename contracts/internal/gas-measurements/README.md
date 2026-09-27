@@ -17,7 +17,7 @@ cp .env.example .env                                     # public RPCs; override
 python3 script/gen_probe.py        # regenerates src/GasProbe.sol and results/ops.json
 python3 script/check_coverage.py   # every FHE.sol overload has an exact probe row or a documented skip
 python3 script/check_probe.py      # no "extra" call reuses an operand of its "first" call
-forge test                         # measures on both forks: results/<chain>.json and results/fherc20-<chain>.json (~4 min)
+forge test                         # measures on both forks: results/<chain>.json, fherc20-<chain>.json, erc20confidential-<chain>.json (~5 min)
 python3 script/check_deployed.py   # TM/ACL/PlaintextsStorage at the measured block == sources here
 python3 script/render.py           # writes results/gas-tables.md; refuses unverified results
 python3 script/test_render.py      # renderer unit tests
