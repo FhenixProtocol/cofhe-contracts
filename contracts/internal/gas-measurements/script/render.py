@@ -46,6 +46,16 @@ TABLES = [
         ("getDecryptSafe", "`getDecryptResultSafe` (view)", ALL_TYPES)]),
 ]
 
+FHERC20_ROWS = [
+    ("transferToHolder", "`confidentialTransfer` to an existing holder"),
+    ("transferAgain", "`confidentialTransfer`, repeated (same sender and recipient)"),
+    ("transferToNewHolder", "`confidentialTransfer` to a new holder (no balance yet)"),
+    ("transferFromByOperator", "`confidentialTransferFrom` by an operator"),
+    ("setOperator", "`setOperator` (one-time approval)"),
+    ("erc20TransferToHolder", "Baseline: plain OpenZeppelin ERC20 `transfer` to an existing holder"),
+    ("erc20TransferToNewHolder", "Baseline: plain OpenZeppelin ERC20 `transfer` to a new holder"),
+]
+
 FOOTNOTES = """¹ Trivial `ebool` has only two handles (`true`, `false`), shared by every contract on the chain. Their ACL state differs per chain, so these cells can differ by a few gas between chains. The same holds for a cast to `ebool`, which uses the shared trivial-0 handle.
 ² `allowThis` is measured on a result handle created earlier in the same transaction (the normal pattern: compute, then `allowThis`). The TaskManager is already warm, so `first` and `extra` are close.
 ³ A receive always follows a share in the same transaction, so the TaskManager is already warm; `first` and `extra` are close.
@@ -175,11 +185,38 @@ def check_chains_match(chains):
     return exact, len(base)
 
 
+def check_fherc20(fherc20, deployed):
+    """Raise unless the FHERC20 runs used the verified implementations and agree across chains."""
+    for key, _ in CHAINS:
+        verified = deployed["chains"][DEPLOYED_NAME[key]]
+        for name, impl_key in IMPL_KEYS.items():
+            if fherc20[key][impl_key].lower() != verified[name]["impl"].lower() or not verified[name]["match"]:
+                raise ValueError(f"fherc20 {key} {name}: {fherc20[key][impl_key]} is not the verified implementation")
+    base, other = (fherc20[key]["rows"] for key, _ in CHAINS)
+    for rid, _ in FHERC20_ROWS:
+        if r100(base[rid]) != r100(other[rid]):
+            raise ValueError(f"fherc20 {rid}: {base[rid]} vs {other[rid]} differ after rounding")
+
+
+def fherc20_table(fherc20):
+    rows = fherc20["sepolia"]["rows"]
+    lines = [[label, r100(rows[rid])] for rid, label in FHERC20_ROWS]
+    commit = fherc20["sepolia"]["fherc20Commit"]
+    return ("### FHERC20 transfer (whole transaction)\n\n"
+            f"The reference `FHERC20` from `FhenixProtocol/fhenix-confidential-contracts` at `{commit[:7]}`, "
+            "deployed on each fork, with an encrypted input amount (`InEuint64`). Gas is the full transaction: "
+            "21,000 base + calldata + execution, measured the same way for a plain ERC20 baseline. On Arbitrum, "
+            "add the L1 data fee for the calldata.\n\n"
+            + table(["Action", "Gas (full transaction)"], lines))
+
+
 def main():
     ops = json.loads(Path("results/ops.json").read_text())
     chains = {key: json.loads(Path(f"results/{key}.json").read_text()) for key, _ in CHAINS}
     deployed = json.loads(Path("results/deployed.json").read_text())
+    fherc20 = {key: json.loads(Path(f"results/fherc20-{key}.json").read_text()) for key, _ in CHAINS}
     check_consistency(chains, deployed)
+    check_fherc20(fherc20, deployed)
     exact, total = check_chains_match(chains)
     rows = chains["sepolia"]["rows"]
     check_type_spread(rows, ops)
@@ -199,7 +236,7 @@ def main():
            "Arbitrum note: the numbers are L2 execution gas. Arbitrum also charges an L1 data fee for the calldata "
            "of the user's transaction. An FHE op inside a contract adds no calldata, so the fee does not change "
            "per op. Encrypted inputs (`FHE.asEuintX(InEuintX)`) do add calldata.\n",
-           "---\n", "## Ethereum Sepolia and Arbitrum Sepolia\n", chain_tables(rows, ops),
+           "---\n", "## Ethereum Sepolia and Arbitrum Sepolia\n", fherc20_table(fherc20), chain_tables(rows, ops),
            "---\n", "## Notes\n", FOOTNOTES]
     Path("results/gas-tables.md").write_text("\n".join(out))
     print("wrote results/gas-tables.md")

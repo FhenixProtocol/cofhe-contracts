@@ -11,12 +11,13 @@ Output: `results/gas-tables.md` (tables for the docs) and the raw numbers in `re
 ```sh
 (cd ../host-chain && pnpm install --frozen-lockfile)   # OpenZeppelin for FHE.sol and TaskManager
 forge install foundry-rs/forge-std --no-git
+forge install FhenixProtocol/fhenix-confidential-contracts@5138cb8644b19b24a75caf3f383a17457e823e16 --no-git
 cp .env.example .env                                     # public RPCs; override if rate-limited
 
 python3 script/gen_probe.py        # regenerates src/GasProbe.sol and results/ops.json
 python3 script/check_coverage.py   # every FHE.sol overload has an exact probe row or a documented skip
 python3 script/check_probe.py      # no "extra" call reuses an operand of its "first" call
-forge test                         # measures on both forks, writes results/<chain>.json (~4 min)
+forge test                         # measures on both forks: results/<chain>.json and results/fherc20-<chain>.json (~4 min)
 python3 script/check_deployed.py   # TM/ACL/PlaintextsStorage at the measured block == sources here
 python3 script/render.py           # writes results/gas-tables.md; refuses unverified results
 python3 script/test_render.py      # renderer unit tests

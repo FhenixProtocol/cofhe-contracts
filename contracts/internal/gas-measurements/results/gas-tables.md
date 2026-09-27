@@ -33,6 +33,20 @@ Arbitrum note: the numbers are L2 execution gas. Arbitrum also charges an L1 dat
 
 ## Ethereum Sepolia and Arbitrum Sepolia
 
+### FHERC20 transfer (whole transaction)
+
+The reference `FHERC20` from `FhenixProtocol/fhenix-confidential-contracts` at `5138cb8`, deployed on each fork, with an encrypted input amount (`InEuint64`). Gas is the full transaction: 21,000 base + calldata + execution, measured the same way for a plain ERC20 baseline. On Arbitrum, add the L1 data fee for the calldata.
+
+| Action | Gas (full transaction) |
+|---|---|
+| `confidentialTransfer` to an existing holder | 421,500 |
+| `confidentialTransfer`, repeated (same sender and recipient) | 421,500 |
+| `confidentialTransfer` to a new holder (no balance yet) | 474,400 |
+| `confidentialTransferFrom` by an operator | 424,800 |
+| `setOperator` (one-time approval) | 46,700 |
+| Baseline: plain OpenZeppelin ERC20 `transfer` to an existing holder | 34,500 |
+| Baseline: plain OpenZeppelin ERC20 `transfer` to a new holder | 51,600 |
+
 ### Arithmetic
 
 | Operation | first | extra | Types | Type spread (gas) |

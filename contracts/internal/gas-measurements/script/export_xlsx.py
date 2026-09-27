@@ -55,6 +55,21 @@ def per_op_sheet(wb, rows, ops):
     widths(ws, [30, 48, 13, 13, 34, 17])
 
 
+def fherc20_sheet(wb, fherc20):
+    ws = wb.create_sheet("FHERC20 transfer", 0)
+    commit = fherc20["sepolia"]["fherc20Commit"][:7]
+    ws.cell(row=1, column=1, value=f"FHERC20 reference implementation (fhenix-confidential-contracts @ {commit}), "
+                                   "whole transaction gas: 21,000 base + calldata + execution").font = SECTION_FONT
+    header(ws, 2, ["Action", "Gas (full transaction)"])
+    rows = fherc20["sepolia"]["rows"]
+    for r, (rid, label) in enumerate(render.FHERC20_ROWS, 3):
+        ws.cell(row=r, column=1, value=label.replace("`", ""))
+        ws.cell(row=r, column=2, value=rounded(rows[rid])).number_format = GAS
+    ws.cell(row=len(render.FHERC20_ROWS) + 4, column=1,
+            value="On Arbitrum, add the L1 data fee for the calldata. Same values on both chains.")
+    widths(ws, [70, 22])
+
+
 def batch_sheet(wb, rows):
     ws = wb.create_sheet("Batches")
     ws.cell(row=1, column=1, value="Batch encrypted inputs (FHE.asEuint32s, one signature)").font = SECTION_FONT
@@ -131,10 +146,13 @@ def main():
     exact, total = render.check_chains_match(chains)
     rows = chains["sepolia"]["rows"]
     render.check_type_spread(rows, ops)
+    fherc20 = {key: json.loads(Path(f"results/fherc20-{key}.json").read_text()) for key, _ in render.CHAINS}
+    render.check_fherc20(fherc20, deployed)
 
     wb = Workbook()
     per_op_sheet(wb, rows, ops)
     batch_sheet(wb, rows)
+    fherc20_sheet(wb, fherc20)
     raw_sheet(wb, chains, ops)
     setup_sheet(wb, chains, deployed, exact, total)
     notes_sheet(wb)

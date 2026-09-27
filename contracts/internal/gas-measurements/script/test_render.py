@@ -12,6 +12,7 @@ import render  # noqa: E402
 CHAINS = {key: json.loads(Path(f"results/{key}.json").read_text()) for key, _ in render.CHAINS}
 DEPLOYED = json.loads(Path("results/deployed.json").read_text())
 OPS = json.loads(Path("results/ops.json").read_text())
+FHERC20 = {key: json.loads(Path(f"results/fherc20-{key}.json").read_text()) for key, _ in render.CHAINS}
 
 
 class ConsistencyTest(unittest.TestCase):
@@ -58,6 +59,23 @@ class ChainsMatchTest(unittest.TestCase):
         self.assertLess(exact, total)
 
 
+class Fherc20Test(unittest.TestCase):
+    def test_current_results_pass(self):
+        render.check_fherc20(FHERC20, DEPLOYED)
+
+    def test_rejects_chain_difference(self):
+        fherc20 = copy.deepcopy(FHERC20)
+        fherc20["arbitrum-sepolia"]["rows"]["transferToHolder"] += 500
+        with self.assertRaises(ValueError):
+            render.check_fherc20(fherc20, DEPLOYED)
+
+    def test_rejects_other_tm_implementation(self):
+        fherc20 = copy.deepcopy(FHERC20)
+        fherc20["sepolia"]["tmImpl"] = "0x" + "11" * 20
+        with self.assertRaises(ValueError):
+            render.check_fherc20(fherc20, DEPLOYED)
+
+
 class OutputTest(unittest.TestCase):
     def setUp(self):
         render.main()
@@ -68,6 +86,11 @@ class OutputTest(unittest.TestCase):
         self.assertIn("## Ethereum Sepolia and Arbitrum Sepolia", self.md)
         self.assertNotIn("Chain difference summary", self.md)
         self.assertRegex(self.md, r"Arbitrum Sepolia: \d+ of \d+ rows equal Sepolia")
+
+    def test_fherc20_section(self):
+        self.assertIn("### FHERC20 transfer (whole transaction)", self.md)
+        self.assertIn("`confidentialTransfer` to an existing holder", self.md)
+        self.assertIn("5138cb8", self.md)
 
     def test_setup_table_lists_plaintexts_storage(self):
         self.assertIn("PlaintextsStorage implementation", self.md)

@@ -2,3 +2,4 @@
 @fhenixprotocol/cofhe-contracts/=../../
 forge-std/=lib/forge-std/src/
 @host-chain/=../host-chain/contracts/
+@fhenixprotocol/confidential-contracts/=lib/fhenix-confidential-contracts/contracts/
