@@ -973,6 +973,55 @@
   "contract": "ProbeEncrypt"
  },
  {
+  "id": "inputBytes__ebool",
+  "category": "Encrypt",
+  "op": "inputBytes",
+  "type": "ebool",
+  "contract": "ProbeEncrypt"
+ },
+ {
+  "id": "inputBytes__euint8",
+  "category": "Encrypt",
+  "op": "inputBytes",
+  "type": "euint8",
+  "contract": "ProbeEncrypt"
+ },
+ {
+  "id": "inputBytes__euint16",
+  "category": "Encrypt",
+  "op": "inputBytes",
+  "type": "euint16",
+  "contract": "ProbeEncrypt"
+ },
+ {
+  "id": "inputBytes__euint32",
+  "category": "Encrypt",
+  "op": "inputBytes",
+  "type": "euint32",
+  "contract": "ProbeEncrypt"
+ },
+ {
+  "id": "inputBytes__euint64",
+  "category": "Encrypt",
+  "op": "inputBytes",
+  "type": "euint64",
+  "contract": "ProbeEncrypt"
+ },
+ {
+  "id": "inputBytes__euint128",
+  "category": "Encrypt",
+  "op": "inputBytes",
+  "type": "euint128",
+  "contract": "ProbeEncrypt"
+ },
+ {
+  "id": "inputBytes__eaddress",
+  "category": "Encrypt",
+  "op": "inputBytes",
+  "type": "eaddress",
+  "contract": "ProbeEncrypt"
+ },
+ {
   "id": "random__euint8",
   "category": "Encrypt",
   "op": "random",

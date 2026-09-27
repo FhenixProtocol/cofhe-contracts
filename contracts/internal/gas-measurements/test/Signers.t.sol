@@ -42,6 +42,19 @@ contract SignersTest is ForkBase {
         _check("sepolia");
     }
 
+    function takeOverSigners() external {
+        _takeOverSigners();
+    }
+
+    // With a zero signer the TaskManager skips verification, so the input and decrypt rows would
+    // measure too little and still pass.
+    function test_takeOverRejectsZeroSigner() public {
+        _fork("sepolia");
+        _replaceAddress(TM, tm.decryptResultSigner(), address(0));
+        vm.expectRevert(bytes("signer is zero"));
+        this.takeOverSigners();
+    }
+
     function test_arbitrumSepolia() public {
         _check("arbitrumSepolia");
     }

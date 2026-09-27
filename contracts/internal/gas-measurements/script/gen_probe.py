@@ -24,7 +24,7 @@ PLAIN = {"ebool": "bool", "euint8": "uint8", "euint16": "uint16", "euint32": "ui
 ONE = {t: ("true" if t == "ebool" else "address(1)" if t == "eaddress" else f"{PLAIN[t]}(1)") for t in ALL}
 
 # Test-side arg kinds (see test/MeasureGas.t.sol).
-K_NONE, K_INPUT, K_DECRYPT, K_INPUT_BATCH, K_DECRYPT_BATCH = 0, 1, 2, 3, 4
+K_NONE, K_INPUT, K_DECRYPT, K_INPUT_BATCH, K_DECRYPT_BATCH, K_INPUT_BYTES = 0, 1, 2, 3, 4, 5
 
 ALICE = "address(0xA11CE)"
 VIEW_OPS = {"isAllowed", "isPubliclyAllowed", "verifyDecrypt", "verifyDecryptSafe", "getDecrypt", "getDecryptSafe",
@@ -83,27 +83,28 @@ def rows():
     out = []
     for op in ["add", "sub", "mul", "div", "rem", "min", "max"]:
         for t in U:
-            out.append(Row("Arithmetic", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(x, z)")))
+            out.append(Row("Arithmetic", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(z, w)")))
     for t in U:
         out.append(Row("Arithmetic", "square", t, measured(t, "FHE.square(x)", "FHE.square(z)")))
     for op in ["eq", "ne"]:
         for t in ALL:
-            out.append(Row("Comparison", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(x, z)")))
+            out.append(Row("Comparison", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(z, w)")))
     for op in ["lt", "lte", "gt", "gte"]:
         for t in U:
-            out.append(Row("Comparison", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(x, z)")))
+            out.append(Row("Comparison", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(z, w)")))
     for op in ["and", "or", "xor"]:
         for t in BOOLU:
-            out.append(Row("Bitwise", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(x, z)")))
+            out.append(Row("Bitwise", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(z, w)")))
     for t in BOOLU:
         out.append(Row("Bitwise", "not", t, measured(t, "FHE.not(x)", "FHE.not(z)")))
     for op in ["shl", "shr", "rol", "ror"]:
         for t in U:
-            out.append(Row("Bitwise", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(x, z)")))
-    # cond is d_ebool: with a_ebool the ebool row would pass one handle twice and get a warm ACL read.
+            out.append(Row("Bitwise", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(z, w)")))
+    # Conditions are two extra ebools, so no select row passes one handle twice.
     for t in ALL:
         out.append(Row("Select", "select", t, measured(
-            t, "FHE.select(cond, x, y)", "FHE.select(cond, x, z)", pre="        ebool cond = d_ebool;\n")))
+            t, "FHE.select(cond, x, y)", "FHE.select(cond2, z, w)",
+            pre="        ebool cond = e_ebool;\n        ebool cond2 = f_ebool;\n")))
 
     for t in ALL:
         out.append(Row("Encrypt", "trivial", t, measured(t, trivial(t, 11), trivial(t, 12))))
@@ -113,6 +114,11 @@ def rows():
         out.append(Row("Encrypt", "input", t, measured(
             t, f"FHE.as{CAP[t]}({ext}.wrap(h1), p1)", f"FHE.as{CAP[t]}({ext}.wrap(h2), p2)", pre=pre),
             kind=K_INPUT, utype=UTYPE[t]))
+    for t in ALL:
+        # ABI-encoded input: abi.encode(ctHash, securityZone, utype, signature), decoded by Utils.inputFromBytes.
+        pre = "        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));\n"
+        out.append(Row("Encrypt", "inputBytes", t, measured(
+            t, f"FHE.as{CAP[t]}(p1)", f"FHE.as{CAP[t]}(p2)", pre=pre), kind=K_INPUT_BYTES, utype=UTYPE[t]))
     for t in U:
         out.append(Row("Encrypt", "random", t, measured(t, f"FHE.random{CAP[t]}()", f"FHE.random{CAP[t]}()")))
     for n in BATCH_SIZES:
@@ -151,7 +157,7 @@ def rows():
         elif t == "eaddress":
             f1, f2 = trivial(t, 101), trivial(t, 103)
         else:
-            f1, f2 = "FHE.add(x, y)", "FHE.add(x, z)"
+            f1, f2 = "FHE.add(x, y)", "FHE.add(z, w)"
         fresh = f"        {t} f1 = {f1};\n        {t} f2 = {f2};\n"
         out.append(Row("Access", "allowThis", t, measured(t, "FHE.allowThis(f1)", "FHE.allowThis(f2)", pre=fresh)))
         out.append(Row("Access", "allowSender", t, measured(t, "FHE.allowSender(x)", "FHE.allowSender(z)")))
@@ -203,6 +209,7 @@ import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 def base_contract():
     decl = "".join(f"    {t} internal {v}_{t};\n" for t in ALL for v in "abcd")
+    decl += "    // Select conditions, separate from the ebool operands.\n    ebool internal e_ebool;\n    ebool internal f_ebool;\n"
     # Only euint128 and eaddress are trivially encrypted from salted plaintexts: their handle space
     # is too large to collide. The other operands derive from them through calls no probe row makes
     # (rows cast v_euint128 itself and always put `a` first), so no row recreates an operand handle.
@@ -215,7 +222,9 @@ def base_contract():
             init.append(f"{v}_{t} = FHE.as{CAP[t]}(n);")
     init += ["a_ebool = FHE.lt(b_euint64, d_euint64);", "b_ebool = FHE.gt(b_euint64, d_euint64);",
              "c_ebool = FHE.lte(b_euint64, d_euint64);", "d_ebool = FHE.gte(b_euint64, d_euint64);"]
+    init += ["e_ebool = FHE.lt(d_euint64, b_euint64);", "f_ebool = FHE.gt(d_euint64, b_euint64);"]
     init += [f"FHE.allowThis({v}_{t});" for t in ALL for v in "abcd"]
+    init += ["FHE.allowThis(e_ebool);", "FHE.allowThis(f_ebool);"]
     body = "".join(f"        {s}\n" for s in init)
     return f"""
 abstract contract ProbeBase {{

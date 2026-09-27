@@ -10,6 +10,7 @@ interface ITaskManagerAdmin {
     function getVersion() external view returns (uint8);
     function isEnabled() external view returns (bool);
     function acl() external view returns (address);
+    function plaintextsStorage() external view returns (address);
     function verifierSigner() external view returns (address);
     function decryptResultSigner() external view returns (address);
 }
@@ -53,8 +54,15 @@ abstract contract ForkBase is Test {
     }
 
     function _takeOverSigners() internal {
-        _replaceAddress(TM, tm.verifierSigner(), signer);
-        _replaceAddress(TM, tm.decryptResultSigner(), signer);
+        address verifier = tm.verifierSigner();
+        address decrypter = tm.decryptResultSigner();
+        // A zero signer switches verification off in the TaskManager, and the search below would
+        // overwrite an unrelated zero field.
+        require(verifier != address(0) && decrypter != address(0), "signer is zero");
+        _replaceAddress(TM, verifier, signer);
+        _replaceAddress(TM, decrypter, signer);
+        assertEq(tm.verifierSigner(), signer, "verifier signer not replaced");
+        assertEq(tm.decryptResultSigner(), signer, "decrypt signer not replaced");
     }
 
     // Mirrors TaskManager.extractBatchSigner / inputMessageHash; security zone is 0.

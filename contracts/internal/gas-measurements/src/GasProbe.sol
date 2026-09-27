@@ -34,6 +34,9 @@ abstract contract ProbeBase {
     eaddress internal b_eaddress;
     eaddress internal c_eaddress;
     eaddress internal d_eaddress;
+    // Select conditions, separate from the ebool operands.
+    ebool internal e_ebool;
+    ebool internal f_ebool;
     GasProbeReceiver internal receiver;
 
     constructor() {
@@ -75,6 +78,8 @@ abstract contract ProbeBase {
         b_ebool = FHE.gt(b_euint64, d_euint64);
         c_ebool = FHE.lte(b_euint64, d_euint64);
         d_ebool = FHE.gte(b_euint64, d_euint64);
+        e_ebool = FHE.lt(d_euint64, b_euint64);
+        f_ebool = FHE.gt(d_euint64, b_euint64);
         FHE.allowThis(a_ebool);
         FHE.allowThis(b_ebool);
         FHE.allowThis(c_ebool);
@@ -103,6 +108,8 @@ abstract contract ProbeBase {
         FHE.allowThis(b_eaddress);
         FHE.allowThis(c_eaddress);
         FHE.allowThis(d_eaddress);
+        FHE.allowThis(e_ebool);
+        FHE.allowThis(f_ebool);
     }
 
 
@@ -301,7 +308,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.add(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.add(x, z);
+        FHE.add(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -316,7 +323,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.add(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.add(x, z);
+        FHE.add(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -331,7 +338,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.add(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.add(x, z);
+        FHE.add(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -346,7 +353,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.add(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.add(x, z);
+        FHE.add(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -361,7 +368,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.add(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.add(x, z);
+        FHE.add(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -376,7 +383,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.sub(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.sub(x, z);
+        FHE.sub(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -391,7 +398,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.sub(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.sub(x, z);
+        FHE.sub(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -406,7 +413,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.sub(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.sub(x, z);
+        FHE.sub(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -421,7 +428,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.sub(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.sub(x, z);
+        FHE.sub(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -436,7 +443,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.sub(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.sub(x, z);
+        FHE.sub(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -451,7 +458,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.mul(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.mul(x, z);
+        FHE.mul(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -466,7 +473,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.mul(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.mul(x, z);
+        FHE.mul(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -481,7 +488,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.mul(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.mul(x, z);
+        FHE.mul(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -496,7 +503,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.mul(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.mul(x, z);
+        FHE.mul(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -511,7 +518,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.mul(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.mul(x, z);
+        FHE.mul(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -526,7 +533,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.div(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.div(x, z);
+        FHE.div(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -541,7 +548,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.div(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.div(x, z);
+        FHE.div(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -556,7 +563,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.div(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.div(x, z);
+        FHE.div(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -571,7 +578,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.div(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.div(x, z);
+        FHE.div(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -586,7 +593,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.div(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.div(x, z);
+        FHE.div(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -601,7 +608,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.rem(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rem(x, z);
+        FHE.rem(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -616,7 +623,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.rem(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rem(x, z);
+        FHE.rem(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -631,7 +638,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.rem(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rem(x, z);
+        FHE.rem(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -646,7 +653,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.rem(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rem(x, z);
+        FHE.rem(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -661,7 +668,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.rem(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rem(x, z);
+        FHE.rem(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -676,7 +683,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.min(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.min(x, z);
+        FHE.min(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -691,7 +698,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.min(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.min(x, z);
+        FHE.min(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -706,7 +713,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.min(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.min(x, z);
+        FHE.min(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -721,7 +728,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.min(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.min(x, z);
+        FHE.min(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -736,7 +743,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.min(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.min(x, z);
+        FHE.min(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -751,7 +758,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.max(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.max(x, z);
+        FHE.max(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -766,7 +773,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.max(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.max(x, z);
+        FHE.max(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -781,7 +788,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.max(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.max(x, z);
+        FHE.max(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -796,7 +803,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.max(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.max(x, z);
+        FHE.max(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -811,7 +818,7 @@ contract ProbeArithmetic is ProbeBase {
         FHE.max(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.max(x, z);
+        FHE.max(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -948,7 +955,7 @@ contract ProbeComparison is ProbeBase {
         FHE.eq(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.eq(x, z);
+        FHE.eq(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -963,7 +970,7 @@ contract ProbeComparison is ProbeBase {
         FHE.eq(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.eq(x, z);
+        FHE.eq(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -978,7 +985,7 @@ contract ProbeComparison is ProbeBase {
         FHE.eq(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.eq(x, z);
+        FHE.eq(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -993,7 +1000,7 @@ contract ProbeComparison is ProbeBase {
         FHE.eq(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.eq(x, z);
+        FHE.eq(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1008,7 +1015,7 @@ contract ProbeComparison is ProbeBase {
         FHE.eq(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.eq(x, z);
+        FHE.eq(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1023,7 +1030,7 @@ contract ProbeComparison is ProbeBase {
         FHE.eq(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.eq(x, z);
+        FHE.eq(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1038,7 +1045,7 @@ contract ProbeComparison is ProbeBase {
         FHE.eq(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.eq(x, z);
+        FHE.eq(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1053,7 +1060,7 @@ contract ProbeComparison is ProbeBase {
         FHE.ne(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ne(x, z);
+        FHE.ne(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1068,7 +1075,7 @@ contract ProbeComparison is ProbeBase {
         FHE.ne(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ne(x, z);
+        FHE.ne(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1083,7 +1090,7 @@ contract ProbeComparison is ProbeBase {
         FHE.ne(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ne(x, z);
+        FHE.ne(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1098,7 +1105,7 @@ contract ProbeComparison is ProbeBase {
         FHE.ne(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ne(x, z);
+        FHE.ne(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1113,7 +1120,7 @@ contract ProbeComparison is ProbeBase {
         FHE.ne(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ne(x, z);
+        FHE.ne(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1128,7 +1135,7 @@ contract ProbeComparison is ProbeBase {
         FHE.ne(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ne(x, z);
+        FHE.ne(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1143,7 +1150,7 @@ contract ProbeComparison is ProbeBase {
         FHE.ne(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ne(x, z);
+        FHE.ne(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1158,7 +1165,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lt(x, z);
+        FHE.lt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1173,7 +1180,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lt(x, z);
+        FHE.lt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1188,7 +1195,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lt(x, z);
+        FHE.lt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1203,7 +1210,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lt(x, z);
+        FHE.lt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1218,7 +1225,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lt(x, z);
+        FHE.lt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1233,7 +1240,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lte(x, z);
+        FHE.lte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1248,7 +1255,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lte(x, z);
+        FHE.lte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1263,7 +1270,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lte(x, z);
+        FHE.lte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1278,7 +1285,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lte(x, z);
+        FHE.lte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1293,7 +1300,7 @@ contract ProbeComparison is ProbeBase {
         FHE.lte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.lte(x, z);
+        FHE.lte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1308,7 +1315,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gt(x, z);
+        FHE.gt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1323,7 +1330,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gt(x, z);
+        FHE.gt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1338,7 +1345,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gt(x, z);
+        FHE.gt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1353,7 +1360,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gt(x, z);
+        FHE.gt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1368,7 +1375,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gt(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gt(x, z);
+        FHE.gt(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1383,7 +1390,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gte(x, z);
+        FHE.gte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1398,7 +1405,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gte(x, z);
+        FHE.gte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1413,7 +1420,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gte(x, z);
+        FHE.gte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1428,7 +1435,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gte(x, z);
+        FHE.gte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1443,7 +1450,7 @@ contract ProbeComparison is ProbeBase {
         FHE.gte(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.gte(x, z);
+        FHE.gte(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1515,7 +1522,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.and(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.and(x, z);
+        FHE.and(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1530,7 +1537,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.and(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.and(x, z);
+        FHE.and(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1545,7 +1552,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.and(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.and(x, z);
+        FHE.and(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1560,7 +1567,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.and(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.and(x, z);
+        FHE.and(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1575,7 +1582,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.and(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.and(x, z);
+        FHE.and(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1590,7 +1597,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.and(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.and(x, z);
+        FHE.and(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1605,7 +1612,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.or(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.or(x, z);
+        FHE.or(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1620,7 +1627,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.or(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.or(x, z);
+        FHE.or(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1635,7 +1642,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.or(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.or(x, z);
+        FHE.or(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1650,7 +1657,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.or(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.or(x, z);
+        FHE.or(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1665,7 +1672,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.or(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.or(x, z);
+        FHE.or(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1680,7 +1687,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.or(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.or(x, z);
+        FHE.or(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1695,7 +1702,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.xor(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.xor(x, z);
+        FHE.xor(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1710,7 +1717,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.xor(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.xor(x, z);
+        FHE.xor(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1725,7 +1732,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.xor(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.xor(x, z);
+        FHE.xor(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1740,7 +1747,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.xor(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.xor(x, z);
+        FHE.xor(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1755,7 +1762,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.xor(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.xor(x, z);
+        FHE.xor(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1770,7 +1777,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.xor(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.xor(x, z);
+        FHE.xor(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1875,7 +1882,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shl(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shl(x, z);
+        FHE.shl(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1890,7 +1897,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shl(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shl(x, z);
+        FHE.shl(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1905,7 +1912,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shl(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shl(x, z);
+        FHE.shl(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1920,7 +1927,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shl(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shl(x, z);
+        FHE.shl(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1935,7 +1942,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shl(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shl(x, z);
+        FHE.shl(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1950,7 +1957,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shr(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shr(x, z);
+        FHE.shr(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1965,7 +1972,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shr(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shr(x, z);
+        FHE.shr(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1980,7 +1987,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shr(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shr(x, z);
+        FHE.shr(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -1995,7 +2002,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shr(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shr(x, z);
+        FHE.shr(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2010,7 +2017,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.shr(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.shr(x, z);
+        FHE.shr(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2025,7 +2032,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.rol(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rol(x, z);
+        FHE.rol(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2040,7 +2047,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.rol(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rol(x, z);
+        FHE.rol(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2055,7 +2062,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.rol(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rol(x, z);
+        FHE.rol(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2070,7 +2077,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.rol(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rol(x, z);
+        FHE.rol(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2085,7 +2092,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.rol(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.rol(x, z);
+        FHE.rol(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2100,7 +2107,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.ror(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ror(x, z);
+        FHE.ror(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2115,7 +2122,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.ror(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ror(x, z);
+        FHE.ror(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2130,7 +2137,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.ror(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ror(x, z);
+        FHE.ror(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2145,7 +2152,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.ror(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ror(x, z);
+        FHE.ror(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2160,7 +2167,7 @@ contract ProbeBitwise is ProbeBase {
         FHE.ror(x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.ror(x, z);
+        FHE.ror(z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2191,12 +2198,13 @@ contract ProbeSelect is ProbeBase {
         ebool y = b_ebool;
         ebool z = c_ebool;
         ebool w = d_ebool;
-        ebool cond = d_ebool;
+        ebool cond = e_ebool;
+        ebool cond2 = f_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.select(cond, x, z);
+        FHE.select(cond2, z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2207,12 +2215,13 @@ contract ProbeSelect is ProbeBase {
         euint8 y = b_euint8;
         euint8 z = c_euint8;
         euint8 w = d_euint8;
-        ebool cond = d_ebool;
+        ebool cond = e_ebool;
+        ebool cond2 = f_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.select(cond, x, z);
+        FHE.select(cond2, z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2223,12 +2232,13 @@ contract ProbeSelect is ProbeBase {
         euint16 y = b_euint16;
         euint16 z = c_euint16;
         euint16 w = d_euint16;
-        ebool cond = d_ebool;
+        ebool cond = e_ebool;
+        ebool cond2 = f_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.select(cond, x, z);
+        FHE.select(cond2, z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2239,12 +2249,13 @@ contract ProbeSelect is ProbeBase {
         euint32 y = b_euint32;
         euint32 z = c_euint32;
         euint32 w = d_euint32;
-        ebool cond = d_ebool;
+        ebool cond = e_ebool;
+        ebool cond2 = f_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.select(cond, x, z);
+        FHE.select(cond2, z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2255,12 +2266,13 @@ contract ProbeSelect is ProbeBase {
         euint64 y = b_euint64;
         euint64 z = c_euint64;
         euint64 w = d_euint64;
-        ebool cond = d_ebool;
+        ebool cond = e_ebool;
+        ebool cond2 = f_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.select(cond, x, z);
+        FHE.select(cond2, z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2271,12 +2283,13 @@ contract ProbeSelect is ProbeBase {
         euint128 y = b_euint128;
         euint128 z = c_euint128;
         euint128 w = d_euint128;
-        ebool cond = d_ebool;
+        ebool cond = e_ebool;
+        ebool cond2 = f_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.select(cond, x, z);
+        FHE.select(cond2, z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2287,12 +2300,13 @@ contract ProbeSelect is ProbeBase {
         eaddress y = b_eaddress;
         eaddress z = c_eaddress;
         eaddress w = d_eaddress;
-        ebool cond = d_ebool;
+        ebool cond = e_ebool;
+        ebool cond2 = f_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
         g = gasleft();
-        FHE.select(cond, x, z);
+        FHE.select(cond2, z, w);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -2304,10 +2318,10 @@ contract ProbeEncrypt is ProbeBase {
         pure
         returns (string[] memory ids, uint8[] memory kinds, uint8[] memory utypes, uint8[] memory sizes)
     {
-        ids = new string[](19);
-        kinds = new uint8[](19);
-        utypes = new uint8[](19);
-        sizes = new uint8[](19);
+        ids = new string[](26);
+        kinds = new uint8[](26);
+        utypes = new uint8[](26);
+        sizes = new uint8[](26);
         ids[0] = "trivial__ebool"; kinds[0] = 0; utypes[0] = 0; sizes[0] = 0;
         ids[1] = "trivial__euint8"; kinds[1] = 0; utypes[1] = 0; sizes[1] = 0;
         ids[2] = "trivial__euint16"; kinds[2] = 0; utypes[2] = 0; sizes[2] = 0;
@@ -2322,11 +2336,18 @@ contract ProbeEncrypt is ProbeBase {
         ids[11] = "input__euint64"; kinds[11] = 1; utypes[11] = 5; sizes[11] = 0;
         ids[12] = "input__euint128"; kinds[12] = 1; utypes[12] = 6; sizes[12] = 0;
         ids[13] = "input__eaddress"; kinds[13] = 1; utypes[13] = 7; sizes[13] = 0;
-        ids[14] = "random__euint8"; kinds[14] = 0; utypes[14] = 0; sizes[14] = 0;
-        ids[15] = "random__euint16"; kinds[15] = 0; utypes[15] = 0; sizes[15] = 0;
-        ids[16] = "random__euint32"; kinds[16] = 0; utypes[16] = 0; sizes[16] = 0;
-        ids[17] = "random__euint64"; kinds[17] = 0; utypes[17] = 0; sizes[17] = 0;
-        ids[18] = "random__euint128"; kinds[18] = 0; utypes[18] = 0; sizes[18] = 0;
+        ids[14] = "inputBytes__ebool"; kinds[14] = 5; utypes[14] = 0; sizes[14] = 0;
+        ids[15] = "inputBytes__euint8"; kinds[15] = 5; utypes[15] = 2; sizes[15] = 0;
+        ids[16] = "inputBytes__euint16"; kinds[16] = 5; utypes[16] = 3; sizes[16] = 0;
+        ids[17] = "inputBytes__euint32"; kinds[17] = 5; utypes[17] = 4; sizes[17] = 0;
+        ids[18] = "inputBytes__euint64"; kinds[18] = 5; utypes[18] = 5; sizes[18] = 0;
+        ids[19] = "inputBytes__euint128"; kinds[19] = 5; utypes[19] = 6; sizes[19] = 0;
+        ids[20] = "inputBytes__eaddress"; kinds[20] = 5; utypes[20] = 7; sizes[20] = 0;
+        ids[21] = "random__euint8"; kinds[21] = 0; utypes[21] = 0; sizes[21] = 0;
+        ids[22] = "random__euint16"; kinds[22] = 0; utypes[22] = 0; sizes[22] = 0;
+        ids[23] = "random__euint32"; kinds[23] = 0; utypes[23] = 0; sizes[23] = 0;
+        ids[24] = "random__euint64"; kinds[24] = 0; utypes[24] = 0; sizes[24] = 0;
+        ids[25] = "random__euint128"; kinds[25] = 0; utypes[25] = 0; sizes[25] = 0;
     }
 
     function trivial__ebool(bytes calldata args) external returns (uint256 first, uint256 extra) {
@@ -2542,6 +2563,118 @@ contract ProbeEncrypt is ProbeBase {
         first = g - gasleft();
         g = gasleft();
         FHE.asEaddress(externalEaddress.wrap(h2), p2);
+        extra = g - gasleft();
+        (x, y, z, w);
+    }
+
+    function inputBytes__ebool(bytes calldata args) external returns (uint256 first, uint256 extra) {
+        (args, first, extra);
+        ebool x = a_ebool;
+        ebool y = b_ebool;
+        ebool z = c_ebool;
+        ebool w = d_ebool;
+        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));
+        uint256 g = gasleft();
+        FHE.asEbool(p1);
+        first = g - gasleft();
+        g = gasleft();
+        FHE.asEbool(p2);
+        extra = g - gasleft();
+        (x, y, z, w);
+    }
+
+    function inputBytes__euint8(bytes calldata args) external returns (uint256 first, uint256 extra) {
+        (args, first, extra);
+        euint8 x = a_euint8;
+        euint8 y = b_euint8;
+        euint8 z = c_euint8;
+        euint8 w = d_euint8;
+        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));
+        uint256 g = gasleft();
+        FHE.asEuint8(p1);
+        first = g - gasleft();
+        g = gasleft();
+        FHE.asEuint8(p2);
+        extra = g - gasleft();
+        (x, y, z, w);
+    }
+
+    function inputBytes__euint16(bytes calldata args) external returns (uint256 first, uint256 extra) {
+        (args, first, extra);
+        euint16 x = a_euint16;
+        euint16 y = b_euint16;
+        euint16 z = c_euint16;
+        euint16 w = d_euint16;
+        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));
+        uint256 g = gasleft();
+        FHE.asEuint16(p1);
+        first = g - gasleft();
+        g = gasleft();
+        FHE.asEuint16(p2);
+        extra = g - gasleft();
+        (x, y, z, w);
+    }
+
+    function inputBytes__euint32(bytes calldata args) external returns (uint256 first, uint256 extra) {
+        (args, first, extra);
+        euint32 x = a_euint32;
+        euint32 y = b_euint32;
+        euint32 z = c_euint32;
+        euint32 w = d_euint32;
+        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));
+        uint256 g = gasleft();
+        FHE.asEuint32(p1);
+        first = g - gasleft();
+        g = gasleft();
+        FHE.asEuint32(p2);
+        extra = g - gasleft();
+        (x, y, z, w);
+    }
+
+    function inputBytes__euint64(bytes calldata args) external returns (uint256 first, uint256 extra) {
+        (args, first, extra);
+        euint64 x = a_euint64;
+        euint64 y = b_euint64;
+        euint64 z = c_euint64;
+        euint64 w = d_euint64;
+        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));
+        uint256 g = gasleft();
+        FHE.asEuint64(p1);
+        first = g - gasleft();
+        g = gasleft();
+        FHE.asEuint64(p2);
+        extra = g - gasleft();
+        (x, y, z, w);
+    }
+
+    function inputBytes__euint128(bytes calldata args) external returns (uint256 first, uint256 extra) {
+        (args, first, extra);
+        euint128 x = a_euint128;
+        euint128 y = b_euint128;
+        euint128 z = c_euint128;
+        euint128 w = d_euint128;
+        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));
+        uint256 g = gasleft();
+        FHE.asEuint128(p1);
+        first = g - gasleft();
+        g = gasleft();
+        FHE.asEuint128(p2);
+        extra = g - gasleft();
+        (x, y, z, w);
+    }
+
+    function inputBytes__eaddress(bytes calldata args) external returns (uint256 first, uint256 extra) {
+        (args, first, extra);
+        eaddress x = a_eaddress;
+        eaddress y = b_eaddress;
+        eaddress z = c_eaddress;
+        eaddress w = d_eaddress;
+        (bytes memory p1, bytes memory p2) = abi.decode(args, (bytes, bytes));
+        uint256 g = gasleft();
+        FHE.asEaddress(p1);
+        first = g - gasleft();
+        g = gasleft();
+        FHE.asEaddress(p2);
         extra = g - gasleft();
         (x, y, z, w);
     }
@@ -3725,7 +3858,7 @@ contract ProbeAccess is ProbeBase {
         euint8 z = c_euint8;
         euint8 w = d_euint8;
         euint8 f1 = FHE.add(x, y);
-        euint8 f2 = FHE.add(x, z);
+        euint8 f2 = FHE.add(z, w);
         uint256 g = gasleft();
         FHE.allowThis(f1);
         first = g - gasleft();
@@ -3847,7 +3980,7 @@ contract ProbeAccess is ProbeBase {
         euint16 z = c_euint16;
         euint16 w = d_euint16;
         euint16 f1 = FHE.add(x, y);
-        euint16 f2 = FHE.add(x, z);
+        euint16 f2 = FHE.add(z, w);
         uint256 g = gasleft();
         FHE.allowThis(f1);
         first = g - gasleft();
@@ -3969,7 +4102,7 @@ contract ProbeAccess is ProbeBase {
         euint32 z = c_euint32;
         euint32 w = d_euint32;
         euint32 f1 = FHE.add(x, y);
-        euint32 f2 = FHE.add(x, z);
+        euint32 f2 = FHE.add(z, w);
         uint256 g = gasleft();
         FHE.allowThis(f1);
         first = g - gasleft();
@@ -4091,7 +4224,7 @@ contract ProbeAccess is ProbeBase {
         euint64 z = c_euint64;
         euint64 w = d_euint64;
         euint64 f1 = FHE.add(x, y);
-        euint64 f2 = FHE.add(x, z);
+        euint64 f2 = FHE.add(z, w);
         uint256 g = gasleft();
         FHE.allowThis(f1);
         first = g - gasleft();
@@ -4213,7 +4346,7 @@ contract ProbeAccess is ProbeBase {
         euint128 z = c_euint128;
         euint128 w = d_euint128;
         euint128 f1 = FHE.add(x, y);
-        euint128 f2 = FHE.add(x, z);
+        euint128 f2 = FHE.add(z, w);
         uint256 g = gasleft();
         FHE.allowThis(f1);
         first = g - gasleft();

@@ -21,6 +21,7 @@ contract MeasureGasTest is ForkBase {
     uint8 constant K_DECRYPT = 2;
     uint8 constant K_INPUT_BATCH = 3;
     uint8 constant K_DECRYPT_BATCH = 4;
+    uint8 constant K_INPUT_BYTES = 5;
     uint8 constant EUINT32 = 4;
 
     string rows;
@@ -50,6 +51,9 @@ contract MeasureGasTest is ForkBase {
         vm.serializeAddress(root, "tmImpl", _impl(TM));
         vm.serializeAddress(root, "acl", acl);
         vm.serializeAddress(root, "aclImpl", _impl(acl));
+        address plaintexts = tm.plaintextsStorage();
+        vm.serializeAddress(root, "plaintextsStorage", plaintexts);
+        vm.serializeAddress(root, "plaintextsStorageImpl", _impl(plaintexts));
         vm.writeJson(vm.serializeString(root, "rows", rows), file);
     }
 
@@ -81,6 +85,12 @@ contract MeasureGasTest is ForkBase {
             (bytes32 h1, bytes memory p1) = _signedInput(probe, id, 1, utype);
             (bytes32 h2, bytes memory p2) = _signedInput(probe, id, 2, utype);
             return abi.encode(h1, p1, h2, p2);
+        }
+        if (kind == K_INPUT_BYTES) {
+            (bytes32 h1, bytes memory p1) = _signedInput(probe, id, 1, utype);
+            (bytes32 h2, bytes memory p2) = _signedInput(probe, id, 2, utype);
+            return
+                abi.encode(abi.encode(uint256(h1), uint8(0), utype, p1), abi.encode(uint256(h2), uint8(0), utype, p2));
         }
         if (kind == K_DECRYPT) {
             // Same handles for publish, verify and get of one type, so get reads what publish stored.

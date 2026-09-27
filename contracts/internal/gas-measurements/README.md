@@ -13,11 +13,13 @@ Output: `results/gas-tables.md` (tables for the docs) and the raw numbers in `re
 forge install foundry-rs/forge-std --no-git
 cp .env.example .env                                     # public RPCs; override if rate-limited
 
-python3 script/check_deployed.py   # deployed TM/ACL bytecode == sources in this checkout
 python3 script/gen_probe.py        # regenerates src/GasProbe.sol and results/ops.json
-python3 script/check_coverage.py   # every FHE.sol function has a probe row or a documented skip
+python3 script/check_coverage.py   # every FHE.sol overload has an exact probe row or a documented skip
+python3 script/check_probe.py      # no "extra" call reuses an operand of its "first" call
 forge test                         # measures on both forks, writes results/<chain>.json (~4 min)
-python3 script/render.py           # writes results/gas-tables.md
+python3 script/check_deployed.py   # TM/ACL/PlaintextsStorage at the measured block == sources here
+python3 script/render.py           # writes results/gas-tables.md; refuses unverified results
+python3 script/test_render.py      # renderer unit tests
 ```
 
 The Arbitrum RPC must keep a few thousand blocks of state. `sepolia-rollup.arbitrum.io/rpc` works;
@@ -29,7 +31,7 @@ Each probe row calls one `FHE.*` function twice in one transaction and measures 
 `gasleft()` delta. Operands are loaded before the measurement, so only the FHE call is counted.
 
 - `first`: the first FHE call of the transaction (cold TaskManager and ACL).
-- `extra`: the same call again, on a different operand (warm).
+- `extra`: the same op again, on operands the first call did not use (warm TaskManager, cold operand ACL entries).
 
 `isolate = true` in `foundry.toml` makes each probe call its own transaction, so `first` starts cold.
 

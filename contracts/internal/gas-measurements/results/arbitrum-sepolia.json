@@ -3,27 +3,29 @@
   "aclImpl": "0xB78000d9c885e37e66633fAFb7E712C26d52D27F",
   "chain": "arbitrumSepolia",
   "chainId": 421614,
-  "forkBlock": 313277559,
+  "forkBlock": 313281513,
+  "plaintextsStorage": "0x3150A5f542e5Ecb28b67399f1a48E6385c4ad579",
+  "plaintextsStorageImpl": "0xcF19Bc30d7914ac6C28854355bf18190aC31bFC8",
   "rows": {
     "add__euint128": {
-      "extra": 29608,
-      "first": 51638
+      "extra": 31608,
+      "first": 51635
     },
     "add__euint16": {
-      "extra": 29530,
-      "first": 51560
+      "extra": 31530,
+      "first": 51557
     },
     "add__euint32": {
-      "extra": 29556,
-      "first": 51586
+      "extra": 31556,
+      "first": 51583
     },
     "add__euint64": {
-      "extra": 29582,
-      "first": 51612
+      "extra": 31582,
+      "first": 51609
     },
     "add__euint8": {
-      "extra": 29504,
-      "first": 51534
+      "extra": 31504,
+      "first": 51531
     },
     "allowGlobal__eaddress": {
       "extra": 28137,
@@ -194,28 +196,28 @@
       "first": 44736
     },
     "and__ebool": {
-      "extra": 29671,
-      "first": 51701
+      "extra": 31671,
+      "first": 51698
     },
     "and__euint128": {
-      "extra": 29639,
-      "first": 51669
+      "extra": 31639,
+      "first": 51666
     },
     "and__euint16": {
-      "extra": 29561,
-      "first": 51591
+      "extra": 31561,
+      "first": 51588
     },
     "and__euint32": {
-      "extra": 29587,
-      "first": 51617
+      "extra": 31587,
+      "first": 51614
     },
     "and__euint64": {
-      "extra": 29613,
-      "first": 51643
+      "extra": 31613,
+      "first": 51640
     },
     "and__euint8": {
-      "extra": 29535,
-      "first": 51565
+      "extra": 31535,
+      "first": 51562
     },
     "cast__eaddress__ebool": {
       "extra": 51792,
@@ -362,52 +364,52 @@
       "first": 45825
     },
     "div__euint128": {
-      "extra": 30318,
-      "first": 52348
+      "extra": 32318,
+      "first": 52345
     },
     "div__euint16": {
-      "extra": 30240,
-      "first": 52270
+      "extra": 32240,
+      "first": 52267
     },
     "div__euint32": {
-      "extra": 30266,
-      "first": 52296
+      "extra": 32266,
+      "first": 52293
     },
     "div__euint64": {
-      "extra": 30292,
-      "first": 52322
+      "extra": 32292,
+      "first": 52319
     },
     "div__euint8": {
-      "extra": 30214,
-      "first": 52244
+      "extra": 32214,
+      "first": 52241
     },
     "eq__eaddress": {
-      "extra": 30695,
-      "first": 52725
+      "extra": 32695,
+      "first": 52722
     },
     "eq__ebool": {
-      "extra": 30701,
-      "first": 52731
+      "extra": 32701,
+      "first": 52728
     },
     "eq__euint128": {
-      "extra": 30669,
-      "first": 52699
+      "extra": 32669,
+      "first": 52696
     },
     "eq__euint16": {
-      "extra": 30591,
-      "first": 52621
+      "extra": 32591,
+      "first": 52618
     },
     "eq__euint32": {
-      "extra": 30617,
-      "first": 52647
+      "extra": 32617,
+      "first": 52644
     },
     "eq__euint64": {
-      "extra": 30643,
-      "first": 52673
+      "extra": 32643,
+      "first": 52670
     },
     "eq__euint8": {
-      "extra": 30565,
-      "first": 52595
+      "extra": 32565,
+      "first": 52592
     },
     "getDecryptSafe__eaddress": {
       "extra": 7239,
@@ -466,44 +468,44 @@
       "first": 24340
     },
     "gt__euint128": {
-      "extra": 31307,
-      "first": 53337
+      "extra": 33307,
+      "first": 53334
     },
     "gt__euint16": {
-      "extra": 31229,
-      "first": 53259
+      "extra": 33229,
+      "first": 53256
     },
     "gt__euint32": {
-      "extra": 31255,
-      "first": 53285
+      "extra": 33255,
+      "first": 53282
     },
     "gt__euint64": {
-      "extra": 31281,
-      "first": 53311
+      "extra": 33281,
+      "first": 53308
     },
     "gt__euint8": {
-      "extra": 31203,
-      "first": 53233
+      "extra": 33203,
+      "first": 53230
     },
     "gte__euint128": {
-      "extra": 30803,
-      "first": 52833
+      "extra": 32803,
+      "first": 52830
     },
     "gte__euint16": {
-      "extra": 30725,
-      "first": 52755
+      "extra": 32725,
+      "first": 52752
     },
     "gte__euint32": {
-      "extra": 30751,
-      "first": 52781
+      "extra": 32751,
+      "first": 52778
     },
     "gte__euint64": {
-      "extra": 30777,
-      "first": 52807
+      "extra": 32777,
+      "first": 52804
     },
     "gte__euint8": {
-      "extra": 30699,
-      "first": 52729
+      "extra": 32699,
+      "first": 52726
     },
     "inputBatch__1": {
       "extra": 0,
@@ -520,6 +522,34 @@
     "inputBatch__8": {
       "extra": 0,
       "first": 79930
+    },
+    "inputBytes__eaddress": {
+      "extra": 18368,
+      "first": 40383
+    },
+    "inputBytes__ebool": {
+      "extra": 18362,
+      "first": 40377
+    },
+    "inputBytes__euint128": {
+      "extra": 18368,
+      "first": 40383
+    },
+    "inputBytes__euint16": {
+      "extra": 18368,
+      "first": 40383
+    },
+    "inputBytes__euint32": {
+      "extra": 18368,
+      "first": 40383
+    },
+    "inputBytes__euint64": {
+      "extra": 18368,
+      "first": 40383
+    },
+    "inputBytes__euint8": {
+      "extra": 18368,
+      "first": 40383
     },
     "input__eaddress": {
       "extra": 17835,
@@ -606,132 +636,132 @@
       "first": 21939
     },
     "lt__euint128": {
-      "extra": 31009,
-      "first": 53039
+      "extra": 33009,
+      "first": 53036
     },
     "lt__euint16": {
-      "extra": 30931,
-      "first": 52961
+      "extra": 32931,
+      "first": 52958
     },
     "lt__euint32": {
-      "extra": 30957,
-      "first": 52987
+      "extra": 32957,
+      "first": 52984
     },
     "lt__euint64": {
-      "extra": 30983,
-      "first": 53013
+      "extra": 32983,
+      "first": 53010
     },
     "lt__euint8": {
-      "extra": 30905,
-      "first": 52935
+      "extra": 32905,
+      "first": 52932
     },
     "lte__euint128": {
-      "extra": 30789,
-      "first": 52819
+      "extra": 32789,
+      "first": 52816
     },
     "lte__euint16": {
-      "extra": 30711,
-      "first": 52741
+      "extra": 32711,
+      "first": 52738
     },
     "lte__euint32": {
-      "extra": 30737,
-      "first": 52767
+      "extra": 32737,
+      "first": 52764
     },
     "lte__euint64": {
-      "extra": 30763,
-      "first": 52793
+      "extra": 32763,
+      "first": 52790
     },
     "lte__euint8": {
-      "extra": 30685,
-      "first": 52715
+      "extra": 32685,
+      "first": 52712
     },
     "max__euint128": {
-      "extra": 31738,
-      "first": 53768
+      "extra": 33738,
+      "first": 53765
     },
     "max__euint16": {
-      "extra": 31660,
-      "first": 53690
+      "extra": 33660,
+      "first": 53687
     },
     "max__euint32": {
-      "extra": 31686,
-      "first": 53716
+      "extra": 33686,
+      "first": 53713
     },
     "max__euint64": {
-      "extra": 31712,
-      "first": 53742
+      "extra": 33712,
+      "first": 53739
     },
     "max__euint8": {
-      "extra": 31634,
-      "first": 53664
+      "extra": 33634,
+      "first": 53661
     },
     "min__euint128": {
-      "extra": 31596,
-      "first": 53626
+      "extra": 33596,
+      "first": 53623
     },
     "min__euint16": {
-      "extra": 31518,
-      "first": 53548
+      "extra": 33518,
+      "first": 53545
     },
     "min__euint32": {
-      "extra": 31544,
-      "first": 53574
+      "extra": 33544,
+      "first": 53571
     },
     "min__euint64": {
-      "extra": 31570,
-      "first": 53600
+      "extra": 33570,
+      "first": 53597
     },
     "min__euint8": {
-      "extra": 31492,
-      "first": 53522
+      "extra": 33492,
+      "first": 53519
     },
     "mul__euint128": {
-      "extra": 30602,
-      "first": 52632
+      "extra": 32602,
+      "first": 52629
     },
     "mul__euint16": {
-      "extra": 30524,
-      "first": 52554
+      "extra": 32524,
+      "first": 52551
     },
     "mul__euint32": {
-      "extra": 30550,
-      "first": 52580
+      "extra": 32550,
+      "first": 52577
     },
     "mul__euint64": {
-      "extra": 30576,
-      "first": 52606
+      "extra": 32576,
+      "first": 52603
     },
     "mul__euint8": {
-      "extra": 30498,
-      "first": 52528
+      "extra": 32498,
+      "first": 52525
     },
     "ne__eaddress": {
-      "extra": 30990,
-      "first": 53020
+      "extra": 32990,
+      "first": 53017
     },
     "ne__ebool": {
-      "extra": 30996,
-      "first": 53026
+      "extra": 32996,
+      "first": 53023
     },
     "ne__euint128": {
-      "extra": 30964,
-      "first": 52994
+      "extra": 32964,
+      "first": 52991
     },
     "ne__euint16": {
-      "extra": 30886,
-      "first": 52916
+      "extra": 32886,
+      "first": 52913
     },
     "ne__euint32": {
-      "extra": 30912,
-      "first": 52942
+      "extra": 32912,
+      "first": 52939
     },
     "ne__euint64": {
-      "extra": 30938,
-      "first": 52968
+      "extra": 32938,
+      "first": 52965
     },
     "ne__euint8": {
-      "extra": 30860,
-      "first": 52890
+      "extra": 32860,
+      "first": 52887
     },
     "not__ebool": {
       "extra": 25654,
@@ -758,28 +788,28 @@
       "first": 45542
     },
     "or__ebool": {
-      "extra": 29891,
-      "first": 51921
+      "extra": 31891,
+      "first": 51918
     },
     "or__euint128": {
-      "extra": 29859,
-      "first": 51889
+      "extra": 31859,
+      "first": 51886
     },
     "or__euint16": {
-      "extra": 29781,
-      "first": 51811
+      "extra": 31781,
+      "first": 51808
     },
     "or__euint32": {
-      "extra": 29807,
-      "first": 51837
+      "extra": 31807,
+      "first": 51834
     },
     "or__euint64": {
-      "extra": 29833,
-      "first": 51863
+      "extra": 31833,
+      "first": 51860
     },
     "or__euint8": {
-      "extra": 29755,
-      "first": 51785
+      "extra": 31755,
+      "first": 51782
     },
     "publishDecryptBatch__1": {
       "extra": 0,
@@ -902,92 +932,92 @@
       "first": 6281
     },
     "rem__euint128": {
-      "extra": 30460,
-      "first": 52490
+      "extra": 32460,
+      "first": 52487
     },
     "rem__euint16": {
-      "extra": 30382,
-      "first": 52412
+      "extra": 32382,
+      "first": 52409
     },
     "rem__euint32": {
-      "extra": 30408,
-      "first": 52438
+      "extra": 32408,
+      "first": 52435
     },
     "rem__euint64": {
-      "extra": 30434,
-      "first": 52464
+      "extra": 32434,
+      "first": 52461
     },
     "rem__euint8": {
-      "extra": 30356,
-      "first": 52386
+      "extra": 32356,
+      "first": 52383
     },
     "rol__euint128": {
-      "extra": 32448,
-      "first": 54478
+      "extra": 34448,
+      "first": 54475
     },
     "rol__euint16": {
-      "extra": 32370,
-      "first": 54400
+      "extra": 34370,
+      "first": 54397
     },
     "rol__euint32": {
-      "extra": 32396,
-      "first": 54426
+      "extra": 34396,
+      "first": 54423
     },
     "rol__euint64": {
-      "extra": 32422,
-      "first": 54452
+      "extra": 34422,
+      "first": 54449
     },
     "rol__euint8": {
-      "extra": 32344,
-      "first": 54374
+      "extra": 34344,
+      "first": 54371
     },
     "ror__euint128": {
-      "extra": 32590,
-      "first": 54620
+      "extra": 34590,
+      "first": 54617
     },
     "ror__euint16": {
-      "extra": 32512,
-      "first": 54542
+      "extra": 34512,
+      "first": 54539
     },
     "ror__euint32": {
-      "extra": 32538,
-      "first": 54568
+      "extra": 34538,
+      "first": 54565
     },
     "ror__euint64": {
-      "extra": 32564,
-      "first": 54594
+      "extra": 34564,
+      "first": 54591
     },
     "ror__euint8": {
-      "extra": 32486,
-      "first": 54516
+      "extra": 34486,
+      "first": 54513
     },
     "select__eaddress": {
-      "extra": 31911,
-      "first": 55946
+      "extra": 35911,
+      "first": 55940
     },
     "select__ebool": {
-      "extra": 31917,
-      "first": 55952
+      "extra": 35917,
+      "first": 55946
     },
     "select__euint128": {
-      "extra": 31885,
-      "first": 55920
+      "extra": 35885,
+      "first": 55914
     },
     "select__euint16": {
-      "extra": 31807,
-      "first": 55842
+      "extra": 35807,
+      "first": 55836
     },
     "select__euint32": {
-      "extra": 31833,
-      "first": 55868
+      "extra": 35833,
+      "first": 55862
     },
     "select__euint64": {
-      "extra": 31859,
-      "first": 55894
+      "extra": 35859,
+      "first": 55888
     },
     "select__euint8": {
-      "extra": 31781,
-      "first": 55816
+      "extra": 35781,
+      "first": 55810
     },
     "share__eaddress": {
       "extra": 7862,
@@ -1018,44 +1048,44 @@
       "first": 25895
     },
     "shl__euint128": {
-      "extra": 30744,
-      "first": 52774
+      "extra": 32744,
+      "first": 52771
     },
     "shl__euint16": {
-      "extra": 30666,
-      "first": 52696
+      "extra": 32666,
+      "first": 52693
     },
     "shl__euint32": {
-      "extra": 30692,
-      "first": 52722
+      "extra": 32692,
+      "first": 52719
     },
     "shl__euint64": {
-      "extra": 30718,
-      "first": 52748
+      "extra": 32718,
+      "first": 52745
     },
     "shl__euint8": {
-      "extra": 30640,
-      "first": 52670
+      "extra": 32640,
+      "first": 52667
     },
     "shr__euint128": {
-      "extra": 30886,
-      "first": 52916
+      "extra": 32886,
+      "first": 52913
     },
     "shr__euint16": {
-      "extra": 30808,
-      "first": 52838
+      "extra": 32808,
+      "first": 52835
     },
     "shr__euint32": {
-      "extra": 30834,
-      "first": 52864
+      "extra": 32834,
+      "first": 52861
     },
     "shr__euint64": {
-      "extra": 30860,
-      "first": 52890
+      "extra": 32860,
+      "first": 52887
     },
     "shr__euint8": {
-      "extra": 30782,
-      "first": 52812
+      "extra": 32782,
+      "first": 52809
     },
     "square__euint128": {
       "extra": 28837,
@@ -1078,24 +1108,24 @@
       "first": 48757
     },
     "sub__euint128": {
-      "extra": 29466,
-      "first": 51496
+      "extra": 31466,
+      "first": 51493
     },
     "sub__euint16": {
-      "extra": 29388,
-      "first": 51418
+      "extra": 31388,
+      "first": 51415
     },
     "sub__euint32": {
-      "extra": 29414,
-      "first": 51444
+      "extra": 31414,
+      "first": 51441
     },
     "sub__euint64": {
-      "extra": 29440,
-      "first": 51470
+      "extra": 31440,
+      "first": 51467
     },
     "sub__euint8": {
-      "extra": 29362,
-      "first": 51392
+      "extra": 31362,
+      "first": 51389
     },
     "trivial__eaddress": {
       "extra": 25300,
@@ -1214,28 +1244,28 @@
       "first": 15071
     },
     "xor__ebool": {
-      "extra": 29503,
-      "first": 51533
+      "extra": 31503,
+      "first": 51530
     },
     "xor__euint128": {
-      "extra": 29471,
-      "first": 51501
+      "extra": 31471,
+      "first": 51498
     },
     "xor__euint16": {
-      "extra": 29393,
-      "first": 51423
+      "extra": 31393,
+      "first": 51420
     },
     "xor__euint32": {
-      "extra": 29419,
-      "first": 51449
+      "extra": 31419,
+      "first": 51446
     },
     "xor__euint64": {
-      "extra": 29445,
-      "first": 51475
+      "extra": 31445,
+      "first": 51472
     },
     "xor__euint8": {
-      "extra": 29367,
-      "first": 51397
+      "extra": 31367,
+      "first": 51394
     }
   },
   "tmImpl": "0xd5A90bcFa4DB735D2385FCd8B980b01d9cAbC1BE",

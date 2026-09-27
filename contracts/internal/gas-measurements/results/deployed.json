@@ -1,9 +1,11 @@
 {
  "packageVersion": "0.3.0",
  "sourceCommit": "0de4946084164c40f4d5a22c65ed4497dff55fcc",
- "describe": "v0.2.0-17-g6262958",
+ "fheSolCommit": "be9ad566b09183230b64aa02d272aad4c07e9f83",
+ "describe": "v0.2.0-18-g7a8165f",
  "chains": {
   "sepolia": {
+   "forkBlock": 11793690,
    "TaskManager": {
     "proxy": "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9",
     "impl": "0x988bf41f45abdda0d4d4397cbfa9ac8551789421",
@@ -13,9 +15,15 @@
     "proxy": "0x5ACD9054a211C1bF5aD24d47b16eA736ccC91b84",
     "impl": "0x5484f3cc3f944f1c8791a1e68645551328981b76",
     "match": true
+   },
+   "PlaintextsStorage": {
+    "proxy": "0x11b3845fbe9cD1468588b586f3E83D8F936f916b",
+    "impl": "0x4fa356cba86c4c2c68f49b25a79c06895a7a3b5d",
+    "match": true
    }
   },
   "arbitrumSepolia": {
+   "forkBlock": 313281513,
    "TaskManager": {
     "proxy": "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9",
     "impl": "0xd5a90bcfa4db735d2385fcd8b980b01d9cabc1be",
@@ -24,6 +32,11 @@
    "ACL": {
     "proxy": "0x76d57191A9769A88a041FeeADc53AaE6EB663B83",
     "impl": "0xb78000d9c885e37e66633fafb7e712c26d52d27f",
+    "match": true
+   },
+   "PlaintextsStorage": {
+    "proxy": "0x3150A5f542e5Ecb28b67399f1a48E6385c4ad579",
+    "impl": "0xcf19bc30d7914ac6c28854355bf18190ac31bfc8",
     "match": true
    }
   }

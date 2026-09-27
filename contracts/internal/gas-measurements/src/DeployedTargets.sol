@@ -5,3 +5,4 @@ pragma solidity 0.8.25;
 // compare their artifacts with the deployed bytecode.
 import {TaskManager} from "@host-chain/TaskManager.sol";
 import {ACL} from "@host-chain/ACL.sol";
+import {PlaintextsStorage} from "@host-chain/PlaintextsStorage.sol";
