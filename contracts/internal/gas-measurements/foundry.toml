@@ -13,6 +13,9 @@ isolate = true
 fs_permissions = [{ access = "read-write", path = "./results" }, { access = "read", path = "../../FHE.sol" }]
 allow_paths = ["../../", "../host-chain"]
 
+# Public RPCs rate-limit a 300-call fork run; retries turn their errors into waits.
+# Arbitrum needs an RPC that keeps a few thousand blocks of state (~250 ms blocks): the
+# publicnode endpoint prunes too fast, sepolia-rollup.arbitrum.io/rpc works.
 [rpc_endpoints]
-sepolia = "${SEPOLIA_RPC_URL}"
-arbitrumSepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"
+sepolia = { endpoint = "${SEPOLIA_RPC_URL}", retries = 10, retry_backoff = 2000, compute_units_per_second = 100 }
+arbitrumSepolia = { endpoint = "${ARBITRUM_SEPOLIA_RPC_URL}", retries = 10, retry_backoff = 2000, compute_units_per_second = 100 }

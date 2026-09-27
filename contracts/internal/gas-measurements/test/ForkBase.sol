@@ -18,11 +18,15 @@ abstract contract ForkBase is Test {
     ITaskManagerAdmin internal tm = ITaskManagerAdmin(TM);
     address internal acl;
     string internal chainName;
+    uint256 internal forkBlock;
 
+    // Pins the chain's own latest block. block.number cannot be used to record it: on Arbitrum
+    // it returns an L1 block number.
     function _fork(string memory chain) internal {
         chainName = chain;
-        // Latest block; the block number goes into the results JSON.
-        vm.createSelectFork(chain);
+        bytes memory latest = vm.rpc(chain, "eth_blockNumber", "[]");
+        forkBlock = uint256(bytes32(latest)) >> (8 * (32 - latest.length));
+        vm.createSelectFork(chain, forkBlock);
         acl = tm.acl();
     }
 

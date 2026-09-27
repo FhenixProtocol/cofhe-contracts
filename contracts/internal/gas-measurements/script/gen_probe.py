@@ -7,6 +7,7 @@ Every probe row is `function <id>(bytes calldata args) external returns (uint256
 Operands load into locals before `gasleft()`, so only the FHE call is measured.
 Run from contracts/internal/gas-measurements.
 """
+import hashlib
 import json
 from pathlib import Path
 
@@ -30,12 +31,23 @@ VIEW_OPS = {"isAllowed", "isPubliclyAllowed", "verifyDecrypt", "verifyDecryptSaf
             "verifyDecryptBatch", "verifyDecryptBatchSafe"}
 
 
+BITS = {"euint8": 8, "euint16": 16, "euint32": 32, "euint64": 64, "euint128": 128, "eaddress": 160}
+
+
+def salted(t, n):
+    # Handles are global and derive only from their inputs, so a common plaintext (3, true) can hit
+    # a handle someone already allowed on chain, which makes ACL calls cheaper. Salted plaintexts
+    # keep every operand handle fresh.
+    return int.from_bytes(hashlib.sha256(f"pro-575:{t}:{n}".encode()).digest(), "big") % (1 << BITS[t])
+
+
 def trivial(t, n):
     if t == "ebool":
+        # Only two ebool trivial handles exist; the table notes that their ACL state is shared.
         return f"FHE.asEbool({'true' if n % 2 else 'false'})"
     if t == "eaddress":
-        return f"FHE.asEaddress(address(uint160({n})))"
-    return f"FHE.as{CAP[t]}(uint256({n}))"
+        return f"FHE.asEaddress(address(uint160({salted(t, n)})))"
+    return f"FHE.as{CAP[t]}(uint256({hex(salted(t, n))}))"
 
 
 def measured(t, call1, call2, pre=""):
@@ -133,8 +145,13 @@ def rows():
     for t in ALL:
         out.append(Row("Access", "allow", t, measured(t, f"FHE.allow(x, {ALICE})", f"FHE.allow(z, {ALICE})")))
         # A fresh result handle, allowed only transiently, is what allowThis meets in real use.
-        fresh = f"        {t} f1 = {'FHE.not(x)' if t == 'ebool' else trivial(t, 101)};\n" \
-                f"        {t} f2 = {'FHE.not(z)' if t == 'ebool' else trivial(t, 103)};\n"
+        if t == "ebool":
+            f1, f2 = "FHE.not(x)", "FHE.not(z)"
+        elif t == "eaddress":
+            f1, f2 = trivial(t, 101), trivial(t, 103)
+        else:
+            f1, f2 = "FHE.add(x, y)", "FHE.add(x, z)"
+        fresh = f"        {t} f1 = {f1};\n        {t} f2 = {f2};\n"
         out.append(Row("Access", "allowThis", t, measured(t, "FHE.allowThis(f1)", "FHE.allowThis(f2)", pre=fresh)))
         out.append(Row("Access", "allowSender", t, measured(t, "FHE.allowSender(x)", "FHE.allowSender(z)")))
         out.append(Row("Access", "allowTransient", t, measured(
@@ -185,14 +202,19 @@ import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 def base_contract():
     decl = "".join(f"    {t} internal {v}_{t};\n" for t in ALL for v in "abcd")
-    init = []
-    for t in ALL:
-        if t == "ebool":
-            init += ["a_ebool = FHE.asEbool(true);", "b_ebool = FHE.asEbool(false);",
-                     "c_ebool = FHE.not(b_ebool);", "d_ebool = FHE.not(a_ebool);"]
-        else:
-            init += [f"{v}_{t} = {trivial(t, n)};" for v, n in zip("abcd", [3, 5, 7, 9])]
-        init += [f"FHE.allowThis({v}_{t});" for v in "abcd"]
+    # Only euint128 and eaddress are trivially encrypted from salted plaintexts: their handle space
+    # is too large to collide. The other operands derive from them through calls no probe row makes
+    # (rows cast v_euint128 itself and always put `a` first), so no row recreates an operand handle.
+    init = ["euint128 n;"]
+    for v, n in zip("abcd", [3, 5, 7, 9]):
+        init.append(f"{v}_euint128 = {trivial('euint128', n)};")
+        init.append(f"{v}_eaddress = {trivial('eaddress', n)};")
+        init.append(f"n = FHE.not({v}_euint128);")
+        for t in ["euint8", "euint16", "euint32", "euint64"]:
+            init.append(f"{v}_{t} = FHE.as{CAP[t]}(n);")
+    init += ["a_ebool = FHE.lt(b_euint64, d_euint64);", "b_ebool = FHE.gt(b_euint64, d_euint64);",
+             "c_ebool = FHE.lte(b_euint64, d_euint64);", "d_ebool = FHE.gte(b_euint64, d_euint64);"]
+    init += [f"FHE.allowThis({v}_{t});" for t in ALL for v in "abcd"]
     body = "".join(f"        {s}\n" for s in init)
     return f"""
 abstract contract ProbeBase {{
