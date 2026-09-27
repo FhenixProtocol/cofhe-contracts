@@ -77,12 +77,25 @@ class OutputTest(unittest.TestCase):
         self.assertIn("already allowed", self.md)          # isAllowed early-return path
         self.assertIn("reuses no operand", self.md)        # extra = independent second op
 
-    def test_cast_spread_excludes_ebool_rewrite(self):
-        type_table = render.type_summary(CHAINS["sepolia"]["rows"], OPS)
-        cast = next(line for line in type_table.splitlines() if line.startswith("| Cast"))
-        spreads = [int(c.strip().replace(",", "")) for c in cast.strip("|").split("|")[2:]]
-        self.assertTrue(all(x < 1000 for x in spreads), cast)  # the ne(x, 0) rewrite adds ~30k
+    def test_one_value_per_op(self):
+        self.assertIn("| Operation | first | extra | Types | Type spread (gas) |", self.md)
+        self.assertNotIn("| Operation | ebool |", self.md)
+        self.assertIn("Cast to `ebool`", self.md)
+        self.assertNotIn("Type dependence summary", self.md)
 
+
+class TypeSpreadTest(unittest.TestCase):
+    def test_current_results_within_limit(self):
+        render.check_type_spread(CHAINS["sepolia"]["rows"], OPS)
+
+    def test_rejects_type_dependent_op(self):
+        rows = copy.deepcopy(CHAINS["sepolia"]["rows"])
+        rows["add__euint128"]["first"] += render.TYPE_SPREAD_LIMIT + 1
+        with self.assertRaises(ValueError):
+            render.check_type_spread(rows, OPS)
+
+    def test_cast_to_ebool_is_its_own_group(self):
+        render.check_type_spread(CHAINS["sepolia"]["rows"], OPS)  # would fail if ~30k rewrite were grouped in
 
 if __name__ == "__main__":
     unittest.main()

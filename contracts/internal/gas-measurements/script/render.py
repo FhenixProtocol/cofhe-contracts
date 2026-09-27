@@ -6,49 +6,52 @@ Run from contracts/internal/gas-measurements after check_deployed.py and `forge 
 import json
 from pathlib import Path
 
-U = ["euint8", "euint16", "euint32", "euint64", "euint128"]
-ALL = ["ebool"] + U + ["eaddress"]
-BOOLU = ["ebool"] + U
 BATCH_SIZES = ["1", "2", "4", "8"]
 CHAINS = [("sepolia", "Ethereum Sepolia"), ("arbitrum-sepolia", "Arbitrum Sepolia")]
-FLAT_SPREAD = 200  # gas; below this a category counts as flat across types
+# One value per op is only honest while the types cost about the same; above this the renderer fails.
+TYPE_SPREAD_LIMIT = 500  # gas
 
+ALL_TYPES = "all 7 types"
+UINTS = "euint8–euint128"
+BOOL_UINTS = "ebool, euint8–euint128"
+# (title, [(group key, label, types label)]). A group key is an op name from results/ops.json.
 TABLES = [
-    ("Arithmetic", U, [("add", "`add`"), ("sub", "`sub`"), ("mul", "`mul`"), ("div", "`div`"), ("rem", "`rem`"),
-                       ("square", "`square`"), ("min", "`min`"), ("max", "`max`")]),
-    ("Comparison", ALL, [("eq", "`eq`"), ("ne", "`ne`"), ("lt", "`lt`"), ("lte", "`lte`"), ("gt", "`gt`"),
-                         ("gte", "`gte`")]),
-    ("Bitwise and shift", BOOLU, [("and", "`and`"), ("or", "`or`"), ("xor", "`xor`"), ("not", "`not`"),
-                                  ("shl", "`shl`"), ("shr", "`shr`"), ("rol", "`rol`"), ("ror", "`ror`")]),
-    ("Select", ALL, [("select", "`select`")]),
-    ("Encrypt (create a ciphertext)", ALL, [
-        ("trivial", "Trivial encrypt `FHE.asEuintX(plaintext)` ¹"),
-        ("input", "Encrypted input `FHE.asEuintX(InEuintX)`"),
-        ("inputBytes", "Encrypted input, ABI-encoded `FHE.asEuintX(bytes)`"),
-        ("random", "Random `FHE.randomEuintX()`")]),
-    ("Access control", ALL, [
-        ("allow", "`allow`"), ("allowThis", "`allowThis` ²"), ("allowSender", "`allowSender`"),
-        ("allowTransient", "`allowTransient`"), ("allowGlobal", "`allowGlobal`"), ("allowPublic", "`allowPublic`"),
-        ("isAllowed", "`isAllowed` (view) ⁵"), ("isPubliclyAllowed", "`isPubliclyAllowed` (view)")]),
-    ("Sharing", ALL, [("share", "`shareX`"), ("receiveParam", "`receiveXParam` ³"),
-                      ("receiveFromCall", "`receiveXFromCall` ³")]),
-    ("Decryption results", ALL, [
-        ("publishDecrypt", "`publishDecryptResult` ⁴"), ("verifyDecrypt", "`verifyDecryptResult` (view)"),
-        ("verifyDecryptSafe", "`verifyDecryptResultSafe` (view)"), ("getDecrypt", "`getDecryptResult` (view)"),
-        ("getDecryptSafe", "`getDecryptResultSafe` (view)")]),
-]
-# Summary category -> probe ops (from results/ops.json) it covers.
-SUMMARY = [
-    ("Arithmetic", "Arithmetic"), ("Comparison", "Comparison"), ("Bitwise and shift", "Bitwise"),
-    ("Select", "Select"), ("Encrypt", "Encrypt"), ("Cast", "Cast"), ("Access control", "Access"),
-    ("Sharing", "Sharing"), ("Decryption results", "Decrypt"),
+    ("Arithmetic", [(op, f"`{op}`", UINTS) for op in ["add", "sub", "mul", "div", "rem", "square", "min", "max"]]),
+    ("Comparison", [("eq", "`eq`", ALL_TYPES), ("ne", "`ne`", ALL_TYPES)]
+     + [(op, f"`{op}`", UINTS) for op in ["lt", "lte", "gt", "gte"]]),
+    ("Bitwise and shift", [(op, f"`{op}`", BOOL_UINTS) for op in ["and", "or", "xor", "not"]]
+     + [(op, f"`{op}`", UINTS) for op in ["shl", "shr", "rol", "ror"]]),
+    ("Select", [("select", "`select`", ALL_TYPES)]),
+    ("Encrypt (create a ciphertext)", [
+        ("trivial", "Trivial encrypt `FHE.asEuintX(plaintext)` ¹", ALL_TYPES),
+        ("input", "Encrypted input `FHE.asEuintX(InEuintX)`", ALL_TYPES),
+        ("inputBytes", "Encrypted input, ABI-encoded `FHE.asEuintX(bytes)`", ALL_TYPES),
+        ("random", "Random `FHE.randomEuintX()`", UINTS)]),
+    ("Cast", [
+        ("cast", "Cast `FHE.asX(eY)`, not to `ebool`", "any → euint8–euint128"),
+        ("castToEbool", "Cast to `ebool` `FHE.asEbool(eY)` ¹ ⁶", "euint8–euint128, eaddress → ebool")]),
+    ("Access control", [
+        ("allow", "`allow`", ALL_TYPES), ("allowThis", "`allowThis` ²", ALL_TYPES),
+        ("allowSender", "`allowSender`", ALL_TYPES), ("allowTransient", "`allowTransient`", ALL_TYPES),
+        ("allowGlobal", "`allowGlobal`", ALL_TYPES), ("allowPublic", "`allowPublic`", ALL_TYPES),
+        ("isAllowed", "`isAllowed` (view) ⁵", ALL_TYPES),
+        ("isPubliclyAllowed", "`isPubliclyAllowed` (view)", ALL_TYPES)]),
+    ("Sharing", [("share", "`shareX`", ALL_TYPES), ("receiveParam", "`receiveXParam` ³", ALL_TYPES),
+                 ("receiveFromCall", "`receiveXFromCall` ³", ALL_TYPES)]),
+    ("Decryption results", [
+        ("publishDecrypt", "`publishDecryptResult` ⁴", ALL_TYPES),
+        ("verifyDecrypt", "`verifyDecryptResult` (view)", ALL_TYPES),
+        ("verifyDecryptSafe", "`verifyDecryptResultSafe` (view)", ALL_TYPES),
+        ("getDecrypt", "`getDecryptResult` (view)", ALL_TYPES),
+        ("getDecryptSafe", "`getDecryptResultSafe` (view)", ALL_TYPES)]),
 ]
 
-FOOTNOTES = """¹ Trivial `ebool` has only two handles (`true`, `false`), shared by every contract on the chain. Their ACL state differs per chain, so these cells can differ by a few gas between chains. The same holds for the cast-to-`ebool` column, which uses the shared trivial-0 handle.
+FOOTNOTES = """¹ Trivial `ebool` has only two handles (`true`, `false`), shared by every contract on the chain. Their ACL state differs per chain, so these cells can differ by a few gas between chains. The same holds for a cast to `ebool`, which uses the shared trivial-0 handle.
 ² `allowThis` is measured on a result handle created earlier in the same transaction (the normal pattern: compute, then `allowThis`). The TaskManager is already warm, so `first` and `extra` are close.
 ³ A receive always follows a share in the same transaction, so the TaskManager is already warm; `first` and `extra` are close.
 ⁴ Measured with a non-zero result. A zero result (for example `false` or an amount of 0) leaves one storage slot at zero, so it costs less.
 ⁵ Measured on a handle already allowed to the account, which returns early. A "not allowed" answer reads more storage, so it costs more.
+⁶ FHE.sol implements a cast to `ebool` as `ne(value, asEuintX(0))`: two TaskManager tasks instead of one.
 """
 
 
@@ -56,9 +59,28 @@ def r100(gas):
     return f"{int(round(gas / 100.0)) * 100:,}"
 
 
-def cell(rows, rid):
-    r = rows.get(rid)
-    return "—" if r is None else f"{r100(r['first'])} / {r100(r['extra'])}"
+def groups(ops):
+    """Group key -> row ids that share one published value. Batch rows are not grouped."""
+    out = {}
+    for o in ops:
+        if o["category"] in ("BatchInput", "BatchDecrypt"):
+            continue
+        key = "castToEbool" if o["category"] == "Cast" and o["type"].endswith("__ebool") else o["op"]
+        out.setdefault(key, []).append(o["id"])
+    return out
+
+
+def spread(rows, ids, field):
+    values = [rows[i][field] for i in ids]
+    return max(values) - min(values)
+
+
+def check_type_spread(rows, ops):
+    """Raise if an op's cost depends on the type more than TYPE_SPREAD_LIMIT."""
+    for key, ids in groups(ops).items():
+        for field in ("first", "extra"):
+            if spread(rows, ids, field) > TYPE_SPREAD_LIMIT:
+                raise ValueError(f"{key}.{field}: spread {spread(rows, ids, field)} gas across types")
 
 
 def table(header, lines):
@@ -67,23 +89,21 @@ def table(header, lines):
     return "\n".join(out) + "\n"
 
 
-def chain_tables(rows):
+def chain_tables(rows, ops):
+    grouped = groups(ops)
     out = []
-    for title, types, ops in TABLES:
-        cols = ALL if len(types) == 7 else (BOOLU if types == BOOLU else U)
-        lines = [[label] + [cell(rows, f"{op}__{t}") for t in cols] for op, label in ops]
-        out.append(f"### {title}\n\n" + table(["Operation"] + cols, lines))
+    for title, entries in TABLES:
+        lines = []
+        for key, label, types in entries:
+            ids = grouped[key]
+            lines.append([label, r100(max(rows[i]["first"] for i in ids)), r100(max(rows[i]["extra"] for i in ids)),
+                          types, f"{spread(rows, ids, 'first'):,}"])
+        out.append(f"### {title}\n\n" + table(["Operation", "first", "extra", "Types", "Type spread (gas)"], lines))
 
     lines = [["Total gas"] + [r100(rows[f"inputBatch__{n}"]["first"]) for n in BATCH_SIZES],
              ["Gas per input"] + [r100(rows[f"inputBatch__{n}"]["first"] / int(n)) for n in BATCH_SIZES]]
     out.append("### Batch encrypted inputs (`FHE.asEuint32s`, one signature)\n\n"
                + table(["Inputs in batch"] + BATCH_SIZES, lines))
-
-    lines = [[f"`{src}`"] + ["—" if src == dst or dst == "eaddress" else cell(rows, f"cast__{src}__{dst}")
-                             for dst in ALL] for src in ALL]
-    out.append("### Cast (`FHE.asX(eY)`) — row = from, column = to\n\n"
-               "FHE.sol has no cast to `eaddress`. A cast to `ebool` is `ne(value, asEuintX(0))`: two TaskManager "
-               "tasks, so it costs about 30k more than other casts.\n\n" + table(["from \\ to"] + ALL, lines))
 
     lines = [[f"`{fn}` total"] + [r100(rows[f"{op}__{n}"]["first"]) for n in BATCH_SIZES]
              for op, fn in [("publishDecryptBatch", "publishDecryptResultBatch"),
@@ -155,26 +175,6 @@ def check_chains_match(chains):
     return exact, len(base)
 
 
-def type_summary(rows, ops):
-    by_cat = {}
-    for o in ops:
-        if o["category"] in ("BatchInput", "BatchDecrypt"):
-            continue
-        # A cast to ebool is rewritten as ne(x, 0), a different op; it would swamp the type spread.
-        if o["category"] == "Cast" and o["type"].endswith("__ebool"):
-            continue
-        by_cat.setdefault(o["category"], []).append(o)
-
-    lines = []
-    for label, cat in SUMMARY:
-        per_op = {}
-        for o in by_cat[cat]:
-            per_op.setdefault(o["op"], []).append(rows[o["id"]]["first"])
-        spread = max(max(v) - min(v) for v in per_op.values())
-        lines.append([label, "yes" if spread <= FLAT_SPREAD else "no", f"{spread:,}"])
-    return table(["Category", "Flat across types?", "Max spread across types (gas)"], lines)
-
-
 def main():
     ops = json.loads(Path("results/ops.json").read_text())
     chains = {key: json.loads(Path(f"results/{key}.json").read_text()) for key, _ in CHAINS}
@@ -182,9 +182,12 @@ def main():
     check_consistency(chains, deployed)
     exact, total = check_chains_match(chains)
     rows = chains["sepolia"]["rows"]
+    check_type_spread(rows, ops)
 
     out = ["# FHE operation gas costs\n",
-           "Cell format: `first / extra`, rounded to the nearest 100 gas. `—` = the type does not support the op.\n",
+           "One value per op: the cost barely depends on the encrypted type, because the FHE math runs offchain. "
+           "Each value is the highest across the listed types, rounded to the nearest 100 gas. Type spread = "
+           "highest − lowest raw `first` across those types.\n",
            "- **first** — gas of the FHE call when it is the first FHE call in the transaction "
            "(cold TaskManager and ACL access).",
            "- **extra** — gas of the same op again in the same transaction. The second call reuses no operand "
@@ -196,11 +199,8 @@ def main():
            "Arbitrum note: the numbers are L2 execution gas. Arbitrum also charges an L1 data fee for the calldata "
            "of the user's transaction. An FHE op inside a contract adds no calldata, so the fee does not change "
            "per op. Encrypted inputs (`FHE.asEuintX(InEuintX)`) do add calldata.\n",
-           "---\n", "## Ethereum Sepolia and Arbitrum Sepolia\n", chain_tables(rows),
-           "---\n", "## Notes\n", FOOTNOTES, "## Type dependence summary\n",
-           f"Spread = max − min of `first` across types for one op; the table shows the largest op spread in the "
-           f"category. Flat = spread ≤ {FLAT_SPREAD} gas. Casts to `ebool` are left out (see the cast table).\n",
-           type_summary(rows, ops)]
+           "---\n", "## Ethereum Sepolia and Arbitrum Sepolia\n", chain_tables(rows, ops),
+           "---\n", "## Notes\n", FOOTNOTES]
     Path("results/gas-tables.md").write_text("\n".join(out))
     print("wrote results/gas-tables.md")
 
