@@ -41,6 +41,12 @@ def main():
     subprocess.check_call(["forge", "build", "--quiet"])
     local = {name: compiled(name) for name in ("TaskManager", "ACL")}
     ok = True
+    with open("../../package.json") as f:
+        package_version = json.load(f)["version"]
+    sources = ["../host-chain/contracts/TaskManager.sol", "../host-chain/contracts/ACL.sol", "../../ICofhe.sol"]
+    report = {"packageVersion": package_version,
+              "sourceCommit": sh("git", "log", "-1", "--format=%H", "--", *sources),
+              "describe": sh("git", "describe", "--tags", "--always"), "chains": {}}
     for chain, rpc in CHAINS.items():
         proxies = {"TaskManager": TM, "ACL": sh("cast", "call", TM, "acl()(address)", "--rpc-url", rpc)}
         for name, proxy in proxies.items():
@@ -49,8 +55,12 @@ def main():
             live = strip_metadata(sh("cast", "code", impl, "--rpc-url", rpc)).replace(impl[2:].lower(), "0" * 40)
             match = live == local[name]
             ok &= match
+            report["chains"].setdefault(chain, {})[name] = {"proxy": proxy, "impl": impl, "match": match}
             print(f"{chain:16} {name:12} proxy={proxy} impl={impl} match={match}")
-    print("commit:", sh("git", "rev-parse", "--short", "HEAD"), "| describe:", sh("git", "describe", "--tags", "--always"))
+    print(f"cofhe-contracts {package_version}, sources last changed in {report['sourceCommit'][:7]}")
+    with open("results/deployed.json", "w") as f:
+        json.dump(report, f, indent=1)
+        f.write("\n")
     sys.exit(0 if ok else 1)
 
 

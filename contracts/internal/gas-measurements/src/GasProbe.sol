@@ -2191,7 +2191,7 @@ contract ProbeSelect is ProbeBase {
         ebool y = b_ebool;
         ebool z = c_ebool;
         ebool w = d_ebool;
-        ebool cond = a_ebool;
+        ebool cond = d_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
@@ -2207,7 +2207,7 @@ contract ProbeSelect is ProbeBase {
         euint8 y = b_euint8;
         euint8 z = c_euint8;
         euint8 w = d_euint8;
-        ebool cond = a_ebool;
+        ebool cond = d_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
@@ -2223,7 +2223,7 @@ contract ProbeSelect is ProbeBase {
         euint16 y = b_euint16;
         euint16 z = c_euint16;
         euint16 w = d_euint16;
-        ebool cond = a_ebool;
+        ebool cond = d_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
@@ -2239,7 +2239,7 @@ contract ProbeSelect is ProbeBase {
         euint32 y = b_euint32;
         euint32 z = c_euint32;
         euint32 w = d_euint32;
-        ebool cond = a_ebool;
+        ebool cond = d_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
@@ -2255,7 +2255,7 @@ contract ProbeSelect is ProbeBase {
         euint64 y = b_euint64;
         euint64 z = c_euint64;
         euint64 w = d_euint64;
-        ebool cond = a_ebool;
+        ebool cond = d_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
@@ -2271,7 +2271,7 @@ contract ProbeSelect is ProbeBase {
         euint128 y = b_euint128;
         euint128 z = c_euint128;
         euint128 w = d_euint128;
-        ebool cond = a_ebool;
+        ebool cond = d_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();
@@ -2287,7 +2287,7 @@ contract ProbeSelect is ProbeBase {
         eaddress y = b_eaddress;
         eaddress z = c_eaddress;
         eaddress w = d_eaddress;
-        ebool cond = a_ebool;
+        ebool cond = d_ebool;
         uint256 g = gasleft();
         FHE.select(cond, x, y);
         first = g - gasleft();

@@ -100,9 +100,10 @@ def rows():
     for op in ["shl", "shr", "rol", "ror"]:
         for t in U:
             out.append(Row("Bitwise", op, t, measured(t, f"FHE.{op}(x, y)", f"FHE.{op}(x, z)")))
+    # cond is d_ebool: with a_ebool the ebool row would pass one handle twice and get a warm ACL read.
     for t in ALL:
         out.append(Row("Select", "select", t, measured(
-            t, "FHE.select(cond, x, y)", "FHE.select(cond, x, z)", pre="        ebool cond = a_ebool;\n")))
+            t, "FHE.select(cond, x, y)", "FHE.select(cond, x, z)", pre="        ebool cond = d_ebool;\n")))
 
     for t in ALL:
         out.append(Row("Encrypt", "trivial", t, measured(t, trivial(t, 11), trivial(t, 12))))

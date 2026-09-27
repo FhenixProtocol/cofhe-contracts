@@ -3,7 +3,7 @@
   "aclImpl": "0xB78000d9c885e37e66633fAFb7E712C26d52D27F",
   "chain": "arbitrumSepolia",
   "chainId": 421614,
-  "forkBlock": 313275292,
+  "forkBlock": 313277559,
   "rows": {
     "add__euint128": {
       "extra": 29608,
@@ -966,8 +966,8 @@
       "first": 55946
     },
     "select__ebool": {
-      "extra": 31920,
-      "first": 53952
+      "extra": 31917,
+      "first": 55952
     },
     "select__euint128": {
       "extra": 31885,
