@@ -3,3 +3,4 @@ cache/
 lib/
 .env
 __pycache__/
+results/gas-measurements.xlsx

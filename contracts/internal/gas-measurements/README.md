@@ -20,6 +20,7 @@ forge test                         # measures on both forks, writes results/<cha
 python3 script/check_deployed.py   # TM/ACL/PlaintextsStorage at the measured block == sources here
 python3 script/render.py           # writes results/gas-tables.md; refuses unverified results
 python3 script/test_render.py      # renderer unit tests
+PYTHONPATH=script python3 script/export_xlsx.py   # results/gas-measurements.xlsx for Google Sheets (needs openpyxl)
 ```
 
 The Arbitrum RPC must keep a few thousand blocks of state. `sepolia-rollup.arbitrum.io/rpc` works;
