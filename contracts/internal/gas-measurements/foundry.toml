@@ -1,0 +1,18 @@
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["lib", "../host-chain/node_modules"]
+solc_version = "0.8.25"
+optimizer = true
+optimizer_runs = 800
+via_ir = true
+evm_version = "cancun"
+bytecode_hash = "none"
+isolate = true
+fs_permissions = [{ access = "read-write", path = "./results" }, { access = "read", path = "../../FHE.sol" }]
+allow_paths = ["../../", "../host-chain"]
+
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+arbitrumSepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"

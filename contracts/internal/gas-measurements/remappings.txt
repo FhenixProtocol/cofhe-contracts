@@ -1,0 +1,4 @@
+@openzeppelin/=../host-chain/node_modules/@openzeppelin/
+@fhenixprotocol/cofhe-contracts/=../../
+forge-std/=lib/forge-std/src/
+@host-chain/=../host-chain/contracts/
