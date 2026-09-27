@@ -4,7 +4,6 @@
 Run from contracts/internal/gas-measurements after check_deployed.py and `forge test`.
 """
 import json
-import statistics
 from pathlib import Path
 
 U = ["euint8", "euint16", "euint32", "euint64", "euint128"]
@@ -141,7 +140,22 @@ def check_consistency(chains, deployed):
                 raise ValueError(f"{key} {name}: bytecode does not match the sources")
 
 
-def summaries(chains, ops):
+def check_chains_match(chains):
+    """Raise if any published (rounded) value differs between chains; return (exact, total) raw matches.
+
+    The docs show one table set for both chains, which is only true while this holds.
+    """
+    base, other = (chains[key]["rows"] for key, _ in CHAINS)
+    exact = 0
+    for rid, r in base.items():
+        for field in ("first", "extra"):
+            if r100(r[field]) != r100(other[rid][field]):
+                raise ValueError(f"{rid}.{field}: {r[field]} vs {other[rid][field]} differ after rounding")
+        exact += r == other[rid]
+    return exact, len(base)
+
+
+def type_summary(rows, ops):
     by_cat = {}
     for o in ops:
         if o["category"] in ("BatchInput", "BatchDecrypt"):
@@ -153,24 +167,12 @@ def summaries(chains, ops):
 
     lines = []
     for label, cat in SUMMARY:
-        spreads = []
-        for key, _ in CHAINS:
-            rows = chains[key]["rows"]
-            per_op = {}
-            for o in by_cat[cat]:
-                per_op.setdefault(o["op"], []).append(rows[o["id"]]["first"])
-            spreads.append(max(max(v) - min(v) for v in per_op.values()))
-        flat = "yes" if max(spreads) <= FLAT_SPREAD else "no"
-        lines.append([label, flat] + [f"{x:,}" for x in spreads])
-    type_table = table(["Category", "Flat across types?", "Max spread across types, Sepolia",
-                        "Max spread across types, Arb Sepolia"], lines)
-
-    lines = []
-    for label, cat in SUMMARY:
-        meds = [statistics.median(chains[key]["rows"][o["id"]]["first"] for o in by_cat[cat]) for key, _ in CHAINS]
-        lines.append([label, r100(meds[0]), r100(meds[1]), f"{int(meds[1] - meds[0]):+,}"])
-    chain_table = table(["Category", "Sepolia median `first`", "Arb Sepolia median `first`", "Delta (raw gas)"], lines)
-    return type_table, chain_table
+        per_op = {}
+        for o in by_cat[cat]:
+            per_op.setdefault(o["op"], []).append(rows[o["id"]]["first"])
+        spread = max(max(v) - min(v) for v in per_op.values())
+        lines.append([label, "yes" if spread <= FLAT_SPREAD else "no", f"{spread:,}"])
+    return table(["Category", "Flat across types?", "Max spread across types (gas)"], lines)
 
 
 def main():
@@ -178,7 +180,8 @@ def main():
     chains = {key: json.loads(Path(f"results/{key}.json").read_text()) for key, _ in CHAINS}
     deployed = json.loads(Path("results/deployed.json").read_text())
     check_consistency(chains, deployed)
-    type_table, chain_table = summaries(chains, ops)
+    exact, total = check_chains_match(chains)
+    rows = chains["sepolia"]["rows"]
 
     out = ["# FHE operation gas costs\n",
            "Cell format: `first / extra`, rounded to the nearest 100 gas. `—` = the type does not support the op.\n",
@@ -187,15 +190,17 @@ def main():
            "- **extra** — gas of the same op again in the same transaction. The second call reuses no operand "
            "of the first, so the TaskManager is warm but the operands' ACL entries are cold.\n",
            "## Measurement setup\n", setup_table(chains, deployed),
+           "Both chains run the same cofhe-contracts code and were measured separately. Every published value is "
+           f"equal on both chains (Arbitrum Sepolia: {exact} of {total} rows equal Sepolia to the gas unit; the rest differ "
+           "by less than the rounding).\n",
            "Arbitrum note: the numbers are L2 execution gas. Arbitrum also charges an L1 data fee for the calldata "
            "of the user's transaction. An FHE op inside a contract adds no calldata, so the fee does not change "
-           "per op. Encrypted inputs (`FHE.asEuintX(InEuintX)`) do add calldata.\n"]
-    for key, title in CHAINS:
-        out += ["---\n", f"## {title} (TaskManager v{chains[key]['tmVersion']})\n", chain_tables(chains[key]["rows"])]
-    out += ["---\n", "## Notes\n", FOOTNOTES, "## Type dependence summary\n",
-            f"Spread = max − min of `first` across types for one op; the table shows the largest op spread in the "
-            f"category. Flat = spread ≤ {FLAT_SPREAD} gas. Casts to `ebool` are left out (see the cast table).\n", type_table,
-            "## Chain difference summary\n", chain_table]
+           "per op. Encrypted inputs (`FHE.asEuintX(InEuintX)`) do add calldata.\n",
+           "---\n", "## Ethereum Sepolia and Arbitrum Sepolia\n", chain_tables(rows),
+           "---\n", "## Notes\n", FOOTNOTES, "## Type dependence summary\n",
+           f"Spread = max − min of `first` across types for one op; the table shows the largest op spread in the "
+           f"category. Flat = spread ≤ {FLAT_SPREAD} gas. Casts to `ebool` are left out (see the cast table).\n",
+           type_summary(rows, ops)]
     Path("results/gas-tables.md").write_text("\n".join(out))
     print("wrote results/gas-tables.md")
 

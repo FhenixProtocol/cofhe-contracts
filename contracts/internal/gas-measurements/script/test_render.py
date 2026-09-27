@@ -37,10 +37,37 @@ class ConsistencyTest(unittest.TestCase):
             render.check_consistency(CHAINS, deployed)
 
 
+class ChainsMatchTest(unittest.TestCase):
+    def test_current_results_match(self):
+        exact, total = render.check_chains_match(CHAINS)
+        self.assertEqual(total, len(OPS))
+        self.assertGreater(exact, 0)
+
+    def test_rejects_difference_visible_after_rounding(self):
+        chains = copy.deepcopy(CHAINS)
+        chains["arbitrum-sepolia"]["rows"]["add__euint8"]["first"] += 500
+        with self.assertRaises(ValueError):
+            render.check_chains_match(chains)
+
+    def test_accepts_difference_hidden_by_rounding(self):
+        chains = copy.deepcopy(CHAINS)
+        row = chains["arbitrum-sepolia"]["rows"]["add__euint8"]
+        row["first"] = round(row["first"] / 100) * 100 + 10
+        chains["sepolia"]["rows"]["add__euint8"]["first"] = row["first"] - 20
+        exact, total = render.check_chains_match(chains)
+        self.assertLess(exact, total)
+
+
 class OutputTest(unittest.TestCase):
     def setUp(self):
         render.main()
         self.md = Path("results/gas-tables.md").read_text()
+
+    def test_one_table_set_for_both_chains(self):
+        self.assertEqual(self.md.count("### Arithmetic"), 1)
+        self.assertIn("## Ethereum Sepolia and Arbitrum Sepolia", self.md)
+        self.assertNotIn("Chain difference summary", self.md)
+        self.assertRegex(self.md, r"Arbitrum Sepolia: \d+ of \d+ rows equal Sepolia")
 
     def test_setup_table_lists_plaintexts_storage(self):
         self.assertIn("PlaintextsStorage implementation", self.md)
@@ -51,7 +78,7 @@ class OutputTest(unittest.TestCase):
         self.assertIn("reuses no operand", self.md)        # extra = independent second op
 
     def test_cast_spread_excludes_ebool_rewrite(self):
-        type_table, _ = render.summaries(CHAINS, OPS)
+        type_table = render.type_summary(CHAINS["sepolia"]["rows"], OPS)
         cast = next(line for line in type_table.splitlines() if line.startswith("| Cast"))
         spreads = [int(c.strip().replace(",", "")) for c in cast.strip("|").split("|")[2:]]
         self.assertTrue(all(x < 1000 for x in spreads), cast)  # the ne(x, 0) rewrite adds ~30k
