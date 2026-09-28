@@ -1,0 +1,11 @@
+{
+  "name": "zama-gas-measurements",
+  "private": true,
+  "description": "Fork gas measurements of Zama fhEVM, for comparison with CoFHE",
+  "dependencies": {
+    "@fhevm/solidity": "0.11.1",
+    "@openzeppelin/confidential-contracts": "0.5.3",
+    "@openzeppelin/contracts": "5.6.1",
+    "@openzeppelin/contracts-upgradeable": "5.6.1"
+  }
+}

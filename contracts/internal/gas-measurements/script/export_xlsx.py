@@ -73,6 +73,51 @@ def token_sheet(wb, tokens):
     widths(ws, [80, 22])
 
 
+def zama_sheet(wb, zama, fh_rows, tokens):
+    ws = wb.create_sheet("Zama comparison")
+    meta = json.loads(Path("zama/results/zama-ops.json").read_text())
+    chains = render.ZAMA_CHAINS
+    ws.cell(row=1, column=1, value="FHE operations, euint64 (first / extra gas)").font = SECTION_FONT
+    cols = ["Operation", "Fhenix first", "Fhenix extra"]
+    for _, label in chains:
+        cols += [f"{label} first", f"{label} extra"]
+    header(ws, 2, cols + ["Note"])
+    r = 3
+    for cat in render.ZAMA_CATEGORIES:
+        for m in (m for m in meta if m["category"] == cat):
+            rid = m["id"]
+            fh = fh_rows.get(f"{rid}__euint64")
+            values = [rid, rounded(fh["first"]) if fh else None, rounded(fh["extra"]) if fh else None]
+            for key, _ in chains:
+                values += [rounded(zama[key]["ops"][rid]["first"]), rounded(zama[key]["ops"][rid]["extra"])]
+            values.append(render.ZAMA_NOTES.get(rid, "").replace("`", ""))
+            for col, v in enumerate(values, 1):
+                c = ws.cell(row=r, column=col, value=v)
+                if isinstance(v, int):
+                    c.number_format = GAS
+            r += 1
+    r += 1
+    ws.cell(row=r, column=1, value="Confidential token, whole transaction gas").font = SECTION_FONT
+    header(ws, r + 1, ["Action", "Fhenix FHERC20"] + [f"{label} ERC7984" for _, label in chains])
+    fherc20 = tokens["fherc20"]["sepolia"]["rows"]
+    for i, (rid, label) in enumerate(render.ZAMA_TOKEN_ROWS, r + 2):
+        values = [label.replace("`", ""), rounded(fherc20[rid])] + [rounded(zama[k]["token"][rid]) for k, _ in chains]
+        for col, v in enumerate(values, 1):
+            c = ws.cell(row=i, column=col, value=v)
+            if isinstance(v, int):
+                c.number_format = GAS
+    r = r + 3 + len(render.ZAMA_TOKEN_ROWS)
+    for k, label in chains:
+        z = zama[k]
+        ws.cell(row=r, column=1, value=f"{label}: block {z['forkBlock']:,}, {z['executor']['version']}, "
+                                       f"{z['acl']['version']}, {z['inputVerifier']['version']}, "
+                                       f"{z['hcuLimit']['version']}, {z['inputSignatures']} input signature(s)")
+        r += 1
+    ws.cell(row=r, column=1, value="Zama: @fhevm/solidity 0.11.1, @openzeppelin/confidential-contracts 0.5.3. "
+                                   "HCU limits are not gas and are not shown.")
+    widths(ws, [30, 13, 13, 18, 18, 18, 18, 60])
+
+
 def batch_sheet(wb, rows):
     ws = wb.create_sheet("Batches")
     ws.cell(row=1, column=1, value="Batch encrypted inputs (FHE.asEuint32s, one signature)").font = SECTION_FONT
@@ -156,6 +201,7 @@ def main():
     per_op_sheet(wb, rows, ops)
     batch_sheet(wb, rows)
     token_sheet(wb, tokens)
+    zama_sheet(wb, render.load_zama(), rows, tokens)
     raw_sheet(wb, chains, ops)
     setup_sheet(wb, chains, deployed, exact, total)
     notes_sheet(wb)

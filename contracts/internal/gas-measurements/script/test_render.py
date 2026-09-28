@@ -77,6 +77,20 @@ class TokenTest(unittest.TestCase):
             render.check_tokens(tokens, DEPLOYED)
 
 
+class ZamaTest(unittest.TestCase):
+    def test_every_like_for_like_row_has_a_fhenix_match(self):
+        meta = json.loads(Path("zama/results/zama-ops.json").read_text())
+        for m in meta:
+            if m["likeForLike"]:
+                self.assertIn(f"{m['id']}__euint64", CHAINS["sepolia"]["rows"], m["id"])
+
+    def test_rejects_missing_zama_row(self):
+        runs = copy.deepcopy(render.load_zama())
+        del runs["mainnet"]["ops"]["add"]
+        with self.assertRaises(KeyError):
+            render.zama_tables(runs, CHAINS["sepolia"]["rows"], TOKENS)
+
+
 class OutputTest(unittest.TestCase):
     def setUp(self):
         render.main()
@@ -94,6 +108,14 @@ class OutputTest(unittest.TestCase):
         self.assertIn("5138cb8", self.md)
         self.assertIn("### ERC20Confidential transfer (whole transaction)", self.md)
         self.assertIn("with an observer set", self.md)
+
+    def test_zama_comparison_file(self):
+        md = Path("results/zama-comparison.md").read_text()
+        self.assertIn("# Gas comparison: Fhenix CoFHE vs Zama fhEVM", md)
+        self.assertIn("FHEVMExecutor v0.4.0", md)
+        self.assertIn("Not like-for-like", md)
+        self.assertIn("ERC7984", md)
+        self.assertNotIn("Zama", self.md)  # the public docs table stays Fhenix-only
 
     def test_setup_table_lists_plaintexts_storage(self):
         self.assertIn("PlaintextsStorage implementation", self.md)

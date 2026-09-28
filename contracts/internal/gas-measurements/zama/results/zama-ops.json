@@ -1,0 +1,162 @@
+[
+ {
+  "id": "add",
+  "category": "Arithmetic",
+  "likeForLike": true
+ },
+ {
+  "id": "sub",
+  "category": "Arithmetic",
+  "likeForLike": true
+ },
+ {
+  "id": "mul",
+  "category": "Arithmetic",
+  "likeForLike": true
+ },
+ {
+  "id": "min",
+  "category": "Arithmetic",
+  "likeForLike": true
+ },
+ {
+  "id": "max",
+  "category": "Arithmetic",
+  "likeForLike": true
+ },
+ {
+  "id": "square",
+  "category": "Arithmetic",
+  "likeForLike": true
+ },
+ {
+  "id": "eq",
+  "category": "Comparison",
+  "likeForLike": true
+ },
+ {
+  "id": "ne",
+  "category": "Comparison",
+  "likeForLike": true
+ },
+ {
+  "id": "lt",
+  "category": "Comparison",
+  "likeForLike": true
+ },
+ {
+  "id": "lte",
+  "category": "Comparison",
+  "likeForLike": true
+ },
+ {
+  "id": "gt",
+  "category": "Comparison",
+  "likeForLike": true
+ },
+ {
+  "id": "gte",
+  "category": "Comparison",
+  "likeForLike": true
+ },
+ {
+  "id": "and",
+  "category": "Bitwise",
+  "likeForLike": true
+ },
+ {
+  "id": "or",
+  "category": "Bitwise",
+  "likeForLike": true
+ },
+ {
+  "id": "xor",
+  "category": "Bitwise",
+  "likeForLike": true
+ },
+ {
+  "id": "not",
+  "category": "Bitwise",
+  "likeForLike": true
+ },
+ {
+  "id": "shl",
+  "category": "Bitwise",
+  "likeForLike": false
+ },
+ {
+  "id": "shr",
+  "category": "Bitwise",
+  "likeForLike": false
+ },
+ {
+  "id": "rol",
+  "category": "Bitwise",
+  "likeForLike": false
+ },
+ {
+  "id": "ror",
+  "category": "Bitwise",
+  "likeForLike": false
+ },
+ {
+  "id": "select",
+  "category": "Select",
+  "likeForLike": true
+ },
+ {
+  "id": "trivial",
+  "category": "Encrypt",
+  "likeForLike": true
+ },
+ {
+  "id": "input",
+  "category": "Encrypt",
+  "likeForLike": true
+ },
+ {
+  "id": "random",
+  "category": "Encrypt",
+  "likeForLike": true
+ },
+ {
+  "id": "allow",
+  "category": "Access",
+  "likeForLike": true
+ },
+ {
+  "id": "allowThis",
+  "category": "Access",
+  "likeForLike": true
+ },
+ {
+  "id": "allowTransient",
+  "category": "Access",
+  "likeForLike": true
+ },
+ {
+  "id": "allowPublic",
+  "category": "Access",
+  "likeForLike": true
+ },
+ {
+  "id": "isAllowed",
+  "category": "Access",
+  "likeForLike": true
+ },
+ {
+  "id": "div (plaintext divisor)",
+  "category": "Zama only",
+  "likeForLike": false
+ },
+ {
+  "id": "rem (plaintext divisor)",
+  "category": "Zama only",
+  "likeForLike": false
+ },
+ {
+  "id": "add (plaintext operand)",
+  "category": "Zama only",
+  "likeForLike": false
+ }
+]

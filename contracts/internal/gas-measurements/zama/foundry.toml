@@ -1,0 +1,20 @@
+# Zama fhEVM side of the gas comparison. Same method as the parent CoFHE harness; solc 0.8.27 is
+# the minimum OpenZeppelin confidential-contracts 0.5.3 accepts.
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["node_modules", "../lib"]
+solc_version = "0.8.27"
+optimizer = true
+optimizer_runs = 800
+via_ir = true
+evm_version = "cancun"
+bytecode_hash = "none"
+isolate = true
+fs_permissions = [{ access = "read-write", path = "./results" }]
+
+# Public RPCs rate-limit a long fork run; retries turn their errors into waits.
+[rpc_endpoints]
+mainnet = { endpoint = "${MAINNET_RPC_URL}", retries = 10, retry_backoff = 2000, compute_units_per_second = 100 }
+sepolia = { endpoint = "${SEPOLIA_RPC_URL}", retries = 10, retry_backoff = 2000, compute_units_per_second = 100 }

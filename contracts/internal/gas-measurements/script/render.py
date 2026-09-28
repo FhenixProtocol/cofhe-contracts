@@ -228,6 +228,75 @@ def token_tables(tokens):
     return "\n".join(out)
 
 
+ZAMA_CHAINS = [("mainnet", "Zama, Ethereum mainnet (live)"), ("sepolia", "Zama, Sepolia")]
+ZAMA_CATEGORIES = ["Arithmetic", "Comparison", "Bitwise", "Select", "Encrypt", "Access", "Zama only"]
+ZAMA_NOTES = {
+    "shl": "Not like-for-like: Zama shifts by an `euint8`, CoFHE by the operand type",
+    "shr": "Not like-for-like: Zama shifts by an `euint8`, CoFHE by the operand type",
+    "rol": "Not like-for-like: Zama shifts by an `euint8`, CoFHE by the operand type",
+    "ror": "Not like-for-like: Zama shifts by an `euint8`, CoFHE by the operand type",
+    "allowPublic": "Zama `makePubliclyDecryptable` vs CoFHE `allowPublic`",
+    "square": "Zama has no `square`; measured as `mul(x, x)`",
+    "div (plaintext divisor)": "Not like-for-like: Zama only; CoFHE divides by an encrypted value",
+    "rem (plaintext divisor)": "Not like-for-like: Zama only; CoFHE divides by an encrypted value",
+    "add (plaintext operand)": "Not like-for-like: Zama only; CoFHE has no plaintext operands",
+}
+ZAMA_TOKEN_ROWS = [
+    ("transferToHolder", "`confidentialTransfer` to an existing holder"),
+    ("transferAgain", "`confidentialTransfer`, repeated"),
+    ("transferToNewHolder", "`confidentialTransfer` to a new holder"),
+    ("transferFromByOperator", "`confidentialTransferFrom` by an operator"),
+    ("setOperator", "`setOperator`"),
+]
+
+
+def load_zama():
+    return {key: json.loads(Path(f"zama/results/zama-{key}.json").read_text()) for key, _ in ZAMA_CHAINS}
+
+
+def pair(r):
+    return f"{r100(r['first'])} / {r100(r['extra'])}"
+
+
+def zama_tables(zama, fh_rows, tokens):
+    meta = json.loads(Path("zama/results/zama-ops.json").read_text())
+    setup = [["Fork block"] + [f"{zama[k]['forkBlock']:,}" for k, _ in ZAMA_CHAINS]]
+    for key, label in [("executor", "FHEVMExecutor"), ("acl", "ACL"), ("inputVerifier", "InputVerifier"),
+                       ("hcuLimit", "HCULimit")]:
+        setup.append([label] + [f"{zama[k][key]['version']} (`{zama[k][key]['proxy']}`)" for k, _ in ZAMA_CHAINS])
+    setup.append(["Coprocessor signatures per input proof"] + [str(zama[k]["inputSignatures"]) for k, _ in ZAMA_CHAINS])
+    out = ["# Gas comparison: Fhenix CoFHE vs Zama fhEVM\n",
+           "Both sides measured the same way on forks of the live contracts: a `gasleft()` delta around one FHE "
+           "call (`first` = first FHE call of the transaction, `extra` = the same op again on fresh operands), "
+           "and whole-transaction gas for tokens. Cells are `first / extra`, rounded to the nearest 100 gas. "
+           "All numbers are `euint64`.\n",
+           "- Fhenix: CoFHE 0.3.0 TaskManager on Ethereum Sepolia (same code as Arbitrum Sepolia), FHE.sol 0.3.0, "
+           "solc 0.8.25.",
+           "- Zama: `@fhevm/solidity` 0.11.1 and `@openzeppelin/confidential-contracts` 0.5.3 (ERC7984), solc "
+           "0.8.27. Mainnet is Zama's live deployment. The input signers were swapped for test keys with the live "
+           "signer count and threshold.",
+           "- Zama also enforces an HCU (homomorphic complexity) limit per transaction. It is not gas and is not "
+           "shown here.\n",
+           "## Zama contracts measured\n", table(["Item"] + [label for _, label in ZAMA_CHAINS], setup),
+           "## FHE operations (euint64)\n"]
+    lines = []
+    for cat in ZAMA_CATEGORIES:
+        for m in (m for m in meta if m["category"] == cat):
+            rid = m["id"]
+            fh = fh_rows.get(f"{rid}__euint64")
+            lines.append([f"`{rid}`" if " " not in rid else rid, pair(fh) if fh else "—"]
+                         + [pair(zama[k]["ops"][rid]) for k, _ in ZAMA_CHAINS] + [ZAMA_NOTES.get(rid, "")])
+    out.append(table(["Operation", "Fhenix CoFHE"] + [label for _, label in ZAMA_CHAINS] + ["Note"], lines))
+    fherc20 = tokens["fherc20"]["sepolia"]["rows"]
+    lines = [[label, r100(fherc20[rid])] + [r100(zama[k]["token"][rid]) for k, _ in ZAMA_CHAINS]
+             for rid, label in ZAMA_TOKEN_ROWS]
+    out += ["## Confidential token (whole transaction)\n",
+            "Fhenix `FHERC20` (fhenix-confidential-contracts `5138cb8`) vs OpenZeppelin `ERC7984` on Zama. Both with "
+            "an encrypted input amount. FHERC20 also keeps an ERC20-compatible indicator balance.\n",
+            table(["Action", "Fhenix FHERC20"] + [f"{label} ERC7984" for _, label in ZAMA_CHAINS], lines)]
+    return "\n".join(out)
+
+
 def load_tokens():
     return {name: {key: json.loads(Path(f"results/{name}-{key}.json").read_text()) for key, _ in CHAINS}
             for name in TOKENS}
@@ -262,6 +331,7 @@ def main():
            "---\n", "## Ethereum Sepolia and Arbitrum Sepolia\n", token_tables(tokens), chain_tables(rows, ops),
            "---\n", "## Notes\n", FOOTNOTES]
     Path("results/gas-tables.md").write_text("\n".join(out))
+    Path("results/zama-comparison.md").write_text(zama_tables(load_zama(), rows, tokens))
     print("wrote results/gas-tables.md")
 
 

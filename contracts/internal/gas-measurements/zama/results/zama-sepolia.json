@@ -1,0 +1,163 @@
+{
+  "acl": {
+    "impl": "0xF4f793e6a2eF47DE60A94c0bC412292da5F7aB98",
+    "proxy": "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
+    "version": "ACL v0.4.0"
+  },
+  "chain": "sepolia",
+  "chainId": 11155111,
+  "executor": {
+    "impl": "0x072636031DC18772100eb5d640f5696C0a17a153",
+    "proxy": "0x92C920834Ec8941d2C77D188936E1f7A6f49c127",
+    "version": "FHEVMExecutor v0.5.0"
+  },
+  "forkBlock": 11800109,
+  "hcuLimit": {
+    "impl": "0xcc7B81E598fCF5E2247f29dE87c6C879d06581E2",
+    "proxy": "0xa10998783c8CF88D886Bc30307e631D6686F0A22",
+    "version": "HCULimit v0.3.0"
+  },
+  "inputSignatures": 3,
+  "inputVerifier": {
+    "impl": "0xFcb7F9B69b169678e3fA2798FB0db49534834766",
+    "proxy": "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
+    "version": "InputVerifier v0.2.0"
+  },
+  "ops": {
+    "add": {
+      "extra": 19588,
+      "first": 51400
+    },
+    "add (plaintext operand)": {
+      "extra": 15742,
+      "first": 47554
+    },
+    "allow": {
+      "extra": 28647,
+      "first": 41659
+    },
+    "allowPublic": {
+      "extra": 29759,
+      "first": 42774
+    },
+    "allowThis": {
+      "extra": 26340,
+      "first": 30340
+    },
+    "allowTransient": {
+      "extra": 5082,
+      "first": 18094
+    },
+    "and": {
+      "extra": 19730,
+      "first": 51542
+    },
+    "div (plaintext divisor)": {
+      "extra": 15731,
+      "first": 47543
+    },
+    "eq": {
+      "extra": 19851,
+      "first": 51663
+    },
+    "gt": {
+      "extra": 19572,
+      "first": 51384
+    },
+    "gte": {
+      "extra": 19483,
+      "first": 51295
+    },
+    "input": {
+      "extra": 161095,
+      "first": 204132
+    },
+    "isAllowed": {
+      "extra": 4074,
+      "first": 13083
+    },
+    "lt": {
+      "extra": 19527,
+      "first": 51339
+    },
+    "lte": {
+      "extra": 19550,
+      "first": 51362
+    },
+    "max": {
+      "extra": 19528,
+      "first": 51340
+    },
+    "min": {
+      "extra": 19477,
+      "first": 51289
+    },
+    "mul": {
+      "extra": 19529,
+      "first": 51341
+    },
+    "ne": {
+      "extra": 19785,
+      "first": 51597
+    },
+    "not": {
+      "extra": 14246,
+      "first": 46052
+    },
+    "or": {
+      "extra": 19709,
+      "first": 51521
+    },
+    "random": {
+      "extra": 10764,
+      "first": 47370
+    },
+    "rem (plaintext divisor)": {
+      "extra": 15701,
+      "first": 47513
+    },
+    "rol": {
+      "extra": 32451,
+      "first": 64263
+    },
+    "ror": {
+      "extra": 32430,
+      "first": 64242
+    },
+    "select": {
+      "extra": 23741,
+      "first": 55553
+    },
+    "shl": {
+      "extra": 32494,
+      "first": 64306
+    },
+    "shr": {
+      "extra": 32476,
+      "first": 64288
+    },
+    "square": {
+      "extra": 17532,
+      "first": 49344
+    },
+    "sub": {
+      "extra": 19505,
+      "first": 51317
+    },
+    "trivial": {
+      "extra": 9816,
+      "first": 41625
+    },
+    "xor": {
+      "extra": 19710,
+      "first": 51522
+    }
+  },
+  "token": {
+    "setOperator": 46459,
+    "transferAgain": 537866,
+    "transferFromByOperator": 543890,
+    "transferToHolder": 537842,
+    "transferToNewHolder": 562476
+  }
+}
