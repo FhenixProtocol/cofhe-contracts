@@ -5,7 +5,7 @@ import { Contract } from "ethers";
 import chalk from "chalk";
 import hre, { ethers, upgrades } from "hardhat";
 
-import { deployCreateX } from "../utils/deployCreateX";
+import { deployCreateX, isAlreadyDeployed } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
 import {
   getDefaultAdmin,
@@ -16,7 +16,8 @@ import {
   requireDefaultAdminIsSignerOrUnset,
   resolveAdminDelay,
 } from "../utils/roles";
-import { resolveTaskManager } from "../utils/addressBook";
+import { addressBookAddress, taskManagerId } from "../utils/addressBook";
+import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -514,6 +515,15 @@ function resolveAdmin(candidateSigners: any[]) {
   return { adminSigner, adminDelay };
 }
 
+/** The TaskManager registered under `id`, or null when the id is unset. */
+async function registeredTaskManager(addressBook: any, id: bigint): Promise<string | null> {
+  try {
+    return await addressBook.getTm(id);
+  } catch {
+    return null;
+  }
+}
+
 const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
@@ -547,14 +557,47 @@ const func: DeployFunction = async function () {
   const finalAdmin = resolveFinalAdmin(ethers);
   const maintenanceAddress = resolveMaintenanceAddress(ethers);
 
-  const TMProxyAddress = await resolveTaskManager(hre);
+  const bookAddress = addressBookAddress();
+  if (!(await isAlreadyDeployed(hre, bookAddress))) {
+    throw new Error(`No CoFHEAddressBook at ${bookAddress} on ${hre.network.name}. Run task:deployAddressBook first.`);
+  }
+  const addressBook: any = await ethers.getContractAt("CoFHEAddressBook", bookAddress);
+  const bookOwner: string = await addressBook.owner();
+  const bookOwnerIsAdmin = bookOwner.toLowerCase() === adminSigner.address.toLowerCase();
+  if (!bookOwnerIsAdmin && bookOwner.toLowerCase() !== finalAdmin?.toLowerCase()) {
+    throw new Error(
+      `CoFHEAddressBook at ${bookAddress} is owned by ${bookOwner}, which is neither the admin signer ` +
+        `${adminSigner.address} nor SAFE_ADMIN_ADDRESS. Refusing to continue.`,
+    );
+  }
 
-  // Headline in chalk blue, with length of 60
   console.log(chalk.bold.blue("-----------------------TaskManager--------------------------"));
   const TMFactory = await ethers.getContractFactory("TaskManager");
-  const TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
-  console.log(chalk.green("TMProxyContract attached to:", await TMProxyContract.getAddress()));
-  await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
+  const id = taskManagerId();
+  let TMProxyContract: any;
+  let TMProxyAddress = await registeredTaskManager(addressBook, id);
+  if (TMProxyAddress) {
+    TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
+    console.log(chalk.green(`TaskManager id ${id} resolves to ${TMProxyAddress} - upgrading in place`));
+    await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
+  } else {
+    if (!bookOwnerIsAdmin) {
+      throw new Error(
+        `TaskManager id ${id} is unset and the admin signer does not own the address book, so it ` +
+          `cannot register a new TaskManager. Have the book owner run setTm, or hand the book back.`,
+      );
+    }
+    const deployed = await getProxyContract(adminSigner, "TaskManager", [adminSigner.address, adminDelay]);
+    TMProxyContract = deployed.ProxyContract;
+    TMProxyAddress = deployed.ProxyAddress;
+    // getVersion() > 0 is how the local stack tells a configured TaskManager from a bare proxy.
+    const incTx = await TMProxyContract.connect(adminSigner).incVersion();
+    await incTx.wait();
+    const setTx = await addressBook.connect(adminSigner).setTm(id, TMProxyAddress);
+    await setTx.wait();
+    console.log(chalk.green(`Registered TaskManager ${TMProxyAddress} as id ${id} in the address book`));
+  }
+  await updateTaskManagerAddressInJsonArtifact(TMProxyAddress, hre);
   await TaskManagerSetup(TMProxyContract, adminSigner);
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));
@@ -594,6 +637,11 @@ const func: DeployFunction = async function () {
       ],
       finalAdmin,
     );
+    if (bookOwnerIsAdmin) {
+      const tx = await addressBook.connect(adminSigner).transferOwnership(finalAdmin);
+      await tx.wait();
+      console.log(chalk.green(`CoFHEAddressBook: nominated ${finalAdmin} as owner (accepted by task:acceptAdminAsSafe)`));
+    }
     console.log(
       chalk.yellow(
         `Handover started. After the admin delay (${adminDelay}s), run task:acceptAdminAsSafe ` +

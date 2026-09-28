@@ -6,7 +6,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { renounceAllRoles } from "../utils/roles";
-import { resolveTaskManager } from "../utils/addressBook";
+import { addressBookAddress, taskManagerId } from "../utils/addressBook";
 
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
@@ -20,30 +20,37 @@ function requireEnv(name: string): string {
   return value;
 }
 
+type ManagedKind =
+  // AccessControlDefaultAdminRules: DEFAULT_ADMIN moves via the two-step transfer.
+  | "defaultAdminRules"
+  // Plain AccessControl (ACPShareRegistry): DEFAULT_ADMIN_ROLE was granted to the Safe directly
+  // during the deploy, so there is nothing to accept there.
+  | "accessControl"
+  // Ownable2Step (CoFHEAddressBook): ownership moves via transferOwnership / acceptOwnership.
+  | "ownable2step";
+
 interface ManagedContract {
   name: string;
   contract: any;
-  // True for the AccessControlDefaultAdminRules contracts, where DEFAULT_ADMIN moves via the
-  // two-step transfer. ACPShareRegistry is plain AccessControl: DEFAULT_ADMIN_ROLE was granted
-  // to the Safe directly during the deploy, so there is nothing to accept there.
-  twoStep: boolean;
+  kind: ManagedKind;
 }
 
 /**
- * Resolves every host-chain contract from the fixed TaskManager address: the ACL and
- * PlaintextsStorage from the TaskManager's getters, the ACPShareRegistry from the ACL's.
- * A zero address means that setup step never ran - fail rather than silently skip a contract
- * that was supposed to be handed over.
+ * Resolves every host-chain contract from the fixed address book: the TaskManager from the id
+ * FHE.sol pins, the ACL and PlaintextsStorage from the TaskManager's getters, the
+ * ACPShareRegistry from the ACL's. A zero address means that setup step never ran - fail rather
+ * than silently skip a contract that was supposed to be handed over.
  */
 async function discoverHostChainContracts(hre: HardhatRuntimeEnvironment): Promise<ManagedContract[]> {
   const { ethers } = hre;
-  const TM_PROXY_ADDRESS = await resolveTaskManager(hre);
-  const tm: any = await ethers.getContractAt("TaskManager", TM_PROXY_ADDRESS);
+  const book: any = await ethers.getContractAt("CoFHEAddressBook", addressBookAddress());
+  const tmAddress: string = await book.getTm(taskManagerId());
+  const tm: any = await ethers.getContractAt("TaskManager", tmAddress);
   const aclAddress = await tm.acl();
   const ptStorageAddress = await tm.plaintextsStorage();
   if (aclAddress === ethers.ZeroAddress || ptStorageAddress === ethers.ZeroAddress) {
     throw new Error(
-      `TaskManager at ${TM_PROXY_ADDRESS} has acl=${aclAddress}, ` +
+      `TaskManager at ${tmAddress} has acl=${aclAddress}, ` +
         `plaintextsStorage=${ptStorageAddress} - the deployment did not finish its setup.`,
     );
   }
@@ -53,17 +60,18 @@ async function discoverHostChainContracts(hre: HardhatRuntimeEnvironment): Promi
     throw new Error(`ACL at ${aclAddress} has no share registry set - the deployment did not finish its setup.`);
   }
   return [
-    { name: "TaskManager", contract: tm, twoStep: true },
-    { name: "ACL", contract: acl, twoStep: true },
+    { name: "CoFHEAddressBook", contract: book, kind: "ownable2step" },
+    { name: "TaskManager", contract: tm, kind: "defaultAdminRules" },
+    { name: "ACL", contract: acl, kind: "defaultAdminRules" },
     {
       name: "ACPShareRegistry",
       contract: await ethers.getContractAt("ACPShareRegistry", shareRegistryAddress),
-      twoStep: false,
+      kind: "accessControl",
     },
     {
       name: "PlaintextsStorage",
       contract: await ethers.getContractAt("PlaintextsStorage", ptStorageAddress),
-      twoStep: true,
+      kind: "defaultAdminRules",
     },
   ];
 }
@@ -90,9 +98,9 @@ task(
   const now = BigInt((await ethers.provider.getBlock("latest"))!.timestamp);
   const toPaste: { name: string; address: string; data: string; readyIn: bigint }[] = [];
 
-  for (const { name, contract, twoStep } of contracts) {
+  for (const { name, contract, kind } of contracts) {
     const address = await contract.getAddress();
-    if (!twoStep) {
+    if (kind === "accessControl") {
       // Plain AccessControl: DEFAULT_ADMIN_ROLE was granted to the Safe directly at deploy time.
       const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
       if (!(await contract.hasRole(defaultAdminRole, safeAddress))) {
@@ -102,6 +110,32 @@ task(
         );
       }
       console.log(chalk.green(`${name} (${address}): Safe already holds DEFAULT_ADMIN_ROLE - nothing to accept`));
+      continue;
+    }
+    if (kind === "ownable2step") {
+      const currentOwner: string = await contract.owner();
+      if (currentOwner.toLowerCase() === safeAddress.toLowerCase()) {
+        console.log(chalk.green(`${name} (${address}): Safe is already the owner`));
+        continue;
+      }
+      const pendingOwner: string = await contract.pendingOwner();
+      if (pendingOwner.toLowerCase() !== safeAddress.toLowerCase()) {
+        throw new Error(
+          `${name} (${address}): pending owner is ${pendingOwner}, not the Safe. ` +
+            `Was the handover step of the deployment run?`,
+        );
+      }
+      const acceptData = contract.interface.encodeFunctionData("acceptOwnership");
+      if (!ownerSigner) {
+        toPaste.push({ name, address, data: acceptData, readyIn: 0n });
+        continue;
+      }
+      await execTransactionThroughSafe(hre, safeAddress, ownerSigner, address, acceptData);
+      const newOwner: string = await contract.owner();
+      if (newOwner.toLowerCase() !== safeAddress.toLowerCase()) {
+        throw new Error(`${name} (${address}): accept executed but owner is ${newOwner}`);
+      }
+      console.log(chalk.green(`${name} (${address}): owner is now the Safe`));
       continue;
     }
     const currentAdmin: string = await contract.defaultAdmin();
@@ -143,9 +177,9 @@ task(
     const path = writeSafeBatch(hre, {
       safeAddress,
       slug: "accept-admin",
-      name: "CoFHE - accept default-admin transfers",
+      name: "CoFHE - accept admin transfers",
       description:
-        `Accept the pending DEFAULT_ADMIN transfer on ${toPaste.map((t) => t.name).join(", ")}. ` +
+        `Accept the pending DEFAULT_ADMIN transfers and the address-book ownership on ${toPaste.map((t) => t.name).join(", ")}. ` +
         `Generated by task:acceptAdminAsSafe.`,
       transactions: toPaste.map(({ address, data }) => ({ to: address, data })),
     });
@@ -182,12 +216,22 @@ task(
   console.log(chalk.green(`Renouncing roles held by ${signer.address}`));
 
   const contracts = await discoverHostChainContracts(hre);
-  for (const { name, contract, twoStep } of contracts) {
+  for (const { name, contract, kind } of contracts) {
     const address = await contract.getAddress();
+    if (kind === "ownable2step") {
+      const currentOwner: string = await contract.owner();
+      if (currentOwner.toLowerCase() !== safeAddress.toLowerCase()) {
+        throw new Error(
+          `${name} (${address}): owner is ${currentOwner}, not the Safe. Run task:acceptAdminAsSafe first.`,
+        );
+      }
+      console.log(chalk.green(`${name} (${address}): owned by the Safe - nothing to renounce`));
+      continue;
+    }
     const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
     // Renouncing before the Safe holds DEFAULT_ADMIN would leave the contract with an admin
     // that has no operational roles and no one else who does - refuse.
-    if (twoStep) {
+    if (kind === "defaultAdminRules") {
       const currentAdmin: string = await contract.defaultAdmin();
       if (currentAdmin.toLowerCase() !== safeAddress.toLowerCase()) {
         throw new Error(
@@ -205,7 +249,7 @@ task(
     await renounceAllRoles(contract, signer);
     // On the two-step contracts the deployer's DEFAULT_ADMIN_ROLE already moved with the
     // transfer; on plain AccessControl it must be renounced explicitly, after everything else.
-    if (!twoStep && (await contract.hasRole(defaultAdminRole, signer.address))) {
+    if (kind === "accessControl" && (await contract.hasRole(defaultAdminRole, signer.address))) {
       const tx = await contract.connect(signer).renounceRole(defaultAdminRole, signer.address);
       await tx.wait();
       console.log(chalk.yellow(`Renounced DEFAULT_ADMIN_ROLE from ${signer.address}`));
