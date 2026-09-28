@@ -199,7 +199,7 @@ describe("Role-based access control", function () {
   // The dangerous state is not the already-migrated proxy above - it is the window a real migration
   // opens. A proxy coming off the Ownable implementation has `_initialized == 1`, so
   // `reinitializer(2)` passes, and a zero AccessControl namespace, so the inherited `_grantRole`
-  // guard does not fire either. Reproduce that state exactly: bootstrap on DeterministicTM, then
+  // guard does not fire either. Reproduce that state exactly: bootstrap on the pre-roles Ownable stub, then
   // `upgradeToAndCall(TaskManager, "0x")` - the non-atomic upgrade the deploy scripts avoid but
   // that a Safe or a manual `cast send` would produce.
   describe("initializeV2 during a non-atomic migration", function () {
@@ -209,14 +209,14 @@ describe("Role-based access control", function () {
     beforeEach(async function () {
       [, , legacyOwner] = await ethers.getSigners();
 
-      const DeterministicTM = await ethers.getContractFactory("DeterministicTM");
-      const legacyImpl = await DeterministicTM.deploy();
+      const PreRolesStub = await ethers.getContractFactory("PreRolesTaskManagerStub");
+      const legacyImpl = await PreRolesStub.deploy();
       await legacyImpl.waitForDeployment();
 
       const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
       const proxy = await ERC1967Proxy.deploy(
         await legacyImpl.getAddress(),
-        DeterministicTM.interface.encodeFunctionData("initialize", [legacyOwner.address]),
+        PreRolesStub.interface.encodeFunctionData("initialize", [legacyOwner.address]),
       );
       await proxy.waitForDeployment();
 
@@ -225,7 +225,7 @@ describe("Role-based access control", function () {
       await newImpl.waitForDeployment();
 
       // Deliberately no migration calldata - this is the gap being tested.
-      const legacyProxy = DeterministicTM.attach(await proxy.getAddress()) as any;
+      const legacyProxy = PreRolesStub.attach(await proxy.getAddress()) as any;
       await legacyProxy.connect(legacyOwner).upgradeToAndCall(await newImpl.getAddress(), "0x");
 
       migrating = TaskManager.attach(await proxy.getAddress());
@@ -250,7 +250,7 @@ describe("Role-based access control", function () {
       expect(await migrating.defaultAdmin()).to.equal(legacyOwner.address);
     });
 
-    // The bootstrap stub's layout stops at slot 3, so TaskManager's signer slots read as zero -
+    // A pre-roles proxy never wrote TaskManager's signer slots, so they read as zero -
     // which is the verification-*disabled* sentinel. initializeV2 must reseed them, otherwise a
     // migrated-but-not-yet-configured proxy accepts unsigned inputs and unsigned decrypt results.
     // Pinning it here means a future layout shift fails CI rather than a testnet.

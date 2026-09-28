@@ -27,55 +27,13 @@ async function getImplementationAddress(ethers: any, proxy: any) {
 }
 
 /**
- * Identifies the implementation currently behind the proxy.
- *
- * `defaultAdmin() == null` is NOT a proxy for "this is the deterministic stub" - the pre-roles
- * Ownable TaskManager, which is what is actually deployed on staging/testnet, has no
- * `defaultAdmin()` selector either and so also reads as null. The two have different layouts
- * (`DeterministicTM` packs `aggregator` into slot 0 and has no `randomCounter`), so guessing wrong
- * makes `validateUpgrade` reject the one migration that is genuinely safe.
- *
- * Probe instead: `aggregator()` is a public getter only `DeterministicTM` declares.
- */
-async function detectCurrentImplementation(ethers: any, proxyAddress: string) {
-  const stub = (await ethers.getContractFactory("DeterministicTM")).attach(proxyAddress);
-  try {
-    await stub.aggregator();
-    return "DeterministicTM" as const;
-  } catch {
-    return "TaskManager" as const;
-  }
-}
-
-/**
  * Validates the storage layout of the pending upgrade, and throws if it is incompatible.
- *
- * Skipped for the deterministic bootstrap: DeterministicTM -> TaskManager is knowingly
- * layout-incompatible (TaskManager inserts `randomCounter` at slot 1 and moves the aggregator
- * address to slot 2), so the reinterpreted slots are deliberate, not an accident. `initializeV2`
- * reseeds the ones that matter to fail-closed values. Validation stays strict on every other path,
- * which is where an accidental layout break would actually show up.
  */
 async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any) {
   const proxyAddress = await TMProxyContract.getAddress();
-  const current = await detectCurrentImplementation(ethers, proxyAddress);
-  console.log(chalk.dim(`Current implementation detected as ${current}`));
-
-  if (current === "DeterministicTM") {
-    console.log(
-      chalk.yellow(
-        "⚠ Skipping storage-layout validation: the deterministic bootstrap stub is intentionally " +
-          "layout-incompatible with TaskManager. initializeV2 reseeds the reinterpreted slots.",
-      ),
-    );
-    return;
-  }
-
   try {
     console.log("Importing implementation contract...");
-    await upgrades.forceImport(proxyAddress, await ethers.getContractFactory(current), {
-      kind: "uups",
-    });
+    await upgrades.forceImport(proxyAddress, TMFactory, { kind: "uups" });
 
     console.log("Validating storage layout...");
     await upgrades.validateUpgrade(proxyAddress, TMFactory, { kind: "uups" });
