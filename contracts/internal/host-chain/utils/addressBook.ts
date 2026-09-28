@@ -3,15 +3,6 @@ import { join } from "path";
 import { getAddress } from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 
-/**
- * The original canonical TaskManager address.
- *
- * Frozen on purpose: it is derived from init code embedding the intentionally-public bootstrap
- * key, so it can be claimed by anyone on any chain where it is still free. Claiming it is a
- * denial measure and must always target this exact address.
- */
-export const LEGACY_TM_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
-
 // The copy the contracts compile against: pnpm copies the `file:` dependency, it does not link it.
 const FHE_SOL = join(__dirname, "../node_modules/@fhenixprotocol/cofhe-contracts/FHE.sol");
 const BOOK_PATTERN = /address constant COFHE_ADDRESS_BOOK = (0x[0-9a-fA-F]{40});/;

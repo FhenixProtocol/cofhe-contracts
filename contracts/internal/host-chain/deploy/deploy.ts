@@ -18,6 +18,7 @@ import {
 } from "../utils/roles";
 import { addressBookAddress, taskManagerId } from "../utils/addressBook";
 import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
+import { readCommittedAddresses } from "../utils/addressBookDeterministic";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -515,13 +516,37 @@ function resolveAdmin(candidateSigners: any[]) {
   return { adminSigner, adminDelay };
 }
 
-/** The TaskManager registered under `id`, or null when the id is unset. */
+/**
+ * The TaskManager registered under `id`, or null when the book reports the id as unset. Any other
+ * failure propagates: a transient RPC error must never be read as "unset", because the fresh-deploy
+ * branch would then register a second TaskManager over the live one.
+ */
 async function registeredTaskManager(addressBook: any, id: bigint): Promise<string | null> {
   try {
     return await addressBook.getTm(id);
-  } catch {
-    return null;
+  } catch (error: any) {
+    if (isTaskManagerNotSet(addressBook, error)) {
+      return null;
+    }
+    throw error;
   }
+}
+
+function isTaskManagerNotSet(addressBook: any, error: any): boolean {
+  if (error?.revert?.name === "TaskManagerNotSet") {
+    return true;
+  }
+  const data: unknown = error?.data ?? error?.error?.data ?? error?.info?.error?.data;
+  if (typeof data === "string") {
+    try {
+      if (addressBook.interface.parseError(data)?.name === "TaskManagerNotSet") {
+        return true;
+      }
+    } catch {
+      // not decodable as one of the book's errors
+    }
+  }
+  return /TaskManagerNotSet/.test(String(error?.message ?? ""));
 }
 
 const func: DeployFunction = async function () {
@@ -561,6 +586,16 @@ const func: DeployFunction = async function () {
   if (!(await isAlreadyDeployed(hre, bookAddress))) {
     throw new Error(`No CoFHEAddressBook at ${bookAddress} on ${hre.network.name}. Run task:deployAddressBook first.`);
   }
+  if (!isLocalNetwork(hre)) {
+    const committedBook = readCommittedAddresses().addressBook;
+    if (bookAddress.toLowerCase() !== committedBook.toLowerCase()) {
+      throw new Error(
+        `FHE.sol is compiled against ${bookAddress} but deterministic/addresses.json says ${committedBook}. ` +
+          `The node_modules copy of FHE.sol is stale (a local-stack run patches it) - restore it with ` +
+          `\`cp ../../FHE.sol node_modules/@fhenixprotocol/cofhe-contracts/\` and recompile before deploying.`,
+      );
+    }
+  }
   const addressBook: any = await ethers.getContractAt("CoFHEAddressBook", bookAddress);
   const bookOwner: string = await addressBook.owner();
   const bookOwnerIsAdmin = bookOwner.toLowerCase() === adminSigner.address.toLowerCase();
@@ -576,11 +611,19 @@ const func: DeployFunction = async function () {
   const id = taskManagerId();
   let TMProxyContract: any;
   let TMProxyAddress = await registeredTaskManager(addressBook, id);
+  let registerFresh = false;
   if (TMProxyAddress) {
     TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
     console.log(chalk.green(`TaskManager id ${id} resolves to ${TMProxyAddress} - upgrading in place`));
     await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
   } else {
+    if (!isLocalNetwork(hre) && process.env.REGISTER_TASK_MANAGER?.trim() !== "1") {
+      throw new Error(
+        `TaskManager id ${id} reads as unset on ${hre.network.name}. Registering a fresh TaskManager ` +
+          `repoints every FHE.sol contract on this chain, so it needs an explicit REGISTER_TASK_MANAGER=1. ` +
+          `If a TaskManager was already registered here, check the RPC before doing anything else.`,
+      );
+    }
     if (!bookOwnerIsAdmin) {
       throw new Error(
         `TaskManager id ${id} is unset and the admin signer does not own the address book, so it ` +
@@ -593,9 +636,7 @@ const func: DeployFunction = async function () {
     // getVersion() > 0 is how the local stack tells a configured TaskManager from a bare proxy.
     const incTx = await TMProxyContract.connect(adminSigner).incVersion();
     await incTx.wait();
-    const setTx = await addressBook.connect(adminSigner).setTm(id, TMProxyAddress);
-    await setTx.wait();
-    console.log(chalk.green(`Registered TaskManager ${TMProxyAddress} as id ${id} in the address book`));
+    registerFresh = true;
   }
   await updateTaskManagerAddressInJsonArtifact(TMProxyAddress, hre);
   await TaskManagerSetup(TMProxyContract, adminSigner);
@@ -616,6 +657,11 @@ const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
   const {ProxyContract: ptStorageContract, ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, "PlaintextsStorage", [adminSigner.address, adminDelay, TMProxyAddress]);
   await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, adminSigner);
+  if (registerFresh) {
+    const setTx = await addressBook.connect(adminSigner).setTm(id, TMProxyAddress);
+    await setTx.wait();
+    console.log(chalk.green(`Registered TaskManager ${TMProxyAddress} as id ${id} in the address book`));
+  }
 
   // Before the handover, while the deployer unambiguously still holds DEFAULT_ADMIN_ROLE:
   // beginDefaultAdminTransfer only schedules, but granting from the Safe afterwards would need a

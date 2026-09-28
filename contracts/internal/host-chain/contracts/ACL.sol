@@ -577,9 +577,10 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     }
 
     /// @notice             Sets the TaskManager allowed to drive this ACL.
-    /// @dev                A proxy migrated from a pre-roles implementation through initializeV2
-    ///                     has no TaskManager recorded and rejects every TaskManager call until
-    ///                     this is set.
+    /// @dev                Any proxy upgraded to this implementation from one that recorded no
+    ///                     TaskManager (pre-roles proxies migrated through initializeV2 included)
+    ///                     rejects every TaskManager call until this is set; upgrade with
+    ///                     upgradeToAndCall(impl, setTaskManager(tm)) to keep it atomic.
     /// @param newAddress   The new TaskManager address.
     function setTaskManager(address newAddress) external virtual onlyRole(DEFAULT_ADMIN_ROLE) {
         _setTaskManager(newAddress);

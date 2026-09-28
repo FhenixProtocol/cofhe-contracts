@@ -123,6 +123,14 @@ describe("CoFHEAddressBook", function () {
       await expect(book.connect(other).setTm(ID, tmA.address))
         .to.be.revertedWithCustomError(book, "OwnableUnauthorizedAccount")
         .withArgs(other.address);
+      await expect(book.connect(other).unsetTm(ID))
+        .to.be.revertedWithCustomError(book, "OwnableUnauthorizedAccount")
+        .withArgs(other.address);
+      const newImpl = await Book.deploy();
+      await newImpl.waitForDeployment();
+      await expect(book.connect(other).upgradeToAndCall(await newImpl.getAddress(), "0x"))
+        .to.be.revertedWithCustomError(book, "OwnableUnauthorizedAccount")
+        .withArgs(other.address);
       await (await book.connect(owner).setTm(ID, tmA.address)).wait();
 
       await (await book.connect(other).acceptOwnership()).wait();
