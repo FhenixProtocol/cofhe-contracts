@@ -21,8 +21,8 @@ The last two are enforced only on chain IDs 1 and 42161; everywhere else they ar
 
 | Variable | Value |
 |---|---|
-| `KEY` | Private key of the deployer. Pays for the whole deployment and is the temporary admin. |
-| `TM_ADMIN_ADDRESS` | **Must be exactly `KEY`'s address, and the address book's bootstrap owner on a chain not yet handed over.** It registers the TaskManager in the book and signs as the default admin. |
+| `DEPLOYER_PRIVATE_KEY` | Private key of the deployer. Pays for the whole deployment and is the temporary admin. |
+| `TM_ADMIN_ADDRESS` | **Must be exactly `DEPLOYER_PRIVATE_KEY`'s address, and the address book's bootstrap owner on a chain not yet handed over.** It registers the TaskManager in the book and signs as the default admin. |
 | `TM_ADMIN_DELAY` | Default-admin transfer timelock, in seconds. Must be a positive integer off a local network; a zero delay removes the timelock entirely. |
 | `VERIFIER_ADDRESS` | zk-verifier's production signing address. Must be non-zero — zero is the verification-*disabled* sentinel and is refused off local. |
 | `DECRYPT_RESULT_SIGNER` | Dispatcher's production signing address. Same non-zero rule. |

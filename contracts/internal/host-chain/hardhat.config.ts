@@ -41,26 +41,26 @@ const ARBITRUM_ONE_RPC_URL = process.env.ARBITRUM_ONE_RPC_URL || "https://arbitr
 const accountsFrom = (...keys: (string | undefined)[]): string[] =>
   keys.filter((key): key is string => Boolean(key && key.trim()));
 
-// Mainnet deploys sign with KEY only - there is no KEY2 / aggregator identity on mainnet.
-const mainnetAccounts = accountsFrom(process.env.KEY);
+// Mainnet deploys sign with DEPLOYER_PRIVATE_KEY only - there is no KEY2 / aggregator identity on mainnet.
+const mainnetAccounts = accountsFrom(process.env.DEPLOYER_PRIVATE_KEY);
 
 
 const sepoliaConfig = {
     chainId: SEPOLIA_CHAIN_ID,
     url: SEPOLIA_RPC_URL,
-    accounts: accountsFrom(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const arbitrumSepoliaConfig = {
     chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
     url: ARBITRUM_SEPOLIA_RPC_URL,
-    accounts: accountsFrom(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const baseSepoliaConfig = {
   chainId: BASE_SEPOLIA_CHAIN_ID,
   url: BASE_SEPOLIA_RPC_URL,
-  accounts: accountsFrom(process.env.KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+  accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const ethereumConfig = {
@@ -85,7 +85,7 @@ const localfhenixconfig: HttpNetworkUserConfig  = {
   timeout: 10_000,
   httpHeaders: {},
   url: "http://127.0.0.1:42069",
-  accounts: accountsFrom(process.env.KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
+  accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
 }
 
 const localfhenixk8sconfig: HttpNetworkUserConfig  = {
@@ -95,7 +95,7 @@ const localfhenixk8sconfig: HttpNetworkUserConfig  = {
   timeout: 10_000,
   httpHeaders: {},
   url: "http://hostchain:8547",
-  accounts: accountsFrom(process.env.KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
+  accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2, process.env.AGGREGATOR_KEY),
 };
 
 const config: HardhatUserConfig = {

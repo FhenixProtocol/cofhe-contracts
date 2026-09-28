@@ -602,7 +602,10 @@ const func: DeployFunction = async function () {
   if (!bookOwnerIsAdmin && bookOwner.toLowerCase() !== finalAdmin?.toLowerCase()) {
     throw new Error(
       `CoFHEAddressBook at ${bookAddress} is owned by ${bookOwner}, which is neither the admin signer ` +
-        `${adminSigner.address} nor SAFE_ADMIN_ADDRESS. Refusing to continue.`,
+        `${adminSigner.address} nor SAFE_ADMIN_ADDRESS. Refusing to continue. On a chain's first deploy the ` +
+        `admin signer must be the bootstrap owner in deterministic/addresses.json; to use a different key, ` +
+        `re-freeze before the first deployment: ADDRESS_BOOK_BOOTSTRAP_OWNER=<its address> FREEZE_FORCE=1 ` +
+        `pnpm freeze:addressBook.`,
     );
   }
 
