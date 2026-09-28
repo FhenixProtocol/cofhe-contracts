@@ -92,7 +92,7 @@ export async function deployDecryptResultFixture(): Promise<DecryptResultFixture
   await aclImpl.waitForDeployment();
 
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-  const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address, 0]);
+  const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address, 0, TASK_MANAGER_ADDRESS]);
   const aclProxy = await ERC1967Proxy.deploy(await aclImpl.getAddress(), aclInitData);
   await aclProxy.waitForDeployment();
   const acl = ACL.attach(await aclProxy.getAddress());
@@ -102,7 +102,7 @@ export async function deployDecryptResultFixture(): Promise<DecryptResultFixture
   const psImpl = await PlaintextsStorage.deploy();
   await psImpl.waitForDeployment();
 
-  const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address, 0]);
+  const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address, 0, TASK_MANAGER_ADDRESS]);
   const psProxy = await ERC1967Proxy.deploy(await psImpl.getAddress(), psInitData);
   await psProxy.waitForDeployment();
   const plaintextsStorage = PlaintextsStorage.attach(await psProxy.getAddress());

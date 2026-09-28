@@ -67,14 +67,14 @@ describe("PubliclyAllowed Tests", function () {
     await aclImpl.waitForDeployment();
 
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address, 0]);
+    const aclInitData = ACL.interface.encodeFunctionData("initialize", [owner.address, 0, TASK_MANAGER_ADDRESS]);
     const aclProxy = await ERC1967Proxy.deploy(await aclImpl.getAddress(), aclInitData);
     await aclProxy.waitForDeployment();
 
     const PlaintextsStorage = await ethers.getContractFactory("PlaintextsStorage");
     const psImpl = await PlaintextsStorage.deploy();
     await psImpl.waitForDeployment();
-    const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address, 0]);
+    const psInitData = PlaintextsStorage.interface.encodeFunctionData("initialize", [owner.address, 0, TASK_MANAGER_ADDRESS]);
     const psProxy = await ERC1967Proxy.deploy(await psImpl.getAddress(), psInitData);
     await psProxy.waitForDeployment();
 

@@ -23,17 +23,17 @@ const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
 /**
- * Deploys a proxy contract for a given contract name
+ * Deploys a UUPS proxy for `contractName` and grants the admin every role it declares.
  * @param adminSigner The admin account, which becomes the default admin and holds every role
- * @param adminDelay The default-admin transfer delay to initialize with
  * @param contractName The name of the contract to deploy
+ * @param initArgs Arguments for the contract's `initialize`
  * @returns The proxy contract and its address
  */
-async function getProxyContract(adminSigner: any, adminDelay: number, contractName: string) {
-  const TaskManager = await ethers.getContractFactory(contractName);
+async function getProxyContract(adminSigner: any, contractName: string, initArgs: unknown[]) {
+  const Factory = await ethers.getContractFactory(contractName);
   const ProxyContract = await upgrades.deployProxy(
-    TaskManager,
-    [adminSigner.address, adminDelay],
+    Factory,
+    initArgs,
     { kind: "uups", initializer: "initialize" },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
@@ -559,7 +559,7 @@ const func: DeployFunction = async function () {
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));
   // Deploy and upgrade ACL contract
-  const {ProxyContract: aclContract} = await getProxyContract(adminSigner, adminDelay, "ACL");
+  const {ProxyContract: aclContract} = await getProxyContract(adminSigner, "ACL", [adminSigner.address, adminDelay, TMProxyAddress]);
   await ACLSetup(TMProxyContract, adminSigner, aclContract);
 
   console.log(chalk.bold.blue("----------------------ACP infrastructure--------------------"));
@@ -571,7 +571,7 @@ const func: DeployFunction = async function () {
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
-  const {ProxyContract: ptStorageContract, ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, adminDelay, "PlaintextsStorage");
+  const {ProxyContract: ptStorageContract, ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, "PlaintextsStorage", [adminSigner.address, adminDelay, TMProxyAddress]);
   await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, adminSigner);
 
   // Before the handover, while the deployer unambiguously still holds DEFAULT_ADMIN_ROLE:

@@ -62,7 +62,7 @@ async function deployTm(factoryName: string) {
     const ACL = await ethers.getContractFactory("ACL");
     const aclImpl = await ACL.deploy();
     await aclImpl.waitForDeployment();
-    const aclInit = ACL.interface.encodeFunctionData("initialize", [owner.address, 0]);
+    const aclInit = ACL.interface.encodeFunctionData("initialize", [owner.address, 0, TASK_MANAGER_ADDRESS]);
     const aclProxy = await ERC1967Proxy.deploy(await aclImpl.getAddress(), aclInit);
     await aclProxy.waitForDeployment();
 

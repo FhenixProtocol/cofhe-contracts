@@ -161,7 +161,7 @@ describe("createRandomTask", function () {
       const handle = existingHandle();
 
       const Caller = await ethers.getContractFactory("RandomTaskCaller");
-      const caller = await Caller.connect(other).deploy();
+      const caller = await Caller.connect(other).deploy(await taskManager.getAddress());
       await caller.waitForDeployment();
 
       await expect(
@@ -175,7 +175,7 @@ describe("createRandomTask", function () {
       const handle = existingHandle();
 
       const Caller = await ethers.getContractFactory("RandomTaskCaller");
-      const caller = await Caller.connect(other).deploy();
+      const caller = await Caller.connect(other).deploy(await taskManager.getAddress());
       await caller.waitForDeployment();
 
       await (
@@ -205,7 +205,7 @@ describe("createRandomTask", function () {
 
     it("grants the caller access to the new handle", async function () {
       const Caller = await ethers.getContractFactory("RandomTaskCaller");
-      const caller = await Caller.connect(owner).deploy();
+      const caller = await Caller.connect(owner).deploy(await taskManager.getAddress());
       await caller.waitForDeployment();
 
       await (
