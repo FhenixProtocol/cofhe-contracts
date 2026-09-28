@@ -59,6 +59,7 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     error ShareExpired();
     error AlreadyShared();
     error UnknownShare();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -70,6 +71,7 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
      * @param initialAdmin  Receives DEFAULT_ADMIN_ROLE and UPGRADER_ROLE.
      */
     function initialize(address initialAdmin) public initializer {
+        if (initialAdmin == address(0)) revert InvalidAddress();
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
         _grantRole(UPGRADER_ROLE, initialAdmin);
