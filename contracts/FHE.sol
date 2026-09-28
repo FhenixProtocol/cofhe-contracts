@@ -3694,6 +3694,57 @@ library FHE {
     }
 
 
+
+    /// @notice Marks the encrypted boolean value as allowed for decryption
+    /// @dev Signals the decrypt network that this ciphertext may be decrypted; the caller must already be allowed to use the handle
+    /// @param ctHash The encrypted boolean value to allow decryption for
+    function allowForDecryption(ebool ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(ebool.unwrap(ctHash)));
+    }
+
+    /// @notice Marks the encrypted 8-bit unsigned integer as allowed for decryption
+    /// @dev Signals the decrypt network that this ciphertext may be decrypted; the caller must already be allowed to use the handle
+    /// @param ctHash The encrypted uint8 value to allow decryption for
+    function allowForDecryption(euint8 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(euint8.unwrap(ctHash)));
+    }
+
+    /// @notice Marks the encrypted 16-bit unsigned integer as allowed for decryption
+    /// @dev Signals the decrypt network that this ciphertext may be decrypted; the caller must already be allowed to use the handle
+    /// @param ctHash The encrypted uint16 value to allow decryption for
+    function allowForDecryption(euint16 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(euint16.unwrap(ctHash)));
+    }
+
+    /// @notice Marks the encrypted 32-bit unsigned integer as allowed for decryption
+    /// @dev Signals the decrypt network that this ciphertext may be decrypted; the caller must already be allowed to use the handle
+    /// @param ctHash The encrypted uint32 value to allow decryption for
+    function allowForDecryption(euint32 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(euint32.unwrap(ctHash)));
+    }
+
+    /// @notice Marks the encrypted 64-bit unsigned integer as allowed for decryption
+    /// @dev Signals the decrypt network that this ciphertext may be decrypted; the caller must already be allowed to use the handle
+    /// @param ctHash The encrypted uint64 value to allow decryption for
+    function allowForDecryption(euint64 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(euint64.unwrap(ctHash)));
+    }
+
+    /// @notice Marks the encrypted 128-bit unsigned integer as allowed for decryption
+    /// @dev Signals the decrypt network that this ciphertext may be decrypted; the caller must already be allowed to use the handle
+    /// @param ctHash The encrypted uint128 value to allow decryption for
+    function allowForDecryption(euint128 ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(euint128.unwrap(ctHash)));
+    }
+
+    /// @notice Marks the encrypted address as allowed for decryption
+    /// @dev Signals the decrypt network that this ciphertext may be decrypted; the caller must already be allowed to use the handle
+    /// @param ctHash The encrypted address value to allow decryption for
+    function allowForDecryption(eaddress ctHash) internal {
+        ITaskManager(TASK_MANAGER_ADDRESS).allowForDecryption(uint256(eaddress.unwrap(ctHash)));
+    }
+
+
     // ********** PUBLISH DECRYPT RESULT ************* //
 
     /// @notice Publish a signed decrypt result to the chain
@@ -4311,6 +4362,9 @@ library BindingsEbool {
     function allowTransient(ebool ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
     }
+    function allowForDecryption(ebool ctHash) internal {
+        FHE.allowForDecryption(ctHash);
+    }
     /// @notice Returns true if the encrypted boolean is initialized and false otherwise
     /// @param value the encrypted boolean value to check
     /// @return true if initialized, false otherwise
@@ -4561,6 +4615,9 @@ library BindingsEuint8 {
     }
     function allowTransient(euint8 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
+    }
+    function allowForDecryption(euint8 ctHash) internal {
+        FHE.allowForDecryption(ctHash);
     }
     /// @notice Returns true if the encrypted uint8 is initialized and false otherwise
     /// @param value the encrypted uint8 value to check
@@ -4813,6 +4870,9 @@ library BindingsEuint16 {
     function allowTransient(euint16 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
     }
+    function allowForDecryption(euint16 ctHash) internal {
+        FHE.allowForDecryption(ctHash);
+    }
     /// @notice Returns true if the encrypted uint16 is initialized and false otherwise
     /// @param value the encrypted uint16 value to check
     /// @return true if initialized, false otherwise
@@ -5063,6 +5123,9 @@ library BindingsEuint32 {
     }
     function allowTransient(euint32 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
+    }
+    function allowForDecryption(euint32 ctHash) internal {
+        FHE.allowForDecryption(ctHash);
     }
     /// @notice Returns true if the encrypted uint32 is initialized and false otherwise
     /// @param value the encrypted uint32 value to check
@@ -5315,6 +5378,9 @@ library BindingsEuint64 {
     function allowTransient(euint64 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
     }
+    function allowForDecryption(euint64 ctHash) internal {
+        FHE.allowForDecryption(ctHash);
+    }
     /// @notice Returns true if the encrypted uint64 is initialized and false otherwise
     /// @param value the encrypted uint64 value to check
     /// @return true if initialized, false otherwise
@@ -5566,6 +5632,9 @@ library BindingsEuint128 {
     function allowTransient(euint128 ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
     }
+    function allowForDecryption(euint128 ctHash) internal {
+        FHE.allowForDecryption(ctHash);
+    }
     /// @notice Returns true if the encrypted uint128 is initialized and false otherwise
     /// @param value the encrypted uint128 value to check
     /// @return true if initialized, false otherwise
@@ -5641,6 +5710,9 @@ library BindingsEaddress {
     }
     function allowTransient(eaddress ctHash, address account) internal {
         FHE.allowTransient(ctHash, account);
+    }
+    function allowForDecryption(eaddress ctHash) internal {
+        FHE.allowForDecryption(ctHash);
     }
     /// @notice Returns true if the encrypted address is initialized and false otherwise
     /// @param value the encrypted address value to check
