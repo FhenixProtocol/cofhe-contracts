@@ -4,11 +4,11 @@ Operator sheet for deploying the host-chain contracts to **Ethereum** (`--networ
 **Arbitrum One** (`--network arbitrumOne`). Run everything from `contracts/internal/host-chain`,
 once per network.
 
-For the reasoning behind each step — why the bootstrap is shaped the way it is, the CREATE2
+For the reasoning behind each step — why the address book is deployed the way it is, the CREATE2
 address derivation, the squat check — see [`mainnet-deployment.md`](./mainnet-deployment.md).
 
 End state: the Gnosis Safe holds `DEFAULT_ADMIN_ROLE` and every operational role on all four
-contracts; the deployer holds nothing; task intake is closed until you deliberately open it.
+contracts and owns the address book; the deployer holds nothing; task intake is closed until you deliberately open it.
 
 ## Environment variables
 
@@ -22,9 +22,8 @@ The last two are enforced only on chain IDs 1 and 42161; everywhere else they ar
 | Variable | Value |
 |---|---|
 | `KEY` | Private key of the deployer. Pays for the whole deployment and is the temporary admin. |
-| `TM_ADMIN_ADDRESS` | **Must be exactly `KEY`'s address.** It is matched against the configured signers, not merely recorded — the script has to sign as the default admin, and it has to send `acceptOwnership()` during the bootstrap. |
+| `TM_ADMIN_ADDRESS` | **Must be exactly `KEY`'s address, and the address book's bootstrap owner on a chain not yet handed over.** It registers the TaskManager in the book and signs as the default admin. |
 | `TM_ADMIN_DELAY` | Default-admin transfer timelock, in seconds. Must be a positive integer off a local network; a zero delay removes the timelock entirely. |
-| `BOOTSTRAP_OWNER_KEY` | Key for `0x55A07F9f7eD7F110c2Ddd8f2f5d8677Dc94aF4E2`, the intentionally-public dev key baked into the canonical TaskManager address. Needs a small balance for two transactions. Never fund it beyond that; sweep it afterwards. |
 | `VERIFIER_ADDRESS` | zk-verifier's production signing address. Must be non-zero — zero is the verification-*disabled* sentinel and is refused off local. |
 | `DECRYPT_RESULT_SIGNER` | Dispatcher's production signing address. Same non-zero rule. |
 | `SAFE_ADMIN_ADDRESS` | The Gnosis Safe that takes over. **Mandatory on chain IDs 1 and 42161** — the deploy refuses to leave an EOA as `DEFAULT_ADMIN` of mainnet proxies. |
@@ -36,15 +35,10 @@ The last two are enforced only on chain IDs 1 and 42161; everywhere else they ar
 |---|---|
 | `SAFE_OWNER_KEY` | Lets step 3 execute **through** the Safe directly. Only works on threshold-1 Safes; the helper refuses anything higher. Unset (a real multisig, or a hardware-held owner key) makes step 3 write a Safe Transaction Builder batch instead. |
 | `SAFE_BATCH_OUT` | Overrides where that batch file is written. Default: `safe-batches/<network>-<slug>-<unix>.json`. |
-| `BOOTSTRAP_MODE` | `direct` (default) or `sponsored`. See step 1 — `sponsored` never funds the bootstrap account. |
 | `ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL` | Keyed RPC endpoints. Keyless public defaults are used when unset. |
 | `ETHERSCAN_API_KEY` | Etherscan API v2 — one key serves both chains, for `hardhat verify`. |
 
 `AGGREGATOR_KEY` and `KEY2` are **local-stack only** and are ignored by a mainnet deployment.
-
-> **On Ethereum, point `ETHEREUM_RPC_URL` at a private-mempool endpoint** (e.g. Flashbots
-> Protect, `https://rpc.flashbots.net`) for step 1, so the bootstrap transactions are not visible
-> before inclusion. Arbitrum One has no public mempool; a plain keyed RPC is fine.
 
 ## The four commands
 
@@ -53,67 +47,15 @@ cd contracts/internal/host-chain
 pnpm install && pnpm compile
 ```
 
-### 1. Bootstrap the deterministic TaskManager proxy
+### 1. Deploy the address book
 
 ```bash
-npx hardhat task:deployDeterministicTM --network <net>
+npx hardhat task:deployAddressBook --network <net>
 ```
 
-Two modes, selected by `BOOTSTRAP_MODE`.
+Sends the committed creation bytecode of the `CoFHEAddressBook` v1 implementation and its proxy through CreateX, so both land at the addresses in `deterministic/addresses.json`. Idempotent. Verifies the implementation slot and the owner afterwards and aborts loudly on any mismatch - a book at the canonical address with a different implementation or owner means the address was claimed with other init code; investigate, do not proceed.
 
-#### `direct` (default)
-
-Deploys the `DeterministicTM` implementation and the canonical proxy through CreateX, then secures
-it. Three transactions, because `DeterministicTM` is `Ownable2Step` and `transferOwnership` only
-*nominates*:
-
-1. `CreateX.deployCreate2` — bootstrap key, nonce `n`
-2. `transferOwnership(TM_ADMIN_ADDRESS)` — bootstrap key, nonce `n+1`
-3. `acceptOwnership()` — `TM_ADMIN_ADDRESS` itself
-
-1 and 2 share consecutive nonces from one account so nothing can execute between them. 3 must come
-from the nominee, leaving a window of roughly one block in which the public bootstrap key is still
-the owner — this is what the private-mempool endpoint is for.
-
-Idempotent and resumable: an already-secured proxy is left alone, one still owned by the bootstrap
-key has its handover completed, and any **other** owner aborts loudly as a possible squat.
-
-Ends with `... and secured: owner is <TM_ADMIN_ADDRESS>`. Anything else — stop and investigate.
-
-This mode requires the bootstrap account to hold a small balance. **On Ethereum mainnet it cannot**:
-that account carries a hostile EIP-7702 delegation whose receive path forwards any incoming value
-out inside the funding transaction itself, so it can never be funded by a plain transfer.
-
-#### `sponsored` — use this on Ethereum
-
-```bash
-BOOTSTRAP_MODE=sponsored npx hardhat task:deployDeterministicTM --network <net>
-```
-
-The bootstrap key signs an **EIP-7702 authorization** — free, offline, no balance, no transaction —
-naming a `BootstrapExecutor` deployed by your deployer. The deployer then sends **one** transaction
-carrying that authorization. Delegated code runs with `msg.sender == BOOTSTRAP_OWNER`, so in a
-single transaction it:
-
-1. creates the proxy via `CreateX.deployCreate2`, and
-2. calls `upgradeToAndCall(taskManagerImpl, initializeV2(TM_ADMIN_ADDRESS, TM_ADMIN_DELAY))`
-
-`onlyOwner` on the stub and `initializeV2`'s legacy-owner check are both satisfied by that same
-`msg.sender`. Three consequences:
-
-- the bootstrap account never holds or spends anything, so there is nothing to sweep;
-- there is **no window** in which a live proxy is owned by the public key, so the private-mempool
-  requirement for this step goes away;
-- any hostile delegation already on that account is replaced in the same transaction.
-
-**This mode also performs the migration, so it covers step 2's `upgradeTM` as well.** Run
-`hardhat deploy` afterwards as usual — it finds an already-migrated TaskManager and goes straight
-to configuring it.
-
-One caveat: an EIP-7702 authorization is bound to the authority account's current nonce, and
-applying it consumes one. If anything touches that account between signing and inclusion, the
-authorization goes stale and the task must be re-run. It reads the nonce immediately before
-signing and verifies `defaultAdmin()` afterwards.
+Ends with `... owner verified.`
 
 ### 2. Deploy and configure everything
 
@@ -121,10 +63,10 @@ signing and verifies `defaultAdmin()` afterwards.
 npx hardhat deploy --network <net>
 ```
 
-Migrates the proxy to the role-based `TaskManager` via `initializeV2`, configures it, then deploys
+Deploys the `TaskManager` and registers it in the address book under the id FHE.sol pins (or upgrades the registered one in place), configures it, then deploys
 ACL, ACPTimestampRevoker, ACPShareRegistry and PlaintextsStorage and wires them together. Finally
-grants `MAINTENANCE_ADDRESS` its two roles, grants the Safe every role, and begins the
-two-step default-admin transfer on each contract.
+grants `MAINTENANCE_ADDRESS` its two roles, grants the Safe every role, begins the
+two-step default-admin transfer on each contract, and nominates the Safe as owner of the address book.
 
 **The TaskManager is left DISABLED.** On mainnet chain IDs the deploy deliberately skips
 `enable()` — intake stays closed until you open it (see Go-live below). Look for:
@@ -141,7 +83,7 @@ Record the printed addresses. The deployer keeps its own roles at this point, on
 npx hardhat task:acceptAdminAsSafe --network <net>
 ```
 
-Rediscovers every contract from the TaskManager and accepts the pending transfers.
+Rediscovers every contract from the address book and accepts the pending transfers, including the book's own `acceptOwnership()`.
 
 - **With `SAFE_OWNER_KEY`** (threshold-1): executes through the Safe and verifies `defaultAdmin()`
   after each. Fails if the admin delay has not passed.
@@ -200,6 +142,7 @@ It needs `POSTER_ADDRESS`, `REGISTRY_ADMIN_DELAY`, `SAFE_ADMIN_ADDRESS`, and
 
 ## Final checklist
 
+- [ ] `owner()` on CoFHEAddressBook is the Safe
 - [ ] `defaultAdmin()` is the Safe on TaskManager, ACL and PlaintextsStorage; the Safe holds
       `DEFAULT_ADMIN_ROLE` on ACPShareRegistry
 - [ ] The deployer holds **no** role on any contract
@@ -208,5 +151,4 @@ It needs `POSTER_ADDRESS`, `REGISTRY_ADMIN_DELAY`, `SAFE_ADMIN_ADDRESS`, and
 - [ ] `isEnabled()` is `false` until go-live, then `true`
 - [ ] `verifierSigner()` / `decryptResultSigner()` are the production addresses
 - [ ] `acl()`, `plaintextsStorage()` and `ACL.shareRegistry()` are all set
-- [ ] The bootstrap wallet `0x55A07F9f…F4E2` has been swept and holds nothing
 - [ ] Sources verified on Etherscan / Arbiscan
