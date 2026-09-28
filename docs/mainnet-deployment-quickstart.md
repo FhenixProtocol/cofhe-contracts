@@ -37,6 +37,7 @@ The last two are enforced only on chain IDs 1 and 42161; everywhere else they ar
 | `SAFE_BATCH_OUT` | Overrides where that batch file is written. Default: `safe-batches/<network>-<slug>-<unix>.json`. |
 | `ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL` | Keyed RPC endpoints. Keyless public defaults are used when unset. |
 | `ETHERSCAN_API_KEY` | Etherscan API v2 — one key serves both chains, for `hardhat verify`. |
+| `REGISTER_TASK_MANAGER` | Must be `1` for the first `hardhat deploy` on a chain, when the address book has no TaskManager registered. Leave unset for re-runs and upgrades. |
 
 `AGGREGATOR_KEY` and `KEY2` are **local-stack only** and are ignored by a mainnet deployment.
 
@@ -53,15 +54,17 @@ pnpm install && pnpm compile
 npx hardhat task:deployAddressBook --network <net>
 ```
 
-Sends the committed creation bytecode of the `CoFHEAddressBook` v1 implementation and its proxy through CreateX, so both land at the addresses in `deterministic/addresses.json`. Idempotent. Verifies the implementation slot and the owner afterwards and aborts loudly on any mismatch - a book at the canonical address with a different implementation or owner means the address was claimed with other init code; investigate, do not proceed.
+Sends the committed creation bytecode of the `CoFHEAddressBook` v1 implementation and its proxy through CreateX, so both land at the addresses in `deterministic/addresses.json`. Idempotent. Verifies the implementation slot and the owner afterwards and aborts loudly on any mismatch - a book at the canonical address with a different implementation or owner means it was upgraded or changed hands since the freeze; investigate, do not proceed.
 
 Ends with `... owner verified.`
 
 ### 2. Deploy and configure everything
 
 ```bash
-npx hardhat deploy --network <net>
+REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>
 ```
+
+The variable is only needed the first time, when no TaskManager is registered yet; re-runs upgrade the registered one in place and refuse to register a new one without it.
 
 Deploys the `TaskManager` and registers it in the address book under the id FHE.sol pins (or upgrades the registered one in place), configures it, then deploys
 ACL, ACPTimestampRevoker, ACPShareRegistry and PlaintextsStorage and wires them together. Finally

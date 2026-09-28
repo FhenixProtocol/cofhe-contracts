@@ -5,7 +5,7 @@ Deploys the CoFHE contracts to production chains:
 - **Host chains** (`contracts/internal/host-chain`): Ethereum (`--network ethereum`) and Arbitrum One (`--network arbitrumOne`) — CoFHEAddressBook (at the canonical address in `contracts/internal/host-chain/deterministic/addresses.json`, which FHE.sol compiles in), TaskManager, ACL, ACPShareRegistry, PlaintextsStorage.
 - **Registry chain** (`contracts/internal/registry-chain`): Arbitrum One — CommitmentRegistry.
 
-End state on every contract: the Gnosis Safe holds `DEFAULT_ADMIN_ROLE` and every operational role; the deployer EOAs hold nothing.
+End state on every contract: the Gnosis Safe holds `DEFAULT_ADMIN_ROLE` and every operational role, and owns the address book; the deployer EOAs hold nothing.
 
 ## Actors and keys
 
@@ -25,6 +25,18 @@ FHE.sol compiles in one address: the `CoFHEAddressBook` proxy, created through C
 
 The TaskManager itself is an ordinary UUPS proxy at whatever address it lands on. `hardhat deploy` registers it under the id FHE.sol pins (`setTm`), or upgrades the registered one in place. `unsetTm` retires an id; every FHE.sol build pinned to it reverts from then on. Both are owner-only, and the owner ends up being the Safe.
 
+### The bootstrap owner key
+
+`deterministic/addresses.json` names the bootstrap owner: the deployer key whose address is baked into the canonical book address. Keep that key in hardware. On every new chain it owns the book until `hardhat deploy` nominates the Safe, so:
+
+- **Rotating the deployer key** still needs the old key to sign one `transferOwnership` per new chain - the book's first owner is fixed by the address.
+- **Losing it** means no new chain can be bootstrapped at the canonical address: run `FREEZE_FORCE=1 pnpm freeze:addressBook` with a new owner and ship a new FHE.sol release.
+- **A future book upgrade** changes the implementation `task:deployAddressBook` expects. On a chain where the book was already deployed and upgraded the task aborts by design; skip it there.
+
+### Upgrading an existing ACL or PlaintextsStorage in place
+
+A proxy upgraded to this implementation has no TaskManager recorded and rejects every TaskManager call until `setTaskManager` runs. Upgrade atomically: `upgradeToAndCall(impl, setTaskManager(tm))`. A pre-roles proxy needs `initializeV2` first, then `setTaskManager`.
+
 ## Host chain deployment (run once per network)
 
 From `contracts/internal/host-chain`, with `.env` filled in per the table above (`<net>` = `ethereum` or `arbitrumOne`):
@@ -35,10 +47,10 @@ pnpm install && pnpm compile
 # 1. Deploy the address book at its canonical address
 npx hardhat task:deployAddressBook --network <net>
 
-# 2. Full deployment: deploys the TaskManager and registers it in the address book,
+# 2. Full deployment (REGISTER_TASK_MANAGER=1 the first time on a chain, when no TaskManager is registered yet):
 #    deploys ACL, ACPShareRegistry, PlaintextsStorage, runs setup, grants every role to the
 #    Safe and begins the default-admin transfers. Record the printed addresses.
-npx hardhat deploy --network <net>
+REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>
 
 # 3. Accept the transfers and the address-book ownership as the Safe. With SAFE_OWNER_KEY set (threshold-1 Safe) this executes
 #    through the Safe directly, after TM_ADMIN_DELAY has passed. Without it, it prints the
