@@ -20,6 +20,7 @@
     "storage-layout:generate": "hardhat task:storage-layout --network hardhat",
     "storage-layout:check": "hardhat task:storage-layout --network hardhat --check",
     "check:size": "hardhat task:check-contract-size --network hardhat",
+    "freeze:addressBook": "hardhat run scripts/freezeAddressBook.ts --network hardhat",
     "lint:sol": "solhint 'contracts/**/*.sol'"
   },
   "author": "Fhenix",
