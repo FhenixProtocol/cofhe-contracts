@@ -77,6 +77,17 @@ class TokenTest(unittest.TestCase):
             render.check_tokens(tokens, DEPLOYED)
 
 
+class EngineReplayTest(unittest.TestCase):
+    def test_current_replay_passes(self):
+        self.assertIn("Ethereum mainnet", render.engine_line(json.loads(Path("results/replay/replayed.json").read_text())))
+
+    def test_rejects_engine_difference(self):
+        replay = json.loads(Path("results/replay/replayed.json").read_text())
+        replay["chains"]["Arbitrum One"]["notEqualToEthereumMainnet"] = ["add__euint8"]
+        with self.assertRaises(ValueError):
+            render.engine_line(replay)
+
+
 class ZamaTest(unittest.TestCase):
     def test_every_like_for_like_row_has_a_fhenix_match(self):
         meta = json.loads(Path("zama/results/zama-ops.json").read_text())

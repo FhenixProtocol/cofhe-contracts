@@ -297,6 +297,18 @@ def zama_tables(zama, fh_rows, tokens):
     return "\n".join(out)
 
 
+def engine_line(replay):
+    """Raise if any real node measured different gas; return the sentence for the setup section."""
+    for name, c in replay["chains"].items():
+        if c["notEqualToFork"] or c["notEqualToEthereumMainnet"]:
+            raise ValueError(f"{name}: gas differs from the fork or from Ethereum mainnet")
+    names = ", ".join(replay["chains"])
+    return (f"Engine check: every probe row and two FHERC20 transfers ({replay['rows']} calls) were replayed as "
+            f"`eth_call` with a state override on real nodes of {names}. Each node's own EVM (geth, Arbitrum "
+            "Nitro) returned exactly the same gas, equal to the fork values. CoFHE 0.3.0 is not deployed on "
+            "Ethereum mainnet or Arbitrum One yet; the check used the verified 0.3.0 bytecode.\n")
+
+
 def load_tokens():
     return {name: {key: json.loads(Path(f"results/{name}-{key}.json").read_text()) for key, _ in CHAINS}
             for name in TOKENS}
@@ -325,6 +337,7 @@ def main():
            "Both chains run the same cofhe-contracts code and were measured separately. Every published value is "
            f"equal on both chains (Arbitrum Sepolia: {exact} of {total} rows equal Sepolia to the gas unit; the rest differ "
            "by less than the rounding).\n",
+           engine_line(json.loads(Path("results/replay/replayed.json").read_text())),
            "Arbitrum note: the numbers are L2 execution gas. Arbitrum also charges an L1 data fee for the calldata "
            "of the user's transaction. An FHE op inside a contract adds no calldata, so the fee does not change "
            "per op. Encrypted inputs (`FHE.asEuintX(InEuintX)`) do add calldata.\n",

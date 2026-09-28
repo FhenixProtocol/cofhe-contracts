@@ -19,6 +19,8 @@ python3 script/check_coverage.py   # every FHE.sol overload has an exact probe r
 python3 script/check_probe.py      # no "extra" call reuses an operand of its "first" call
 forge test                         # measures on both forks: results/<chain>.json, fherc20-<chain>.json, erc20confidential-<chain>.json (~5 min)
 python3 script/check_deployed.py   # TM/ACL/PlaintextsStorage at the measured block == sources here
+REPLAY_EXPORT=true forge test --match-contract ReplayExport   # exports every row as a replayable eth_call
+python3 script/replay.py           # replays them on real Ethereum/Arbitrum nodes (needs requests), fails on any difference
 python3 script/render.py           # writes results/gas-tables.md; refuses unverified results
 python3 script/test_render.py      # renderer unit tests
 PYTHONPATH=script python3 script/export_xlsx.py   # results/gas-measurements.xlsx for Google Sheets (needs openpyxl)

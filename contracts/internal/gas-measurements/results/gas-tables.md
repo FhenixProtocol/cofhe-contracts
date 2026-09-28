@@ -27,6 +27,8 @@ One value per op: the cost barely depends on the encrypted type, because the FHE
 
 Both chains run the same cofhe-contracts code and were measured separately. Every published value is equal on both chains (Arbitrum Sepolia: 314 of 315 rows equal Sepolia to the gas unit; the rest differ by less than the rounding).
 
+Engine check: every probe row and two FHERC20 transfers (317 calls) were replayed as `eth_call` with a state override on real nodes of Ethereum mainnet, Arbitrum One, Ethereum Sepolia, Arbitrum Sepolia. Each node's own EVM (geth, Arbitrum Nitro) returned exactly the same gas, equal to the fork values. CoFHE 0.3.0 is not deployed on Ethereum mainnet or Arbitrum One yet; the check used the verified 0.3.0 bytecode.
+
 Arbitrum note: the numbers are L2 execution gas. Arbitrum also charges an L1 data fee for the calldata of the user's transaction. An FHE op inside a contract adds no calldata, so the fee does not change per op. Encrypted inputs (`FHE.asEuintX(InEuintX)`) do add calldata.
 
 ---

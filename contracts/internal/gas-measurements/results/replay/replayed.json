@@ -1,0 +1,5101 @@
+{
+ "rows": 317,
+ "chains": {
+  "Ethereum mainnet": {
+   "chainId": 1,
+   "rpc": "https://ethereum-rpc.publicnode.com",
+   "notEqualToFork": [],
+   "results": {
+    "allow__ebool": [
+     44736,
+     28724
+    ],
+    "allowThis__ebool": [
+     26274,
+     26274
+    ],
+    "allowSender__ebool": [
+     44748,
+     28736
+    ],
+    "allowTransient__ebool": [
+     22984,
+     6972
+    ],
+    "allowGlobal__ebool": [
+     44146,
+     28137
+    ],
+    "allowPublic__ebool": [
+     44146,
+     28137
+    ],
+    "isAllowed__ebool": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__ebool": [
+     21939,
+     5933
+    ],
+    "allow__euint8": [
+     44736,
+     28724
+    ],
+    "allowThis__euint8": [
+     26274,
+     26274
+    ],
+    "allowSender__euint8": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint8": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint8": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint8": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint8": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint8": [
+     21939,
+     5933
+    ],
+    "allow__euint16": [
+     44736,
+     28724
+    ],
+    "allowThis__euint16": [
+     26274,
+     26274
+    ],
+    "allowSender__euint16": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint16": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint16": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint16": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint16": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint16": [
+     21939,
+     5933
+    ],
+    "allow__euint32": [
+     44736,
+     28724
+    ],
+    "allowThis__euint32": [
+     26274,
+     26274
+    ],
+    "allowSender__euint32": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint32": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint32": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint32": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint32": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint32": [
+     21939,
+     5933
+    ],
+    "allow__euint64": [
+     44736,
+     28724
+    ],
+    "allowThis__euint64": [
+     26274,
+     26274
+    ],
+    "allowSender__euint64": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint64": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint64": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint64": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint64": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint64": [
+     21939,
+     5933
+    ],
+    "allow__euint128": [
+     44736,
+     28724
+    ],
+    "allowThis__euint128": [
+     26274,
+     26274
+    ],
+    "allowSender__euint128": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint128": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint128": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint128": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint128": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint128": [
+     21939,
+     5933
+    ],
+    "allow__eaddress": [
+     44736,
+     28724
+    ],
+    "allowThis__eaddress": [
+     26274,
+     26274
+    ],
+    "allowSender__eaddress": [
+     44748,
+     28736
+    ],
+    "allowTransient__eaddress": [
+     22984,
+     6972
+    ],
+    "allowGlobal__eaddress": [
+     44146,
+     28137
+    ],
+    "allowPublic__eaddress": [
+     44146,
+     28137
+    ],
+    "isAllowed__eaddress": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__eaddress": [
+     21939,
+     5933
+    ],
+    "add__euint8": [
+     51531,
+     31504
+    ],
+    "add__euint16": [
+     51557,
+     31530
+    ],
+    "add__euint32": [
+     51583,
+     31556
+    ],
+    "add__euint64": [
+     51609,
+     31582
+    ],
+    "add__euint128": [
+     51635,
+     31608
+    ],
+    "sub__euint8": [
+     51389,
+     31362
+    ],
+    "sub__euint16": [
+     51415,
+     31388
+    ],
+    "sub__euint32": [
+     51441,
+     31414
+    ],
+    "sub__euint64": [
+     51467,
+     31440
+    ],
+    "sub__euint128": [
+     51493,
+     31466
+    ],
+    "mul__euint8": [
+     52525,
+     32498
+    ],
+    "mul__euint16": [
+     52551,
+     32524
+    ],
+    "mul__euint32": [
+     52577,
+     32550
+    ],
+    "mul__euint64": [
+     52603,
+     32576
+    ],
+    "mul__euint128": [
+     52629,
+     32602
+    ],
+    "div__euint8": [
+     52241,
+     32214
+    ],
+    "div__euint16": [
+     52267,
+     32240
+    ],
+    "div__euint32": [
+     52293,
+     32266
+    ],
+    "div__euint64": [
+     52319,
+     32292
+    ],
+    "div__euint128": [
+     52345,
+     32318
+    ],
+    "rem__euint8": [
+     52383,
+     32356
+    ],
+    "rem__euint16": [
+     52409,
+     32382
+    ],
+    "rem__euint32": [
+     52435,
+     32408
+    ],
+    "rem__euint64": [
+     52461,
+     32434
+    ],
+    "rem__euint128": [
+     52487,
+     32460
+    ],
+    "min__euint8": [
+     53519,
+     33492
+    ],
+    "min__euint16": [
+     53545,
+     33518
+    ],
+    "min__euint32": [
+     53571,
+     33544
+    ],
+    "min__euint64": [
+     53597,
+     33570
+    ],
+    "min__euint128": [
+     53623,
+     33596
+    ],
+    "max__euint8": [
+     53661,
+     33634
+    ],
+    "max__euint16": [
+     53687,
+     33660
+    ],
+    "max__euint32": [
+     53713,
+     33686
+    ],
+    "max__euint64": [
+     53739,
+     33712
+    ],
+    "max__euint128": [
+     53765,
+     33738
+    ],
+    "square__euint8": [
+     48757,
+     28733
+    ],
+    "square__euint16": [
+     48783,
+     28759
+    ],
+    "square__euint32": [
+     48809,
+     28785
+    ],
+    "square__euint64": [
+     48835,
+     28811
+    ],
+    "square__euint128": [
+     48861,
+     28837
+    ],
+    "publishDecryptBatch__1": [
+     75096,
+     0
+    ],
+    "verifyDecryptBatch__1": [
+     18751,
+     0
+    ],
+    "verifyDecryptBatchSafe__1": [
+     19516,
+     0
+    ],
+    "publishDecryptBatch__2": [
+     128658,
+     0
+    ],
+    "verifyDecryptBatch__2": [
+     24322,
+     0
+    ],
+    "verifyDecryptBatchSafe__2": [
+     25388,
+     0
+    ],
+    "publishDecryptBatch__4": [
+     235791,
+     0
+    ],
+    "verifyDecryptBatch__4": [
+     35473,
+     0
+    ],
+    "verifyDecryptBatchSafe__4": [
+     37145,
+     0
+    ],
+    "publishDecryptBatch__8": [
+     450066,
+     0
+    ],
+    "verifyDecryptBatch__8": [
+     57784,
+     0
+    ],
+    "verifyDecryptBatchSafe__8": [
+     60671,
+     0
+    ],
+    "inputBatch__1": [
+     39611,
+     0
+    ],
+    "inputBatch__2": [
+     45368,
+     0
+    ],
+    "inputBatch__4": [
+     56883,
+     0
+    ],
+    "inputBatch__8": [
+     79930,
+     0
+    ],
+    "and__ebool": [
+     51698,
+     31671
+    ],
+    "and__euint8": [
+     51562,
+     31535
+    ],
+    "and__euint16": [
+     51588,
+     31561
+    ],
+    "and__euint32": [
+     51614,
+     31587
+    ],
+    "and__euint64": [
+     51640,
+     31613
+    ],
+    "and__euint128": [
+     51666,
+     31639
+    ],
+    "or__ebool": [
+     51918,
+     31891
+    ],
+    "or__euint8": [
+     51782,
+     31755
+    ],
+    "or__euint16": [
+     51808,
+     31781
+    ],
+    "or__euint32": [
+     51834,
+     31807
+    ],
+    "or__euint64": [
+     51860,
+     31833
+    ],
+    "or__euint128": [
+     51886,
+     31859
+    ],
+    "xor__ebool": [
+     51530,
+     31503
+    ],
+    "xor__euint8": [
+     51394,
+     31367
+    ],
+    "xor__euint16": [
+     51420,
+     31393
+    ],
+    "xor__euint32": [
+     51446,
+     31419
+    ],
+    "xor__euint64": [
+     51472,
+     31445
+    ],
+    "xor__euint128": [
+     51498,
+     31471
+    ],
+    "not__ebool": [
+     45678,
+     25654
+    ],
+    "not__euint8": [
+     45542,
+     25518
+    ],
+    "not__euint16": [
+     45568,
+     25544
+    ],
+    "not__euint32": [
+     45594,
+     25570
+    ],
+    "not__euint64": [
+     45620,
+     25596
+    ],
+    "not__euint128": [
+     45646,
+     25622
+    ],
+    "shl__euint8": [
+     52667,
+     32640
+    ],
+    "shl__euint16": [
+     52693,
+     32666
+    ],
+    "shl__euint32": [
+     52719,
+     32692
+    ],
+    "shl__euint64": [
+     52745,
+     32718
+    ],
+    "shl__euint128": [
+     52771,
+     32744
+    ],
+    "shr__euint8": [
+     52809,
+     32782
+    ],
+    "shr__euint16": [
+     52835,
+     32808
+    ],
+    "shr__euint32": [
+     52861,
+     32834
+    ],
+    "shr__euint64": [
+     52887,
+     32860
+    ],
+    "shr__euint128": [
+     52913,
+     32886
+    ],
+    "rol__euint8": [
+     54371,
+     34344
+    ],
+    "rol__euint16": [
+     54397,
+     34370
+    ],
+    "rol__euint32": [
+     54423,
+     34396
+    ],
+    "rol__euint64": [
+     54449,
+     34422
+    ],
+    "rol__euint128": [
+     54475,
+     34448
+    ],
+    "ror__euint8": [
+     54513,
+     34486
+    ],
+    "ror__euint16": [
+     54539,
+     34512
+    ],
+    "ror__euint32": [
+     54565,
+     34538
+    ],
+    "ror__euint64": [
+     54591,
+     34564
+    ],
+    "ror__euint128": [
+     54617,
+     34590
+    ],
+    "cast__ebool__euint8": [
+     45669,
+     25642
+    ],
+    "cast__ebool__euint16": [
+     45721,
+     25694
+    ],
+    "cast__ebool__euint32": [
+     45773,
+     25746
+    ],
+    "cast__ebool__euint64": [
+     45825,
+     25798
+    ],
+    "cast__ebool__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint8__ebool": [
+     75397,
+     51370
+    ],
+    "cast__euint8__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint8__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint8__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint8__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint16__ebool": [
+     75518,
+     51491
+    ],
+    "cast__euint16__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint16__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint16__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint16__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint32__ebool": [
+     75552,
+     51525
+    ],
+    "cast__euint32__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint32__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint32__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint32__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint64__ebool": [
+     75627,
+     51600
+    ],
+    "cast__euint64__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint64__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint64__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint64__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint128__ebool": [
+     75732,
+     51705
+    ],
+    "cast__euint128__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint128__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint128__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint128__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__ebool": [
+     75819,
+     51792
+    ],
+    "cast__eaddress__euint8": [
+     45669,
+     25642
+    ],
+    "cast__eaddress__euint16": [
+     45721,
+     25694
+    ],
+    "cast__eaddress__euint32": [
+     45773,
+     25746
+    ],
+    "cast__eaddress__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__euint128": [
+     45877,
+     25850
+    ],
+    "eq__ebool": [
+     52728,
+     32701
+    ],
+    "eq__euint8": [
+     52592,
+     32565
+    ],
+    "eq__euint16": [
+     52618,
+     32591
+    ],
+    "eq__euint32": [
+     52644,
+     32617
+    ],
+    "eq__euint64": [
+     52670,
+     32643
+    ],
+    "eq__euint128": [
+     52696,
+     32669
+    ],
+    "eq__eaddress": [
+     52722,
+     32695
+    ],
+    "ne__ebool": [
+     53023,
+     32996
+    ],
+    "ne__euint8": [
+     52887,
+     32860
+    ],
+    "ne__euint16": [
+     52913,
+     32886
+    ],
+    "ne__euint32": [
+     52939,
+     32912
+    ],
+    "ne__euint64": [
+     52965,
+     32938
+    ],
+    "ne__euint128": [
+     52991,
+     32964
+    ],
+    "ne__eaddress": [
+     53017,
+     32990
+    ],
+    "lt__euint8": [
+     52932,
+     32905
+    ],
+    "lt__euint16": [
+     52958,
+     32931
+    ],
+    "lt__euint32": [
+     52984,
+     32957
+    ],
+    "lt__euint64": [
+     53010,
+     32983
+    ],
+    "lt__euint128": [
+     53036,
+     33009
+    ],
+    "lte__euint8": [
+     52712,
+     32685
+    ],
+    "lte__euint16": [
+     52738,
+     32711
+    ],
+    "lte__euint32": [
+     52764,
+     32737
+    ],
+    "lte__euint64": [
+     52790,
+     32763
+    ],
+    "lte__euint128": [
+     52816,
+     32789
+    ],
+    "gt__euint8": [
+     53230,
+     33203
+    ],
+    "gt__euint16": [
+     53256,
+     33229
+    ],
+    "gt__euint32": [
+     53282,
+     33255
+    ],
+    "gt__euint64": [
+     53308,
+     33281
+    ],
+    "gt__euint128": [
+     53334,
+     33307
+    ],
+    "gte__euint8": [
+     52726,
+     32699
+    ],
+    "gte__euint16": [
+     52752,
+     32725
+    ],
+    "gte__euint32": [
+     52778,
+     32751
+    ],
+    "gte__euint64": [
+     52804,
+     32777
+    ],
+    "gte__euint128": [
+     52830,
+     32803
+    ],
+    "publishDecrypt__ebool": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__ebool": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__ebool": [
+     15731,
+     6713
+    ],
+    "getDecrypt__ebool": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__ebool": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint8": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint8": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint8": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint8": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint8": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint16": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint16": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint16": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint16": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint16": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint32": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint32": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint32": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint32": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint32": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint64": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint64": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint64": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint64": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint64": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint128": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint128": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint128": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint128": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint128": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__eaddress": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__eaddress": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__eaddress": [
+     15731,
+     6713
+    ],
+    "getDecrypt__eaddress": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__eaddress": [
+     23236,
+     7239
+    ],
+    "trivial__ebool": [
+     45358,
+     25306
+    ],
+    "trivial__euint8": [
+     45091,
+     25038
+    ],
+    "trivial__euint16": [
+     45140,
+     25087
+    ],
+    "trivial__euint32": [
+     45194,
+     25141
+    ],
+    "trivial__euint64": [
+     45243,
+     25190
+    ],
+    "trivial__euint128": [
+     45292,
+     25239
+    ],
+    "trivial__eaddress": [
+     45353,
+     25300
+    ],
+    "input__ebool": [
+     39849,
+     17834
+    ],
+    "input__euint8": [
+     39850,
+     17835
+    ],
+    "input__euint16": [
+     39850,
+     17835
+    ],
+    "input__euint32": [
+     39850,
+     17835
+    ],
+    "input__euint64": [
+     39850,
+     17835
+    ],
+    "input__euint128": [
+     39850,
+     17835
+    ],
+    "input__eaddress": [
+     39850,
+     17835
+    ],
+    "inputBytes__ebool": [
+     40377,
+     18362
+    ],
+    "inputBytes__euint8": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint16": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint32": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint64": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint128": [
+     40383,
+     18368
+    ],
+    "inputBytes__eaddress": [
+     40383,
+     18368
+    ],
+    "random__euint8": [
+     40811,
+     15999
+    ],
+    "random__euint16": [
+     40837,
+     16025
+    ],
+    "random__euint32": [
+     40863,
+     16051
+    ],
+    "random__euint64": [
+     40889,
+     16077
+    ],
+    "random__euint128": [
+     40915,
+     16103
+    ],
+    "select__ebool": [
+     55946,
+     35917
+    ],
+    "select__euint8": [
+     55810,
+     35781
+    ],
+    "select__euint16": [
+     55836,
+     35807
+    ],
+    "select__euint32": [
+     55862,
+     35833
+    ],
+    "select__euint64": [
+     55888,
+     35859
+    ],
+    "select__euint128": [
+     55914,
+     35885
+    ],
+    "select__eaddress": [
+     55940,
+     35911
+    ],
+    "share__ebool": [
+     25895,
+     7862
+    ],
+    "receiveParam__ebool": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__ebool": [
+     6298,
+     6298
+    ],
+    "share__euint8": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint8": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint8": [
+     6298,
+     6298
+    ],
+    "share__euint16": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint16": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint16": [
+     6298,
+     6298
+    ],
+    "share__euint32": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint32": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint32": [
+     6298,
+     6298
+    ],
+    "share__euint64": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint64": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint64": [
+     6298,
+     6298
+    ],
+    "share__euint128": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint128": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint128": [
+     6298,
+     6298
+    ],
+    "share__eaddress": [
+     25895,
+     7862
+    ],
+    "receiveParam__eaddress": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__eaddress": [
+     6298,
+     6298
+    ],
+    "fherc20.transferToHolder": [
+     400777
+    ],
+    "fherc20.transferToNewHolder": [
+     453648
+    ]
+   },
+   "notEqualToEthereumMainnet": []
+  },
+  "Arbitrum One": {
+   "chainId": 42161,
+   "rpc": "https://arb1.arbitrum.io/rpc",
+   "notEqualToFork": [],
+   "results": {
+    "allow__ebool": [
+     44736,
+     28724
+    ],
+    "allowThis__ebool": [
+     26274,
+     26274
+    ],
+    "allowSender__ebool": [
+     44748,
+     28736
+    ],
+    "allowTransient__ebool": [
+     22984,
+     6972
+    ],
+    "allowGlobal__ebool": [
+     44146,
+     28137
+    ],
+    "allowPublic__ebool": [
+     44146,
+     28137
+    ],
+    "isAllowed__ebool": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__ebool": [
+     21939,
+     5933
+    ],
+    "allow__euint8": [
+     44736,
+     28724
+    ],
+    "allowThis__euint8": [
+     26274,
+     26274
+    ],
+    "allowSender__euint8": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint8": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint8": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint8": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint8": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint8": [
+     21939,
+     5933
+    ],
+    "allow__euint16": [
+     44736,
+     28724
+    ],
+    "allowThis__euint16": [
+     26274,
+     26274
+    ],
+    "allowSender__euint16": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint16": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint16": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint16": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint16": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint16": [
+     21939,
+     5933
+    ],
+    "allow__euint32": [
+     44736,
+     28724
+    ],
+    "allowThis__euint32": [
+     26274,
+     26274
+    ],
+    "allowSender__euint32": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint32": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint32": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint32": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint32": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint32": [
+     21939,
+     5933
+    ],
+    "allow__euint64": [
+     44736,
+     28724
+    ],
+    "allowThis__euint64": [
+     26274,
+     26274
+    ],
+    "allowSender__euint64": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint64": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint64": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint64": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint64": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint64": [
+     21939,
+     5933
+    ],
+    "allow__euint128": [
+     44736,
+     28724
+    ],
+    "allowThis__euint128": [
+     26274,
+     26274
+    ],
+    "allowSender__euint128": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint128": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint128": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint128": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint128": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint128": [
+     21939,
+     5933
+    ],
+    "allow__eaddress": [
+     44736,
+     28724
+    ],
+    "allowThis__eaddress": [
+     26274,
+     26274
+    ],
+    "allowSender__eaddress": [
+     44748,
+     28736
+    ],
+    "allowTransient__eaddress": [
+     22984,
+     6972
+    ],
+    "allowGlobal__eaddress": [
+     44146,
+     28137
+    ],
+    "allowPublic__eaddress": [
+     44146,
+     28137
+    ],
+    "isAllowed__eaddress": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__eaddress": [
+     21939,
+     5933
+    ],
+    "add__euint8": [
+     51531,
+     31504
+    ],
+    "add__euint16": [
+     51557,
+     31530
+    ],
+    "add__euint32": [
+     51583,
+     31556
+    ],
+    "add__euint64": [
+     51609,
+     31582
+    ],
+    "add__euint128": [
+     51635,
+     31608
+    ],
+    "sub__euint8": [
+     51389,
+     31362
+    ],
+    "sub__euint16": [
+     51415,
+     31388
+    ],
+    "sub__euint32": [
+     51441,
+     31414
+    ],
+    "sub__euint64": [
+     51467,
+     31440
+    ],
+    "sub__euint128": [
+     51493,
+     31466
+    ],
+    "mul__euint8": [
+     52525,
+     32498
+    ],
+    "mul__euint16": [
+     52551,
+     32524
+    ],
+    "mul__euint32": [
+     52577,
+     32550
+    ],
+    "mul__euint64": [
+     52603,
+     32576
+    ],
+    "mul__euint128": [
+     52629,
+     32602
+    ],
+    "div__euint8": [
+     52241,
+     32214
+    ],
+    "div__euint16": [
+     52267,
+     32240
+    ],
+    "div__euint32": [
+     52293,
+     32266
+    ],
+    "div__euint64": [
+     52319,
+     32292
+    ],
+    "div__euint128": [
+     52345,
+     32318
+    ],
+    "rem__euint8": [
+     52383,
+     32356
+    ],
+    "rem__euint16": [
+     52409,
+     32382
+    ],
+    "rem__euint32": [
+     52435,
+     32408
+    ],
+    "rem__euint64": [
+     52461,
+     32434
+    ],
+    "rem__euint128": [
+     52487,
+     32460
+    ],
+    "min__euint8": [
+     53519,
+     33492
+    ],
+    "min__euint16": [
+     53545,
+     33518
+    ],
+    "min__euint32": [
+     53571,
+     33544
+    ],
+    "min__euint64": [
+     53597,
+     33570
+    ],
+    "min__euint128": [
+     53623,
+     33596
+    ],
+    "max__euint8": [
+     53661,
+     33634
+    ],
+    "max__euint16": [
+     53687,
+     33660
+    ],
+    "max__euint32": [
+     53713,
+     33686
+    ],
+    "max__euint64": [
+     53739,
+     33712
+    ],
+    "max__euint128": [
+     53765,
+     33738
+    ],
+    "square__euint8": [
+     48757,
+     28733
+    ],
+    "square__euint16": [
+     48783,
+     28759
+    ],
+    "square__euint32": [
+     48809,
+     28785
+    ],
+    "square__euint64": [
+     48835,
+     28811
+    ],
+    "square__euint128": [
+     48861,
+     28837
+    ],
+    "publishDecryptBatch__1": [
+     75096,
+     0
+    ],
+    "verifyDecryptBatch__1": [
+     18751,
+     0
+    ],
+    "verifyDecryptBatchSafe__1": [
+     19516,
+     0
+    ],
+    "publishDecryptBatch__2": [
+     128658,
+     0
+    ],
+    "verifyDecryptBatch__2": [
+     24322,
+     0
+    ],
+    "verifyDecryptBatchSafe__2": [
+     25388,
+     0
+    ],
+    "publishDecryptBatch__4": [
+     235791,
+     0
+    ],
+    "verifyDecryptBatch__4": [
+     35473,
+     0
+    ],
+    "verifyDecryptBatchSafe__4": [
+     37145,
+     0
+    ],
+    "publishDecryptBatch__8": [
+     450066,
+     0
+    ],
+    "verifyDecryptBatch__8": [
+     57784,
+     0
+    ],
+    "verifyDecryptBatchSafe__8": [
+     60671,
+     0
+    ],
+    "inputBatch__1": [
+     39611,
+     0
+    ],
+    "inputBatch__2": [
+     45368,
+     0
+    ],
+    "inputBatch__4": [
+     56883,
+     0
+    ],
+    "inputBatch__8": [
+     79930,
+     0
+    ],
+    "and__ebool": [
+     51698,
+     31671
+    ],
+    "and__euint8": [
+     51562,
+     31535
+    ],
+    "and__euint16": [
+     51588,
+     31561
+    ],
+    "and__euint32": [
+     51614,
+     31587
+    ],
+    "and__euint64": [
+     51640,
+     31613
+    ],
+    "and__euint128": [
+     51666,
+     31639
+    ],
+    "or__ebool": [
+     51918,
+     31891
+    ],
+    "or__euint8": [
+     51782,
+     31755
+    ],
+    "or__euint16": [
+     51808,
+     31781
+    ],
+    "or__euint32": [
+     51834,
+     31807
+    ],
+    "or__euint64": [
+     51860,
+     31833
+    ],
+    "or__euint128": [
+     51886,
+     31859
+    ],
+    "xor__ebool": [
+     51530,
+     31503
+    ],
+    "xor__euint8": [
+     51394,
+     31367
+    ],
+    "xor__euint16": [
+     51420,
+     31393
+    ],
+    "xor__euint32": [
+     51446,
+     31419
+    ],
+    "xor__euint64": [
+     51472,
+     31445
+    ],
+    "xor__euint128": [
+     51498,
+     31471
+    ],
+    "not__ebool": [
+     45678,
+     25654
+    ],
+    "not__euint8": [
+     45542,
+     25518
+    ],
+    "not__euint16": [
+     45568,
+     25544
+    ],
+    "not__euint32": [
+     45594,
+     25570
+    ],
+    "not__euint64": [
+     45620,
+     25596
+    ],
+    "not__euint128": [
+     45646,
+     25622
+    ],
+    "shl__euint8": [
+     52667,
+     32640
+    ],
+    "shl__euint16": [
+     52693,
+     32666
+    ],
+    "shl__euint32": [
+     52719,
+     32692
+    ],
+    "shl__euint64": [
+     52745,
+     32718
+    ],
+    "shl__euint128": [
+     52771,
+     32744
+    ],
+    "shr__euint8": [
+     52809,
+     32782
+    ],
+    "shr__euint16": [
+     52835,
+     32808
+    ],
+    "shr__euint32": [
+     52861,
+     32834
+    ],
+    "shr__euint64": [
+     52887,
+     32860
+    ],
+    "shr__euint128": [
+     52913,
+     32886
+    ],
+    "rol__euint8": [
+     54371,
+     34344
+    ],
+    "rol__euint16": [
+     54397,
+     34370
+    ],
+    "rol__euint32": [
+     54423,
+     34396
+    ],
+    "rol__euint64": [
+     54449,
+     34422
+    ],
+    "rol__euint128": [
+     54475,
+     34448
+    ],
+    "ror__euint8": [
+     54513,
+     34486
+    ],
+    "ror__euint16": [
+     54539,
+     34512
+    ],
+    "ror__euint32": [
+     54565,
+     34538
+    ],
+    "ror__euint64": [
+     54591,
+     34564
+    ],
+    "ror__euint128": [
+     54617,
+     34590
+    ],
+    "cast__ebool__euint8": [
+     45669,
+     25642
+    ],
+    "cast__ebool__euint16": [
+     45721,
+     25694
+    ],
+    "cast__ebool__euint32": [
+     45773,
+     25746
+    ],
+    "cast__ebool__euint64": [
+     45825,
+     25798
+    ],
+    "cast__ebool__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint8__ebool": [
+     75397,
+     51370
+    ],
+    "cast__euint8__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint8__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint8__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint8__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint16__ebool": [
+     75518,
+     51491
+    ],
+    "cast__euint16__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint16__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint16__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint16__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint32__ebool": [
+     75552,
+     51525
+    ],
+    "cast__euint32__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint32__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint32__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint32__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint64__ebool": [
+     75627,
+     51600
+    ],
+    "cast__euint64__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint64__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint64__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint64__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint128__ebool": [
+     75732,
+     51705
+    ],
+    "cast__euint128__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint128__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint128__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint128__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__ebool": [
+     75819,
+     51792
+    ],
+    "cast__eaddress__euint8": [
+     45669,
+     25642
+    ],
+    "cast__eaddress__euint16": [
+     45721,
+     25694
+    ],
+    "cast__eaddress__euint32": [
+     45773,
+     25746
+    ],
+    "cast__eaddress__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__euint128": [
+     45877,
+     25850
+    ],
+    "eq__ebool": [
+     52728,
+     32701
+    ],
+    "eq__euint8": [
+     52592,
+     32565
+    ],
+    "eq__euint16": [
+     52618,
+     32591
+    ],
+    "eq__euint32": [
+     52644,
+     32617
+    ],
+    "eq__euint64": [
+     52670,
+     32643
+    ],
+    "eq__euint128": [
+     52696,
+     32669
+    ],
+    "eq__eaddress": [
+     52722,
+     32695
+    ],
+    "ne__ebool": [
+     53023,
+     32996
+    ],
+    "ne__euint8": [
+     52887,
+     32860
+    ],
+    "ne__euint16": [
+     52913,
+     32886
+    ],
+    "ne__euint32": [
+     52939,
+     32912
+    ],
+    "ne__euint64": [
+     52965,
+     32938
+    ],
+    "ne__euint128": [
+     52991,
+     32964
+    ],
+    "ne__eaddress": [
+     53017,
+     32990
+    ],
+    "lt__euint8": [
+     52932,
+     32905
+    ],
+    "lt__euint16": [
+     52958,
+     32931
+    ],
+    "lt__euint32": [
+     52984,
+     32957
+    ],
+    "lt__euint64": [
+     53010,
+     32983
+    ],
+    "lt__euint128": [
+     53036,
+     33009
+    ],
+    "lte__euint8": [
+     52712,
+     32685
+    ],
+    "lte__euint16": [
+     52738,
+     32711
+    ],
+    "lte__euint32": [
+     52764,
+     32737
+    ],
+    "lte__euint64": [
+     52790,
+     32763
+    ],
+    "lte__euint128": [
+     52816,
+     32789
+    ],
+    "gt__euint8": [
+     53230,
+     33203
+    ],
+    "gt__euint16": [
+     53256,
+     33229
+    ],
+    "gt__euint32": [
+     53282,
+     33255
+    ],
+    "gt__euint64": [
+     53308,
+     33281
+    ],
+    "gt__euint128": [
+     53334,
+     33307
+    ],
+    "gte__euint8": [
+     52726,
+     32699
+    ],
+    "gte__euint16": [
+     52752,
+     32725
+    ],
+    "gte__euint32": [
+     52778,
+     32751
+    ],
+    "gte__euint64": [
+     52804,
+     32777
+    ],
+    "gte__euint128": [
+     52830,
+     32803
+    ],
+    "publishDecrypt__ebool": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__ebool": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__ebool": [
+     15731,
+     6713
+    ],
+    "getDecrypt__ebool": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__ebool": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint8": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint8": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint8": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint8": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint8": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint16": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint16": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint16": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint16": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint16": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint32": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint32": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint32": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint32": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint32": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint64": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint64": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint64": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint64": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint64": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint128": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint128": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint128": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint128": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint128": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__eaddress": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__eaddress": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__eaddress": [
+     15731,
+     6713
+    ],
+    "getDecrypt__eaddress": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__eaddress": [
+     23236,
+     7239
+    ],
+    "trivial__ebool": [
+     45358,
+     25306
+    ],
+    "trivial__euint8": [
+     45091,
+     25038
+    ],
+    "trivial__euint16": [
+     45140,
+     25087
+    ],
+    "trivial__euint32": [
+     45194,
+     25141
+    ],
+    "trivial__euint64": [
+     45243,
+     25190
+    ],
+    "trivial__euint128": [
+     45292,
+     25239
+    ],
+    "trivial__eaddress": [
+     45353,
+     25300
+    ],
+    "input__ebool": [
+     39849,
+     17834
+    ],
+    "input__euint8": [
+     39850,
+     17835
+    ],
+    "input__euint16": [
+     39850,
+     17835
+    ],
+    "input__euint32": [
+     39850,
+     17835
+    ],
+    "input__euint64": [
+     39850,
+     17835
+    ],
+    "input__euint128": [
+     39850,
+     17835
+    ],
+    "input__eaddress": [
+     39850,
+     17835
+    ],
+    "inputBytes__ebool": [
+     40377,
+     18362
+    ],
+    "inputBytes__euint8": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint16": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint32": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint64": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint128": [
+     40383,
+     18368
+    ],
+    "inputBytes__eaddress": [
+     40383,
+     18368
+    ],
+    "random__euint8": [
+     40811,
+     15999
+    ],
+    "random__euint16": [
+     40837,
+     16025
+    ],
+    "random__euint32": [
+     40863,
+     16051
+    ],
+    "random__euint64": [
+     40889,
+     16077
+    ],
+    "random__euint128": [
+     40915,
+     16103
+    ],
+    "select__ebool": [
+     55946,
+     35917
+    ],
+    "select__euint8": [
+     55810,
+     35781
+    ],
+    "select__euint16": [
+     55836,
+     35807
+    ],
+    "select__euint32": [
+     55862,
+     35833
+    ],
+    "select__euint64": [
+     55888,
+     35859
+    ],
+    "select__euint128": [
+     55914,
+     35885
+    ],
+    "select__eaddress": [
+     55940,
+     35911
+    ],
+    "share__ebool": [
+     25895,
+     7862
+    ],
+    "receiveParam__ebool": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__ebool": [
+     6298,
+     6298
+    ],
+    "share__euint8": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint8": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint8": [
+     6298,
+     6298
+    ],
+    "share__euint16": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint16": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint16": [
+     6298,
+     6298
+    ],
+    "share__euint32": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint32": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint32": [
+     6298,
+     6298
+    ],
+    "share__euint64": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint64": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint64": [
+     6298,
+     6298
+    ],
+    "share__euint128": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint128": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint128": [
+     6298,
+     6298
+    ],
+    "share__eaddress": [
+     25895,
+     7862
+    ],
+    "receiveParam__eaddress": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__eaddress": [
+     6298,
+     6298
+    ],
+    "fherc20.transferToHolder": [
+     400777
+    ],
+    "fherc20.transferToNewHolder": [
+     453648
+    ]
+   },
+   "notEqualToEthereumMainnet": []
+  },
+  "Ethereum Sepolia": {
+   "chainId": 11155111,
+   "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+   "notEqualToFork": [],
+   "results": {
+    "allow__ebool": [
+     44736,
+     28724
+    ],
+    "allowThis__ebool": [
+     26274,
+     26274
+    ],
+    "allowSender__ebool": [
+     44748,
+     28736
+    ],
+    "allowTransient__ebool": [
+     22984,
+     6972
+    ],
+    "allowGlobal__ebool": [
+     44146,
+     28137
+    ],
+    "allowPublic__ebool": [
+     44146,
+     28137
+    ],
+    "isAllowed__ebool": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__ebool": [
+     21939,
+     5933
+    ],
+    "allow__euint8": [
+     44736,
+     28724
+    ],
+    "allowThis__euint8": [
+     26274,
+     26274
+    ],
+    "allowSender__euint8": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint8": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint8": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint8": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint8": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint8": [
+     21939,
+     5933
+    ],
+    "allow__euint16": [
+     44736,
+     28724
+    ],
+    "allowThis__euint16": [
+     26274,
+     26274
+    ],
+    "allowSender__euint16": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint16": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint16": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint16": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint16": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint16": [
+     21939,
+     5933
+    ],
+    "allow__euint32": [
+     44736,
+     28724
+    ],
+    "allowThis__euint32": [
+     26274,
+     26274
+    ],
+    "allowSender__euint32": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint32": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint32": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint32": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint32": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint32": [
+     21939,
+     5933
+    ],
+    "allow__euint64": [
+     44736,
+     28724
+    ],
+    "allowThis__euint64": [
+     26274,
+     26274
+    ],
+    "allowSender__euint64": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint64": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint64": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint64": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint64": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint64": [
+     21939,
+     5933
+    ],
+    "allow__euint128": [
+     44736,
+     28724
+    ],
+    "allowThis__euint128": [
+     26274,
+     26274
+    ],
+    "allowSender__euint128": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint128": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint128": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint128": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint128": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint128": [
+     21939,
+     5933
+    ],
+    "allow__eaddress": [
+     44736,
+     28724
+    ],
+    "allowThis__eaddress": [
+     26274,
+     26274
+    ],
+    "allowSender__eaddress": [
+     44748,
+     28736
+    ],
+    "allowTransient__eaddress": [
+     22984,
+     6972
+    ],
+    "allowGlobal__eaddress": [
+     44146,
+     28137
+    ],
+    "allowPublic__eaddress": [
+     44146,
+     28137
+    ],
+    "isAllowed__eaddress": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__eaddress": [
+     21939,
+     5933
+    ],
+    "add__euint8": [
+     51531,
+     31504
+    ],
+    "add__euint16": [
+     51557,
+     31530
+    ],
+    "add__euint32": [
+     51583,
+     31556
+    ],
+    "add__euint64": [
+     51609,
+     31582
+    ],
+    "add__euint128": [
+     51635,
+     31608
+    ],
+    "sub__euint8": [
+     51389,
+     31362
+    ],
+    "sub__euint16": [
+     51415,
+     31388
+    ],
+    "sub__euint32": [
+     51441,
+     31414
+    ],
+    "sub__euint64": [
+     51467,
+     31440
+    ],
+    "sub__euint128": [
+     51493,
+     31466
+    ],
+    "mul__euint8": [
+     52525,
+     32498
+    ],
+    "mul__euint16": [
+     52551,
+     32524
+    ],
+    "mul__euint32": [
+     52577,
+     32550
+    ],
+    "mul__euint64": [
+     52603,
+     32576
+    ],
+    "mul__euint128": [
+     52629,
+     32602
+    ],
+    "div__euint8": [
+     52241,
+     32214
+    ],
+    "div__euint16": [
+     52267,
+     32240
+    ],
+    "div__euint32": [
+     52293,
+     32266
+    ],
+    "div__euint64": [
+     52319,
+     32292
+    ],
+    "div__euint128": [
+     52345,
+     32318
+    ],
+    "rem__euint8": [
+     52383,
+     32356
+    ],
+    "rem__euint16": [
+     52409,
+     32382
+    ],
+    "rem__euint32": [
+     52435,
+     32408
+    ],
+    "rem__euint64": [
+     52461,
+     32434
+    ],
+    "rem__euint128": [
+     52487,
+     32460
+    ],
+    "min__euint8": [
+     53519,
+     33492
+    ],
+    "min__euint16": [
+     53545,
+     33518
+    ],
+    "min__euint32": [
+     53571,
+     33544
+    ],
+    "min__euint64": [
+     53597,
+     33570
+    ],
+    "min__euint128": [
+     53623,
+     33596
+    ],
+    "max__euint8": [
+     53661,
+     33634
+    ],
+    "max__euint16": [
+     53687,
+     33660
+    ],
+    "max__euint32": [
+     53713,
+     33686
+    ],
+    "max__euint64": [
+     53739,
+     33712
+    ],
+    "max__euint128": [
+     53765,
+     33738
+    ],
+    "square__euint8": [
+     48757,
+     28733
+    ],
+    "square__euint16": [
+     48783,
+     28759
+    ],
+    "square__euint32": [
+     48809,
+     28785
+    ],
+    "square__euint64": [
+     48835,
+     28811
+    ],
+    "square__euint128": [
+     48861,
+     28837
+    ],
+    "publishDecryptBatch__1": [
+     75096,
+     0
+    ],
+    "verifyDecryptBatch__1": [
+     18751,
+     0
+    ],
+    "verifyDecryptBatchSafe__1": [
+     19516,
+     0
+    ],
+    "publishDecryptBatch__2": [
+     128658,
+     0
+    ],
+    "verifyDecryptBatch__2": [
+     24322,
+     0
+    ],
+    "verifyDecryptBatchSafe__2": [
+     25388,
+     0
+    ],
+    "publishDecryptBatch__4": [
+     235791,
+     0
+    ],
+    "verifyDecryptBatch__4": [
+     35473,
+     0
+    ],
+    "verifyDecryptBatchSafe__4": [
+     37145,
+     0
+    ],
+    "publishDecryptBatch__8": [
+     450066,
+     0
+    ],
+    "verifyDecryptBatch__8": [
+     57784,
+     0
+    ],
+    "verifyDecryptBatchSafe__8": [
+     60671,
+     0
+    ],
+    "inputBatch__1": [
+     39611,
+     0
+    ],
+    "inputBatch__2": [
+     45368,
+     0
+    ],
+    "inputBatch__4": [
+     56883,
+     0
+    ],
+    "inputBatch__8": [
+     79930,
+     0
+    ],
+    "and__ebool": [
+     51698,
+     31671
+    ],
+    "and__euint8": [
+     51562,
+     31535
+    ],
+    "and__euint16": [
+     51588,
+     31561
+    ],
+    "and__euint32": [
+     51614,
+     31587
+    ],
+    "and__euint64": [
+     51640,
+     31613
+    ],
+    "and__euint128": [
+     51666,
+     31639
+    ],
+    "or__ebool": [
+     51918,
+     31891
+    ],
+    "or__euint8": [
+     51782,
+     31755
+    ],
+    "or__euint16": [
+     51808,
+     31781
+    ],
+    "or__euint32": [
+     51834,
+     31807
+    ],
+    "or__euint64": [
+     51860,
+     31833
+    ],
+    "or__euint128": [
+     51886,
+     31859
+    ],
+    "xor__ebool": [
+     51530,
+     31503
+    ],
+    "xor__euint8": [
+     51394,
+     31367
+    ],
+    "xor__euint16": [
+     51420,
+     31393
+    ],
+    "xor__euint32": [
+     51446,
+     31419
+    ],
+    "xor__euint64": [
+     51472,
+     31445
+    ],
+    "xor__euint128": [
+     51498,
+     31471
+    ],
+    "not__ebool": [
+     45678,
+     25654
+    ],
+    "not__euint8": [
+     45542,
+     25518
+    ],
+    "not__euint16": [
+     45568,
+     25544
+    ],
+    "not__euint32": [
+     45594,
+     25570
+    ],
+    "not__euint64": [
+     45620,
+     25596
+    ],
+    "not__euint128": [
+     45646,
+     25622
+    ],
+    "shl__euint8": [
+     52667,
+     32640
+    ],
+    "shl__euint16": [
+     52693,
+     32666
+    ],
+    "shl__euint32": [
+     52719,
+     32692
+    ],
+    "shl__euint64": [
+     52745,
+     32718
+    ],
+    "shl__euint128": [
+     52771,
+     32744
+    ],
+    "shr__euint8": [
+     52809,
+     32782
+    ],
+    "shr__euint16": [
+     52835,
+     32808
+    ],
+    "shr__euint32": [
+     52861,
+     32834
+    ],
+    "shr__euint64": [
+     52887,
+     32860
+    ],
+    "shr__euint128": [
+     52913,
+     32886
+    ],
+    "rol__euint8": [
+     54371,
+     34344
+    ],
+    "rol__euint16": [
+     54397,
+     34370
+    ],
+    "rol__euint32": [
+     54423,
+     34396
+    ],
+    "rol__euint64": [
+     54449,
+     34422
+    ],
+    "rol__euint128": [
+     54475,
+     34448
+    ],
+    "ror__euint8": [
+     54513,
+     34486
+    ],
+    "ror__euint16": [
+     54539,
+     34512
+    ],
+    "ror__euint32": [
+     54565,
+     34538
+    ],
+    "ror__euint64": [
+     54591,
+     34564
+    ],
+    "ror__euint128": [
+     54617,
+     34590
+    ],
+    "cast__ebool__euint8": [
+     45669,
+     25642
+    ],
+    "cast__ebool__euint16": [
+     45721,
+     25694
+    ],
+    "cast__ebool__euint32": [
+     45773,
+     25746
+    ],
+    "cast__ebool__euint64": [
+     45825,
+     25798
+    ],
+    "cast__ebool__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint8__ebool": [
+     75397,
+     51370
+    ],
+    "cast__euint8__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint8__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint8__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint8__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint16__ebool": [
+     75518,
+     51491
+    ],
+    "cast__euint16__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint16__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint16__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint16__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint32__ebool": [
+     75552,
+     51525
+    ],
+    "cast__euint32__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint32__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint32__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint32__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint64__ebool": [
+     75627,
+     51600
+    ],
+    "cast__euint64__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint64__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint64__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint64__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint128__ebool": [
+     75732,
+     51705
+    ],
+    "cast__euint128__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint128__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint128__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint128__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__ebool": [
+     75819,
+     51792
+    ],
+    "cast__eaddress__euint8": [
+     45669,
+     25642
+    ],
+    "cast__eaddress__euint16": [
+     45721,
+     25694
+    ],
+    "cast__eaddress__euint32": [
+     45773,
+     25746
+    ],
+    "cast__eaddress__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__euint128": [
+     45877,
+     25850
+    ],
+    "eq__ebool": [
+     52728,
+     32701
+    ],
+    "eq__euint8": [
+     52592,
+     32565
+    ],
+    "eq__euint16": [
+     52618,
+     32591
+    ],
+    "eq__euint32": [
+     52644,
+     32617
+    ],
+    "eq__euint64": [
+     52670,
+     32643
+    ],
+    "eq__euint128": [
+     52696,
+     32669
+    ],
+    "eq__eaddress": [
+     52722,
+     32695
+    ],
+    "ne__ebool": [
+     53023,
+     32996
+    ],
+    "ne__euint8": [
+     52887,
+     32860
+    ],
+    "ne__euint16": [
+     52913,
+     32886
+    ],
+    "ne__euint32": [
+     52939,
+     32912
+    ],
+    "ne__euint64": [
+     52965,
+     32938
+    ],
+    "ne__euint128": [
+     52991,
+     32964
+    ],
+    "ne__eaddress": [
+     53017,
+     32990
+    ],
+    "lt__euint8": [
+     52932,
+     32905
+    ],
+    "lt__euint16": [
+     52958,
+     32931
+    ],
+    "lt__euint32": [
+     52984,
+     32957
+    ],
+    "lt__euint64": [
+     53010,
+     32983
+    ],
+    "lt__euint128": [
+     53036,
+     33009
+    ],
+    "lte__euint8": [
+     52712,
+     32685
+    ],
+    "lte__euint16": [
+     52738,
+     32711
+    ],
+    "lte__euint32": [
+     52764,
+     32737
+    ],
+    "lte__euint64": [
+     52790,
+     32763
+    ],
+    "lte__euint128": [
+     52816,
+     32789
+    ],
+    "gt__euint8": [
+     53230,
+     33203
+    ],
+    "gt__euint16": [
+     53256,
+     33229
+    ],
+    "gt__euint32": [
+     53282,
+     33255
+    ],
+    "gt__euint64": [
+     53308,
+     33281
+    ],
+    "gt__euint128": [
+     53334,
+     33307
+    ],
+    "gte__euint8": [
+     52726,
+     32699
+    ],
+    "gte__euint16": [
+     52752,
+     32725
+    ],
+    "gte__euint32": [
+     52778,
+     32751
+    ],
+    "gte__euint64": [
+     52804,
+     32777
+    ],
+    "gte__euint128": [
+     52830,
+     32803
+    ],
+    "publishDecrypt__ebool": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__ebool": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__ebool": [
+     15731,
+     6713
+    ],
+    "getDecrypt__ebool": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__ebool": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint8": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint8": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint8": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint8": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint8": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint16": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint16": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint16": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint16": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint16": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint32": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint32": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint32": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint32": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint32": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint64": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint64": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint64": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint64": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint64": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint128": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint128": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint128": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint128": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint128": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__eaddress": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__eaddress": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__eaddress": [
+     15731,
+     6713
+    ],
+    "getDecrypt__eaddress": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__eaddress": [
+     23236,
+     7239
+    ],
+    "trivial__ebool": [
+     45358,
+     25306
+    ],
+    "trivial__euint8": [
+     45091,
+     25038
+    ],
+    "trivial__euint16": [
+     45140,
+     25087
+    ],
+    "trivial__euint32": [
+     45194,
+     25141
+    ],
+    "trivial__euint64": [
+     45243,
+     25190
+    ],
+    "trivial__euint128": [
+     45292,
+     25239
+    ],
+    "trivial__eaddress": [
+     45353,
+     25300
+    ],
+    "input__ebool": [
+     39849,
+     17834
+    ],
+    "input__euint8": [
+     39850,
+     17835
+    ],
+    "input__euint16": [
+     39850,
+     17835
+    ],
+    "input__euint32": [
+     39850,
+     17835
+    ],
+    "input__euint64": [
+     39850,
+     17835
+    ],
+    "input__euint128": [
+     39850,
+     17835
+    ],
+    "input__eaddress": [
+     39850,
+     17835
+    ],
+    "inputBytes__ebool": [
+     40377,
+     18362
+    ],
+    "inputBytes__euint8": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint16": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint32": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint64": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint128": [
+     40383,
+     18368
+    ],
+    "inputBytes__eaddress": [
+     40383,
+     18368
+    ],
+    "random__euint8": [
+     40811,
+     15999
+    ],
+    "random__euint16": [
+     40837,
+     16025
+    ],
+    "random__euint32": [
+     40863,
+     16051
+    ],
+    "random__euint64": [
+     40889,
+     16077
+    ],
+    "random__euint128": [
+     40915,
+     16103
+    ],
+    "select__ebool": [
+     55946,
+     35917
+    ],
+    "select__euint8": [
+     55810,
+     35781
+    ],
+    "select__euint16": [
+     55836,
+     35807
+    ],
+    "select__euint32": [
+     55862,
+     35833
+    ],
+    "select__euint64": [
+     55888,
+     35859
+    ],
+    "select__euint128": [
+     55914,
+     35885
+    ],
+    "select__eaddress": [
+     55940,
+     35911
+    ],
+    "share__ebool": [
+     25895,
+     7862
+    ],
+    "receiveParam__ebool": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__ebool": [
+     6298,
+     6298
+    ],
+    "share__euint8": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint8": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint8": [
+     6298,
+     6298
+    ],
+    "share__euint16": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint16": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint16": [
+     6298,
+     6298
+    ],
+    "share__euint32": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint32": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint32": [
+     6298,
+     6298
+    ],
+    "share__euint64": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint64": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint64": [
+     6298,
+     6298
+    ],
+    "share__euint128": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint128": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint128": [
+     6298,
+     6298
+    ],
+    "share__eaddress": [
+     25895,
+     7862
+    ],
+    "receiveParam__eaddress": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__eaddress": [
+     6298,
+     6298
+    ],
+    "fherc20.transferToHolder": [
+     400777
+    ],
+    "fherc20.transferToNewHolder": [
+     453648
+    ]
+   },
+   "notEqualToEthereumMainnet": []
+  },
+  "Arbitrum Sepolia": {
+   "chainId": 421614,
+   "rpc": "https://sepolia-rollup.arbitrum.io/rpc",
+   "notEqualToFork": [],
+   "results": {
+    "allow__ebool": [
+     44736,
+     28724
+    ],
+    "allowThis__ebool": [
+     26274,
+     26274
+    ],
+    "allowSender__ebool": [
+     44748,
+     28736
+    ],
+    "allowTransient__ebool": [
+     22984,
+     6972
+    ],
+    "allowGlobal__ebool": [
+     44146,
+     28137
+    ],
+    "allowPublic__ebool": [
+     44146,
+     28137
+    ],
+    "isAllowed__ebool": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__ebool": [
+     21939,
+     5933
+    ],
+    "allow__euint8": [
+     44736,
+     28724
+    ],
+    "allowThis__euint8": [
+     26274,
+     26274
+    ],
+    "allowSender__euint8": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint8": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint8": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint8": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint8": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint8": [
+     21939,
+     5933
+    ],
+    "allow__euint16": [
+     44736,
+     28724
+    ],
+    "allowThis__euint16": [
+     26274,
+     26274
+    ],
+    "allowSender__euint16": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint16": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint16": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint16": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint16": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint16": [
+     21939,
+     5933
+    ],
+    "allow__euint32": [
+     44736,
+     28724
+    ],
+    "allowThis__euint32": [
+     26274,
+     26274
+    ],
+    "allowSender__euint32": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint32": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint32": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint32": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint32": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint32": [
+     21939,
+     5933
+    ],
+    "allow__euint64": [
+     44736,
+     28724
+    ],
+    "allowThis__euint64": [
+     26274,
+     26274
+    ],
+    "allowSender__euint64": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint64": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint64": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint64": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint64": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint64": [
+     21939,
+     5933
+    ],
+    "allow__euint128": [
+     44736,
+     28724
+    ],
+    "allowThis__euint128": [
+     26274,
+     26274
+    ],
+    "allowSender__euint128": [
+     44748,
+     28736
+    ],
+    "allowTransient__euint128": [
+     22984,
+     6972
+    ],
+    "allowGlobal__euint128": [
+     44146,
+     28137
+    ],
+    "allowPublic__euint128": [
+     44146,
+     28137
+    ],
+    "isAllowed__euint128": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__euint128": [
+     21939,
+     5933
+    ],
+    "allow__eaddress": [
+     44736,
+     28724
+    ],
+    "allowThis__eaddress": [
+     26274,
+     26274
+    ],
+    "allowSender__eaddress": [
+     44748,
+     28736
+    ],
+    "allowTransient__eaddress": [
+     22984,
+     6972
+    ],
+    "allowGlobal__eaddress": [
+     44146,
+     28137
+    ],
+    "allowPublic__eaddress": [
+     44146,
+     28137
+    ],
+    "isAllowed__eaddress": [
+     22197,
+     6188
+    ],
+    "isPubliclyAllowed__eaddress": [
+     21939,
+     5933
+    ],
+    "add__euint8": [
+     51531,
+     31504
+    ],
+    "add__euint16": [
+     51557,
+     31530
+    ],
+    "add__euint32": [
+     51583,
+     31556
+    ],
+    "add__euint64": [
+     51609,
+     31582
+    ],
+    "add__euint128": [
+     51635,
+     31608
+    ],
+    "sub__euint8": [
+     51389,
+     31362
+    ],
+    "sub__euint16": [
+     51415,
+     31388
+    ],
+    "sub__euint32": [
+     51441,
+     31414
+    ],
+    "sub__euint64": [
+     51467,
+     31440
+    ],
+    "sub__euint128": [
+     51493,
+     31466
+    ],
+    "mul__euint8": [
+     52525,
+     32498
+    ],
+    "mul__euint16": [
+     52551,
+     32524
+    ],
+    "mul__euint32": [
+     52577,
+     32550
+    ],
+    "mul__euint64": [
+     52603,
+     32576
+    ],
+    "mul__euint128": [
+     52629,
+     32602
+    ],
+    "div__euint8": [
+     52241,
+     32214
+    ],
+    "div__euint16": [
+     52267,
+     32240
+    ],
+    "div__euint32": [
+     52293,
+     32266
+    ],
+    "div__euint64": [
+     52319,
+     32292
+    ],
+    "div__euint128": [
+     52345,
+     32318
+    ],
+    "rem__euint8": [
+     52383,
+     32356
+    ],
+    "rem__euint16": [
+     52409,
+     32382
+    ],
+    "rem__euint32": [
+     52435,
+     32408
+    ],
+    "rem__euint64": [
+     52461,
+     32434
+    ],
+    "rem__euint128": [
+     52487,
+     32460
+    ],
+    "min__euint8": [
+     53519,
+     33492
+    ],
+    "min__euint16": [
+     53545,
+     33518
+    ],
+    "min__euint32": [
+     53571,
+     33544
+    ],
+    "min__euint64": [
+     53597,
+     33570
+    ],
+    "min__euint128": [
+     53623,
+     33596
+    ],
+    "max__euint8": [
+     53661,
+     33634
+    ],
+    "max__euint16": [
+     53687,
+     33660
+    ],
+    "max__euint32": [
+     53713,
+     33686
+    ],
+    "max__euint64": [
+     53739,
+     33712
+    ],
+    "max__euint128": [
+     53765,
+     33738
+    ],
+    "square__euint8": [
+     48757,
+     28733
+    ],
+    "square__euint16": [
+     48783,
+     28759
+    ],
+    "square__euint32": [
+     48809,
+     28785
+    ],
+    "square__euint64": [
+     48835,
+     28811
+    ],
+    "square__euint128": [
+     48861,
+     28837
+    ],
+    "publishDecryptBatch__1": [
+     75096,
+     0
+    ],
+    "verifyDecryptBatch__1": [
+     18751,
+     0
+    ],
+    "verifyDecryptBatchSafe__1": [
+     19516,
+     0
+    ],
+    "publishDecryptBatch__2": [
+     128658,
+     0
+    ],
+    "verifyDecryptBatch__2": [
+     24322,
+     0
+    ],
+    "verifyDecryptBatchSafe__2": [
+     25388,
+     0
+    ],
+    "publishDecryptBatch__4": [
+     235791,
+     0
+    ],
+    "verifyDecryptBatch__4": [
+     35473,
+     0
+    ],
+    "verifyDecryptBatchSafe__4": [
+     37145,
+     0
+    ],
+    "publishDecryptBatch__8": [
+     450066,
+     0
+    ],
+    "verifyDecryptBatch__8": [
+     57784,
+     0
+    ],
+    "verifyDecryptBatchSafe__8": [
+     60671,
+     0
+    ],
+    "inputBatch__1": [
+     39611,
+     0
+    ],
+    "inputBatch__2": [
+     45368,
+     0
+    ],
+    "inputBatch__4": [
+     56883,
+     0
+    ],
+    "inputBatch__8": [
+     79930,
+     0
+    ],
+    "and__ebool": [
+     51698,
+     31671
+    ],
+    "and__euint8": [
+     51562,
+     31535
+    ],
+    "and__euint16": [
+     51588,
+     31561
+    ],
+    "and__euint32": [
+     51614,
+     31587
+    ],
+    "and__euint64": [
+     51640,
+     31613
+    ],
+    "and__euint128": [
+     51666,
+     31639
+    ],
+    "or__ebool": [
+     51918,
+     31891
+    ],
+    "or__euint8": [
+     51782,
+     31755
+    ],
+    "or__euint16": [
+     51808,
+     31781
+    ],
+    "or__euint32": [
+     51834,
+     31807
+    ],
+    "or__euint64": [
+     51860,
+     31833
+    ],
+    "or__euint128": [
+     51886,
+     31859
+    ],
+    "xor__ebool": [
+     51530,
+     31503
+    ],
+    "xor__euint8": [
+     51394,
+     31367
+    ],
+    "xor__euint16": [
+     51420,
+     31393
+    ],
+    "xor__euint32": [
+     51446,
+     31419
+    ],
+    "xor__euint64": [
+     51472,
+     31445
+    ],
+    "xor__euint128": [
+     51498,
+     31471
+    ],
+    "not__ebool": [
+     45678,
+     25654
+    ],
+    "not__euint8": [
+     45542,
+     25518
+    ],
+    "not__euint16": [
+     45568,
+     25544
+    ],
+    "not__euint32": [
+     45594,
+     25570
+    ],
+    "not__euint64": [
+     45620,
+     25596
+    ],
+    "not__euint128": [
+     45646,
+     25622
+    ],
+    "shl__euint8": [
+     52667,
+     32640
+    ],
+    "shl__euint16": [
+     52693,
+     32666
+    ],
+    "shl__euint32": [
+     52719,
+     32692
+    ],
+    "shl__euint64": [
+     52745,
+     32718
+    ],
+    "shl__euint128": [
+     52771,
+     32744
+    ],
+    "shr__euint8": [
+     52809,
+     32782
+    ],
+    "shr__euint16": [
+     52835,
+     32808
+    ],
+    "shr__euint32": [
+     52861,
+     32834
+    ],
+    "shr__euint64": [
+     52887,
+     32860
+    ],
+    "shr__euint128": [
+     52913,
+     32886
+    ],
+    "rol__euint8": [
+     54371,
+     34344
+    ],
+    "rol__euint16": [
+     54397,
+     34370
+    ],
+    "rol__euint32": [
+     54423,
+     34396
+    ],
+    "rol__euint64": [
+     54449,
+     34422
+    ],
+    "rol__euint128": [
+     54475,
+     34448
+    ],
+    "ror__euint8": [
+     54513,
+     34486
+    ],
+    "ror__euint16": [
+     54539,
+     34512
+    ],
+    "ror__euint32": [
+     54565,
+     34538
+    ],
+    "ror__euint64": [
+     54591,
+     34564
+    ],
+    "ror__euint128": [
+     54617,
+     34590
+    ],
+    "cast__ebool__euint8": [
+     45669,
+     25642
+    ],
+    "cast__ebool__euint16": [
+     45721,
+     25694
+    ],
+    "cast__ebool__euint32": [
+     45773,
+     25746
+    ],
+    "cast__ebool__euint64": [
+     45825,
+     25798
+    ],
+    "cast__ebool__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint8__ebool": [
+     75397,
+     51370
+    ],
+    "cast__euint8__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint8__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint8__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint8__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint16__ebool": [
+     75518,
+     51491
+    ],
+    "cast__euint16__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint16__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint16__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint16__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint32__ebool": [
+     75552,
+     51525
+    ],
+    "cast__euint32__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint32__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint32__euint64": [
+     45825,
+     25798
+    ],
+    "cast__euint32__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint64__ebool": [
+     75627,
+     51600
+    ],
+    "cast__euint64__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint64__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint64__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint64__euint128": [
+     45877,
+     25850
+    ],
+    "cast__euint128__ebool": [
+     75732,
+     51705
+    ],
+    "cast__euint128__euint8": [
+     45669,
+     25642
+    ],
+    "cast__euint128__euint16": [
+     45721,
+     25694
+    ],
+    "cast__euint128__euint32": [
+     45773,
+     25746
+    ],
+    "cast__euint128__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__ebool": [
+     75819,
+     51792
+    ],
+    "cast__eaddress__euint8": [
+     45669,
+     25642
+    ],
+    "cast__eaddress__euint16": [
+     45721,
+     25694
+    ],
+    "cast__eaddress__euint32": [
+     45773,
+     25746
+    ],
+    "cast__eaddress__euint64": [
+     45825,
+     25798
+    ],
+    "cast__eaddress__euint128": [
+     45877,
+     25850
+    ],
+    "eq__ebool": [
+     52728,
+     32701
+    ],
+    "eq__euint8": [
+     52592,
+     32565
+    ],
+    "eq__euint16": [
+     52618,
+     32591
+    ],
+    "eq__euint32": [
+     52644,
+     32617
+    ],
+    "eq__euint64": [
+     52670,
+     32643
+    ],
+    "eq__euint128": [
+     52696,
+     32669
+    ],
+    "eq__eaddress": [
+     52722,
+     32695
+    ],
+    "ne__ebool": [
+     53023,
+     32996
+    ],
+    "ne__euint8": [
+     52887,
+     32860
+    ],
+    "ne__euint16": [
+     52913,
+     32886
+    ],
+    "ne__euint32": [
+     52939,
+     32912
+    ],
+    "ne__euint64": [
+     52965,
+     32938
+    ],
+    "ne__euint128": [
+     52991,
+     32964
+    ],
+    "ne__eaddress": [
+     53017,
+     32990
+    ],
+    "lt__euint8": [
+     52932,
+     32905
+    ],
+    "lt__euint16": [
+     52958,
+     32931
+    ],
+    "lt__euint32": [
+     52984,
+     32957
+    ],
+    "lt__euint64": [
+     53010,
+     32983
+    ],
+    "lt__euint128": [
+     53036,
+     33009
+    ],
+    "lte__euint8": [
+     52712,
+     32685
+    ],
+    "lte__euint16": [
+     52738,
+     32711
+    ],
+    "lte__euint32": [
+     52764,
+     32737
+    ],
+    "lte__euint64": [
+     52790,
+     32763
+    ],
+    "lte__euint128": [
+     52816,
+     32789
+    ],
+    "gt__euint8": [
+     53230,
+     33203
+    ],
+    "gt__euint16": [
+     53256,
+     33229
+    ],
+    "gt__euint32": [
+     53282,
+     33255
+    ],
+    "gt__euint64": [
+     53308,
+     33281
+    ],
+    "gt__euint128": [
+     53334,
+     33307
+    ],
+    "gte__euint8": [
+     52726,
+     32699
+    ],
+    "gte__euint16": [
+     52752,
+     32725
+    ],
+    "gte__euint32": [
+     52778,
+     32751
+    ],
+    "gte__euint64": [
+     52804,
+     32777
+    ],
+    "gte__euint128": [
+     52830,
+     32803
+    ],
+    "publishDecrypt__ebool": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__ebool": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__ebool": [
+     15731,
+     6713
+    ],
+    "getDecrypt__ebool": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__ebool": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint8": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint8": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint8": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint8": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint8": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint16": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint16": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint16": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint16": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint16": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint32": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint32": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint32": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint32": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint32": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint64": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint64": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint64": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint64": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint64": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__euint128": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__euint128": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__euint128": [
+     15731,
+     6713
+    ],
+    "getDecrypt__euint128": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__euint128": [
+     23236,
+     7239
+    ],
+    "publishDecrypt__eaddress": [
+     71418,
+     53397
+    ],
+    "verifyDecrypt__eaddress": [
+     15071,
+     6053
+    ],
+    "verifyDecryptSafe__eaddress": [
+     15731,
+     6713
+    ],
+    "getDecrypt__eaddress": [
+     24340,
+     8340
+    ],
+    "getDecryptSafe__eaddress": [
+     23236,
+     7239
+    ],
+    "trivial__ebool": [
+     45358,
+     25306
+    ],
+    "trivial__euint8": [
+     45091,
+     25038
+    ],
+    "trivial__euint16": [
+     45140,
+     25087
+    ],
+    "trivial__euint32": [
+     45194,
+     25141
+    ],
+    "trivial__euint64": [
+     45243,
+     25190
+    ],
+    "trivial__euint128": [
+     45292,
+     25239
+    ],
+    "trivial__eaddress": [
+     45353,
+     25300
+    ],
+    "input__ebool": [
+     39849,
+     17834
+    ],
+    "input__euint8": [
+     39850,
+     17835
+    ],
+    "input__euint16": [
+     39850,
+     17835
+    ],
+    "input__euint32": [
+     39850,
+     17835
+    ],
+    "input__euint64": [
+     39850,
+     17835
+    ],
+    "input__euint128": [
+     39850,
+     17835
+    ],
+    "input__eaddress": [
+     39850,
+     17835
+    ],
+    "inputBytes__ebool": [
+     40377,
+     18362
+    ],
+    "inputBytes__euint8": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint16": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint32": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint64": [
+     40383,
+     18368
+    ],
+    "inputBytes__euint128": [
+     40383,
+     18368
+    ],
+    "inputBytes__eaddress": [
+     40383,
+     18368
+    ],
+    "random__euint8": [
+     40811,
+     15999
+    ],
+    "random__euint16": [
+     40837,
+     16025
+    ],
+    "random__euint32": [
+     40863,
+     16051
+    ],
+    "random__euint64": [
+     40889,
+     16077
+    ],
+    "random__euint128": [
+     40915,
+     16103
+    ],
+    "select__ebool": [
+     55946,
+     35917
+    ],
+    "select__euint8": [
+     55810,
+     35781
+    ],
+    "select__euint16": [
+     55836,
+     35807
+    ],
+    "select__euint32": [
+     55862,
+     35833
+    ],
+    "select__euint64": [
+     55888,
+     35859
+    ],
+    "select__euint128": [
+     55914,
+     35885
+    ],
+    "select__eaddress": [
+     55940,
+     35911
+    ],
+    "share__ebool": [
+     25895,
+     7862
+    ],
+    "receiveParam__ebool": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__ebool": [
+     6298,
+     6298
+    ],
+    "share__euint8": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint8": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint8": [
+     6298,
+     6298
+    ],
+    "share__euint16": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint16": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint16": [
+     6298,
+     6298
+    ],
+    "share__euint32": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint32": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint32": [
+     6298,
+     6298
+    ],
+    "share__euint64": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint64": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint64": [
+     6298,
+     6298
+    ],
+    "share__euint128": [
+     25895,
+     7862
+    ],
+    "receiveParam__euint128": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__euint128": [
+     6298,
+     6298
+    ],
+    "share__eaddress": [
+     25895,
+     7862
+    ],
+    "receiveParam__eaddress": [
+     6281,
+     6281
+    ],
+    "receiveFromCall__eaddress": [
+     6298,
+     6298
+    ],
+    "fherc20.transferToHolder": [
+     400777
+    ],
+    "fherc20.transferToNewHolder": [
+     453648
+    ]
+   },
+   "notEqualToEthereumMainnet": []
+  }
+ }
+}
