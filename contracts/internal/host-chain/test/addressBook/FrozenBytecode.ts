@@ -1,11 +1,14 @@
 import { expect } from "chai";
+import * as fs from "fs";
 import hre from "hardhat";
+import * as path from "path";
 
 import {
   computeAddressBookAddresses,
   readCommittedAddresses,
   readFrozenArtifacts,
 } from "../../utils/addressBookDeterministic";
+import { addressBookAddress } from "../../utils/addressBook";
 
 /**
  * The canonical address book address is derived from the committed creation bytecode. These pin
@@ -30,5 +33,12 @@ describe("Frozen address-book bytecode", function () {
     const computed = computeAddressBookAddresses(committed.bootstrapOwner, readFrozenArtifacts());
     expect(computed.addressBookImplV1).to.equal(committed.addressBookImplV1);
     expect(computed.addressBook).to.equal(committed.addressBook);
+  });
+
+  it("is the address FHE.sol is compiled against", function () {
+    const committed = readCommittedAddresses();
+    expect(addressBookAddress()).to.equal(committed.addressBook);
+    const source = fs.readFileSync(path.join(__dirname, "../../../../FHE.sol"), "utf8");
+    expect(source).to.include(`address constant COFHE_ADDRESS_BOOK = ${committed.addressBook};`);
   });
 });

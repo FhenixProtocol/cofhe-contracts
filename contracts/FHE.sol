@@ -4,7 +4,7 @@
 pragma solidity >=0.8.25 <0.9.0;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {FunctionId, ITaskManager, Utils, EncryptedInput, UnsignedEncryptedInput} from "./ICofhe.sol";
+import {FunctionId, ITaskManager, ICoFHEAddressBook, Utils, EncryptedInput, UnsignedEncryptedInput} from "./ICofhe.sol";
 
 type ebool is bytes32;
 type euint8 is bytes32;
@@ -30,15 +30,17 @@ type sharedEuint64 is bytes32;
 type sharedEuint128 is bytes32;
 type sharedEaddress is bytes32;
 
-// ================================
-// \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
-// TODO : CHANGE ME AFTER DEPLOYING
-// /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\
-// ================================
+// The CoFHEAddressBook proxy - one fixed address on every chain - resolves TASK_MANAGER_ID to the
+// TaskManager this release of FHE.sol talks to.
 //solhint-disable const-name-snakecase
-address constant TASK_MANAGER_ADDRESS = 0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9;
+address constant COFHE_ADDRESS_BOOK = 0x4E3A97FCeaBD6d68ADC89CF91C53b7a17D5cb99a;
+uint256 constant TASK_MANAGER_ID = 1;
 
 library Common {
+    function tm() internal view returns (ITaskManager) {
+        return ITaskManager(ICoFHEAddressBook(COFHE_ADDRESS_BOOK).getTm(TASK_MANAGER_ID));
+    }
+
     error InvalidHexCharacter(bytes1 char);
     error SecurityZoneOutOfBounds(int32 value);
 
@@ -129,38 +131,38 @@ library Common {
 
 library Impl {
     function trivialEncrypt(uint256 value, uint8 toType, int32 securityZone) internal returns (bytes32) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(toType, FunctionId.trivialEncrypt, new uint256[](0), Common.createUint256ExtraInputs(value, toType, Common.convertInt32ToUint256(securityZone))));
+        return bytes32(Common.tm().createTask(toType, FunctionId.trivialEncrypt, new uint256[](0), Common.createUint256ExtraInputs(value, toType, Common.convertInt32ToUint256(securityZone))));
     }
 
     function cast(bytes32 key, uint8 toType) internal returns (bytes32) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(toType, FunctionId.cast, Common.createUint256Inputs(key), Common.createUint256ExtraInputs(toType)));
+        return bytes32(Common.tm().createTask(toType, FunctionId.cast, Common.createUint256Inputs(key), Common.createUint256ExtraInputs(toType)));
     }
 
     function select(uint8 returnType, ebool control, bytes32 ifTrue, bytes32 ifFalse) internal returns (bytes32 result) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType,
+        return bytes32(Common.tm().createTask(returnType,
             FunctionId.select,
             Common.createUint256Inputs(ebool.unwrap(control), ifTrue, ifFalse),
             new uint256[](0)));
     }
 
     function mathOp(uint8 returnType, bytes32 lhs, bytes32 rhs, FunctionId functionId) internal returns (bytes32) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, functionId, Common.createUint256Inputs(lhs, rhs), new uint256[](0)));
+        return bytes32(Common.tm().createTask(returnType, functionId, Common.createUint256Inputs(lhs, rhs), new uint256[](0)));
     }
 
     function getDecryptResult(bytes32 input) internal view returns (uint256) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResult(uint256(input));
+        return Common.tm().getDecryptResult(uint256(input));
     }
 
     function getDecryptResultSafe(bytes32 input) internal view returns (uint256 result, bool decrypted) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).getDecryptResultSafe(uint256(input));
+        return Common.tm().getDecryptResultSafe(uint256(input));
     }
 
     function publishDecryptResult(bytes32 ctHash, uint256 result, bytes memory signature) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResult(uint256(ctHash), result, signature);
+        Common.tm().publishDecryptResult(uint256(ctHash), result, signature);
     }
 
     function publishDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).publishDecryptResultBatch(ctHashes, results, signatures);
+        Common.tm().publishDecryptResultBatch(ctHashes, results, signatures);
     }
 
     function publishDecryptResultBatch(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal {
@@ -172,15 +174,15 @@ library Impl {
     }
 
     function verifyDecryptResult(bytes32 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResult(uint256(ctHash), result, signature);
+        return Common.tm().verifyDecryptResult(uint256(ctHash), result, signature);
     }
 
     function verifyDecryptResultSafe(bytes32 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultSafe(uint256(ctHash), result, signature);
+        return Common.tm().verifyDecryptResultSafe(uint256(ctHash), result, signature);
     }
 
     function verifyDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultBatch(ctHashes, results, signatures);
+        return Common.tm().verifyDecryptResultBatch(ctHashes, results, signatures);
     }
 
     function verifyDecryptResultBatch(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool) {
@@ -192,7 +194,7 @@ library Impl {
     }
 
     function verifyDecryptResultBatchSafe(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).verifyDecryptResultBatchSafe(ctHashes, results, signatures);
+        return Common.tm().verifyDecryptResultBatchSafe(ctHashes, results, signatures);
     }
 
     function verifyDecryptResultBatchSafe(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
@@ -204,11 +206,11 @@ library Impl {
     }
 
     function not(uint8 returnType, bytes32 input) internal returns (bytes32) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0)));
+        return bytes32(Common.tm().createTask(returnType, FunctionId.not, Common.createUint256Inputs(input), new uint256[](0)));
     }
 
     function square(uint8 returnType, bytes32 input) internal returns (bytes32) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0)));
+        return bytes32(Common.tm().createTask(returnType, FunctionId.square, Common.createUint256Inputs(input), new uint256[](0)));
     }
 
     /// @dev A single input is a batch of one: the signature must cover
@@ -221,7 +223,7 @@ library Impl {
     }
 
     function verifyBatchInputs(UnsignedEncryptedInput[] memory inputs, bytes memory signature) internal returns (bytes32[] memory hashes) {
-        uint256[] memory handles = ITaskManager(TASK_MANAGER_ADDRESS).batchVerifyInputs(inputs, msg.sender, signature);
+        uint256[] memory handles = Common.tm().batchVerifyInputs(inputs, msg.sender, signature);
         // uint256[] and bytes32[] have identical memory layout, so reinterpret in place instead of copying.
         assembly ("memory-safe") {
             hashes := handles
@@ -234,7 +236,7 @@ library Impl {
     /// @param seed the seed to use to create a random value from
     /// @param securityZone the security zone to use for the random value
     function random(uint8 uintType, uint256 seed, int32 securityZone) internal returns (bytes32) {
-        return bytes32(ITaskManager(TASK_MANAGER_ADDRESS).createRandomTask(uintType, seed, securityZone));
+        return bytes32(Common.tm().createRandomTask(uintType, seed, securityZone));
     }
 
     /// @notice Generates a random value of a given type with the given seed
@@ -3030,7 +3032,7 @@ library FHE {
     /// @param ctHash The encrypted boolean value to grant access to
     /// @param account The address being granted permission
     function allow(ebool ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(ebool.unwrap(ctHash)), account);
+        Common.tm().allow(uint256(ebool.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 8-bit unsigned integer
@@ -3038,7 +3040,7 @@ library FHE {
     /// @param ctHash The encrypted uint8 value to grant access to
     /// @param account The address being granted permission
     function allow(euint8 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint8.unwrap(ctHash)), account);
+        Common.tm().allow(uint256(euint8.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 16-bit unsigned integer
@@ -3046,7 +3048,7 @@ library FHE {
     /// @param ctHash The encrypted uint16 value to grant access to
     /// @param account The address being granted permission
     function allow(euint16 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint16.unwrap(ctHash)), account);
+        Common.tm().allow(uint256(euint16.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 32-bit unsigned integer
@@ -3054,7 +3056,7 @@ library FHE {
     /// @param ctHash The encrypted uint32 value to grant access to
     /// @param account The address being granted permission
     function allow(euint32 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint32.unwrap(ctHash)), account);
+        Common.tm().allow(uint256(euint32.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 64-bit unsigned integer
@@ -3062,7 +3064,7 @@ library FHE {
     /// @param ctHash The encrypted uint64 value to grant access to
     /// @param account The address being granted permission
     function allow(euint64 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint64.unwrap(ctHash)), account);
+        Common.tm().allow(uint256(euint64.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted 128-bit unsigned integer
@@ -3070,7 +3072,7 @@ library FHE {
     /// @param ctHash The encrypted uint128 value to grant access to
     /// @param account The address being granted permission
     function allow(euint128 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint128.unwrap(ctHash)), account);
+        Common.tm().allow(uint256(euint128.unwrap(ctHash)), account);
     }
 
     /// @notice Grants permission to an account to operate on the encrypted address
@@ -3078,105 +3080,105 @@ library FHE {
     /// @param ctHash The encrypted address value to grant access to
     /// @param account The address being granted permission
     function allow(eaddress ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(eaddress.unwrap(ctHash)), account);
+        Common.tm().allow(uint256(eaddress.unwrap(ctHash)), account);
     }
 
     /// @notice Grants global permission to operate on the encrypted boolean value
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant global access to
     function allowGlobal(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(ebool.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(ebool.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant global access to
     function allowGlobal(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint8.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint8.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant global access to
     function allowGlobal(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint16.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint16.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant global access to
     function allowGlobal(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint32.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint32.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant global access to
     function allowGlobal(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint64.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint64.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant global access to
     function allowGlobal(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint128.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint128.unwrap(ctHash)));
     }
 
     /// @notice Grants global permission to operate on the encrypted address
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted address value to grant global access to
     function allowGlobal(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(eaddress.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(eaddress.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted boolean value
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant public access to
     function allowPublic(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(ebool.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(ebool.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant public access to
     function allowPublic(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint8.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint8.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant public access to
     function allowPublic(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint16.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint16.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant public access to
     function allowPublic(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint32.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint32.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant public access to
     function allowPublic(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint64.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint64.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant public access to
     function allowPublic(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(euint128.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(euint128.unwrap(ctHash)));
     }
 
     /// @notice Grants public permission to operate on the encrypted address
     /// @dev Allows all accounts to access the ciphertext
     /// @param ctHash The encrypted address value to grant public access to
     function allowPublic(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowGlobal(uint256(eaddress.unwrap(ctHash)));
+        Common.tm().allowGlobal(uint256(eaddress.unwrap(ctHash)));
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted boolean value
@@ -3185,7 +3187,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(ebool ctHash, address account) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(ebool.unwrap(ctHash)), account);
+        return Common.tm().isAllowed(uint256(ebool.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 8-bit unsigned integer
@@ -3194,7 +3196,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint8 ctHash, address account) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint8.unwrap(ctHash)), account);
+        return Common.tm().isAllowed(uint256(euint8.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 16-bit unsigned integer
@@ -3203,7 +3205,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint16 ctHash, address account) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint16.unwrap(ctHash)), account);
+        return Common.tm().isAllowed(uint256(euint16.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 32-bit unsigned integer
@@ -3212,7 +3214,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint32 ctHash, address account) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint32.unwrap(ctHash)), account);
+        return Common.tm().isAllowed(uint256(euint32.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 64-bit unsigned integer
@@ -3221,7 +3223,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint64 ctHash, address account) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint64.unwrap(ctHash)), account);
+        return Common.tm().isAllowed(uint256(euint64.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an account has permission to operate on the encrypted 128-bit unsigned integer
@@ -3230,7 +3232,7 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(euint128 ctHash, address account) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(euint128.unwrap(ctHash)), account);
+        return Common.tm().isAllowed(uint256(euint128.unwrap(ctHash)), account);
     }
 
 
@@ -3240,154 +3242,154 @@ library FHE {
     /// @param account The address to check permissions for
     /// @return True if the account has permission, false otherwise
     function isAllowed(eaddress ctHash, address account) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isAllowed(uint256(eaddress.unwrap(ctHash)), account);
+        return Common.tm().isAllowed(uint256(eaddress.unwrap(ctHash)), account);
     }
 
     /// @notice Checks if an encrypted boolean value is publicly (globally) allowed
     /// @param ctHash The encrypted boolean value to check
     /// @return True if the ciphertext is publicly allowed, false otherwise
     function isPubliclyAllowed(ebool ctHash) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(ebool.unwrap(ctHash)));
+        return Common.tm().isPubliclyAllowed(uint256(ebool.unwrap(ctHash)));
     }
 
     /// @notice Checks if an encrypted 8-bit unsigned integer is publicly (globally) allowed
     /// @param ctHash The encrypted uint8 value to check
     /// @return True if the ciphertext is publicly allowed, false otherwise
     function isPubliclyAllowed(euint8 ctHash) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint8.unwrap(ctHash)));
+        return Common.tm().isPubliclyAllowed(uint256(euint8.unwrap(ctHash)));
     }
 
     /// @notice Checks if an encrypted 16-bit unsigned integer is publicly (globally) allowed
     /// @param ctHash The encrypted uint16 value to check
     /// @return True if the ciphertext is publicly allowed, false otherwise
     function isPubliclyAllowed(euint16 ctHash) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint16.unwrap(ctHash)));
+        return Common.tm().isPubliclyAllowed(uint256(euint16.unwrap(ctHash)));
     }
 
     /// @notice Checks if an encrypted 32-bit unsigned integer is publicly (globally) allowed
     /// @param ctHash The encrypted uint32 value to check
     /// @return True if the ciphertext is publicly allowed, false otherwise
     function isPubliclyAllowed(euint32 ctHash) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint32.unwrap(ctHash)));
+        return Common.tm().isPubliclyAllowed(uint256(euint32.unwrap(ctHash)));
     }
 
     /// @notice Checks if an encrypted 64-bit unsigned integer is publicly (globally) allowed
     /// @param ctHash The encrypted uint64 value to check
     /// @return True if the ciphertext is publicly allowed, false otherwise
     function isPubliclyAllowed(euint64 ctHash) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint64.unwrap(ctHash)));
+        return Common.tm().isPubliclyAllowed(uint256(euint64.unwrap(ctHash)));
     }
 
     /// @notice Checks if an encrypted 128-bit unsigned integer is publicly (globally) allowed
     /// @param ctHash The encrypted uint128 value to check
     /// @return True if the ciphertext is publicly allowed, false otherwise
     function isPubliclyAllowed(euint128 ctHash) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(euint128.unwrap(ctHash)));
+        return Common.tm().isPubliclyAllowed(uint256(euint128.unwrap(ctHash)));
     }
 
     /// @notice Checks if an encrypted address is publicly (globally) allowed
     /// @param ctHash The encrypted address value to check
     /// @return True if the ciphertext is publicly allowed, false otherwise
     function isPubliclyAllowed(eaddress ctHash) internal view returns (bool) {
-        return ITaskManager(TASK_MANAGER_ADDRESS).isPubliclyAllowed(uint256(eaddress.unwrap(ctHash)));
+        return Common.tm().isPubliclyAllowed(uint256(eaddress.unwrap(ctHash)));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted boolean value
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant access to
     function allowThis(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(ebool.unwrap(ctHash)), address(this));
+        Common.tm().allow(uint256(ebool.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant access to
     function allowThis(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint8.unwrap(ctHash)), address(this));
+        Common.tm().allow(uint256(euint8.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant access to
     function allowThis(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint16.unwrap(ctHash)), address(this));
+        Common.tm().allow(uint256(euint16.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant access to
     function allowThis(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint32.unwrap(ctHash)), address(this));
+        Common.tm().allow(uint256(euint32.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant access to
     function allowThis(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint64.unwrap(ctHash)), address(this));
+        Common.tm().allow(uint256(euint64.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant access to
     function allowThis(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint128.unwrap(ctHash)), address(this));
+        Common.tm().allow(uint256(euint128.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the current contract to operate on the encrypted address
     /// @dev Allows this contract to access the ciphertext
     /// @param ctHash The encrypted address value to grant access to
     function allowThis(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(eaddress.unwrap(ctHash)), address(this));
+        Common.tm().allow(uint256(eaddress.unwrap(ctHash)), address(this));
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted boolean value
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted boolean value to grant access to
     function allowSender(ebool ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(ebool.unwrap(ctHash)), msg.sender);
+        Common.tm().allow(uint256(ebool.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 8-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint8 value to grant access to
     function allowSender(euint8 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint8.unwrap(ctHash)), msg.sender);
+        Common.tm().allow(uint256(euint8.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 16-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint16 value to grant access to
     function allowSender(euint16 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint16.unwrap(ctHash)), msg.sender);
+        Common.tm().allow(uint256(euint16.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 32-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint32 value to grant access to
     function allowSender(euint32 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint32.unwrap(ctHash)), msg.sender);
+        Common.tm().allow(uint256(euint32.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 64-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint64 value to grant access to
     function allowSender(euint64 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint64.unwrap(ctHash)), msg.sender);
+        Common.tm().allow(uint256(euint64.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted 128-bit unsigned integer
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted uint128 value to grant access to
     function allowSender(euint128 ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(euint128.unwrap(ctHash)), msg.sender);
+        Common.tm().allow(uint256(euint128.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants permission to the message sender to operate on the encrypted address
     /// @dev Allows the transaction sender to access the ciphertext
     /// @param ctHash The encrypted address value to grant access to
     function allowSender(eaddress ctHash) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allow(uint256(eaddress.unwrap(ctHash)), msg.sender);
+        Common.tm().allow(uint256(eaddress.unwrap(ctHash)), msg.sender);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted boolean value
@@ -3395,7 +3397,7 @@ library FHE {
     /// @param ctHash The encrypted boolean value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(ebool ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(ebool.unwrap(ctHash)), account);
+        Common.tm().allowTransient(uint256(ebool.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 8-bit unsigned integer
@@ -3403,7 +3405,7 @@ library FHE {
     /// @param ctHash The encrypted uint8 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint8 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint8.unwrap(ctHash)), account);
+        Common.tm().allowTransient(uint256(euint8.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 16-bit unsigned integer
@@ -3411,7 +3413,7 @@ library FHE {
     /// @param ctHash The encrypted uint16 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint16 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint16.unwrap(ctHash)), account);
+        Common.tm().allowTransient(uint256(euint16.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 32-bit unsigned integer
@@ -3419,7 +3421,7 @@ library FHE {
     /// @param ctHash The encrypted uint32 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint32 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint32.unwrap(ctHash)), account);
+        Common.tm().allowTransient(uint256(euint32.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 64-bit unsigned integer
@@ -3427,7 +3429,7 @@ library FHE {
     /// @param ctHash The encrypted uint64 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint64 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint64.unwrap(ctHash)), account);
+        Common.tm().allowTransient(uint256(euint64.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted 128-bit unsigned integer
@@ -3435,7 +3437,7 @@ library FHE {
     /// @param ctHash The encrypted uint128 value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(euint128 ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(euint128.unwrap(ctHash)), account);
+        Common.tm().allowTransient(uint256(euint128.unwrap(ctHash)), account);
     }
 
     /// @notice Grants temporary permission to an account to operate on the encrypted address
@@ -3443,7 +3445,7 @@ library FHE {
     /// @param ctHash The encrypted address value to grant temporary access to
     /// @param account The address being granted temporary permission
     function allowTransient(eaddress ctHash, address account) internal {
-        ITaskManager(TASK_MANAGER_ADDRESS).allowTransient(uint256(eaddress.unwrap(ctHash)), account);
+        Common.tm().allowTransient(uint256(eaddress.unwrap(ctHash)), account);
     }
 
     // ********** SHARE / RECEIVE ************* //
@@ -3455,7 +3457,7 @@ library FHE {
     /// @param receiver The contract the value is being handed to
     /// @return A sharedEbool carrying the handle and the permission to use it
     function shareEbool(ebool ctHash, address receiver) internal returns (sharedEbool) {
-        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(ebool.unwrap(ctHash)), receiver);
+        Common.tm().shareCtHash(uint256(ebool.unwrap(ctHash)), receiver);
         return sharedEbool.wrap(ebool.unwrap(ctHash));
     }
 
@@ -3468,7 +3470,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEboolParam(sharedEbool shared) internal returns (ebool) {
         bytes32 handle = sharedEbool.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        Common.tm().receiveCtHash(uint256(handle), msg.sender);
         return ebool.wrap(handle);
     }
 
@@ -3479,7 +3481,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEboolFromCall(sharedEbool shared, address callee) internal returns (ebool) {
         bytes32 handle = sharedEbool.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        Common.tm().receiveCtHash(uint256(handle), callee);
         return ebool.wrap(handle);
     }
 
@@ -3490,7 +3492,7 @@ library FHE {
     /// @param receiver The contract the value is being handed to
     /// @return A sharedEuint8 carrying the handle and the permission to use it
     function shareEuint8(euint8 ctHash, address receiver) internal returns (sharedEuint8) {
-        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint8.unwrap(ctHash)), receiver);
+        Common.tm().shareCtHash(uint256(euint8.unwrap(ctHash)), receiver);
         return sharedEuint8.wrap(euint8.unwrap(ctHash));
     }
 
@@ -3503,7 +3505,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint8Param(sharedEuint8 shared) internal returns (euint8) {
         bytes32 handle = sharedEuint8.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        Common.tm().receiveCtHash(uint256(handle), msg.sender);
         return euint8.wrap(handle);
     }
 
@@ -3514,7 +3516,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint8FromCall(sharedEuint8 shared, address callee) internal returns (euint8) {
         bytes32 handle = sharedEuint8.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        Common.tm().receiveCtHash(uint256(handle), callee);
         return euint8.wrap(handle);
     }
 
@@ -3525,7 +3527,7 @@ library FHE {
     /// @param receiver The contract the value is being handed to
     /// @return A sharedEuint16 carrying the handle and the permission to use it
     function shareEuint16(euint16 ctHash, address receiver) internal returns (sharedEuint16) {
-        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint16.unwrap(ctHash)), receiver);
+        Common.tm().shareCtHash(uint256(euint16.unwrap(ctHash)), receiver);
         return sharedEuint16.wrap(euint16.unwrap(ctHash));
     }
 
@@ -3538,7 +3540,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint16Param(sharedEuint16 shared) internal returns (euint16) {
         bytes32 handle = sharedEuint16.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        Common.tm().receiveCtHash(uint256(handle), msg.sender);
         return euint16.wrap(handle);
     }
 
@@ -3549,7 +3551,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint16FromCall(sharedEuint16 shared, address callee) internal returns (euint16) {
         bytes32 handle = sharedEuint16.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        Common.tm().receiveCtHash(uint256(handle), callee);
         return euint16.wrap(handle);
     }
 
@@ -3560,7 +3562,7 @@ library FHE {
     /// @param receiver The contract the value is being handed to
     /// @return A sharedEuint32 carrying the handle and the permission to use it
     function shareEuint32(euint32 ctHash, address receiver) internal returns (sharedEuint32) {
-        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint32.unwrap(ctHash)), receiver);
+        Common.tm().shareCtHash(uint256(euint32.unwrap(ctHash)), receiver);
         return sharedEuint32.wrap(euint32.unwrap(ctHash));
     }
 
@@ -3573,7 +3575,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint32Param(sharedEuint32 shared) internal returns (euint32) {
         bytes32 handle = sharedEuint32.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        Common.tm().receiveCtHash(uint256(handle), msg.sender);
         return euint32.wrap(handle);
     }
 
@@ -3584,7 +3586,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint32FromCall(sharedEuint32 shared, address callee) internal returns (euint32) {
         bytes32 handle = sharedEuint32.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        Common.tm().receiveCtHash(uint256(handle), callee);
         return euint32.wrap(handle);
     }
 
@@ -3595,7 +3597,7 @@ library FHE {
     /// @param receiver The contract the value is being handed to
     /// @return A sharedEuint64 carrying the handle and the permission to use it
     function shareEuint64(euint64 ctHash, address receiver) internal returns (sharedEuint64) {
-        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint64.unwrap(ctHash)), receiver);
+        Common.tm().shareCtHash(uint256(euint64.unwrap(ctHash)), receiver);
         return sharedEuint64.wrap(euint64.unwrap(ctHash));
     }
 
@@ -3608,7 +3610,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint64Param(sharedEuint64 shared) internal returns (euint64) {
         bytes32 handle = sharedEuint64.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        Common.tm().receiveCtHash(uint256(handle), msg.sender);
         return euint64.wrap(handle);
     }
 
@@ -3619,7 +3621,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint64FromCall(sharedEuint64 shared, address callee) internal returns (euint64) {
         bytes32 handle = sharedEuint64.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        Common.tm().receiveCtHash(uint256(handle), callee);
         return euint64.wrap(handle);
     }
 
@@ -3630,7 +3632,7 @@ library FHE {
     /// @param receiver The contract the value is being handed to
     /// @return A sharedEuint128 carrying the handle and the permission to use it
     function shareEuint128(euint128 ctHash, address receiver) internal returns (sharedEuint128) {
-        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(euint128.unwrap(ctHash)), receiver);
+        Common.tm().shareCtHash(uint256(euint128.unwrap(ctHash)), receiver);
         return sharedEuint128.wrap(euint128.unwrap(ctHash));
     }
 
@@ -3643,7 +3645,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint128Param(sharedEuint128 shared) internal returns (euint128) {
         bytes32 handle = sharedEuint128.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        Common.tm().receiveCtHash(uint256(handle), msg.sender);
         return euint128.wrap(handle);
     }
 
@@ -3654,7 +3656,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEuint128FromCall(sharedEuint128 shared, address callee) internal returns (euint128) {
         bytes32 handle = sharedEuint128.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        Common.tm().receiveCtHash(uint256(handle), callee);
         return euint128.wrap(handle);
     }
 
@@ -3665,7 +3667,7 @@ library FHE {
     /// @param receiver The contract the value is being handed to
     /// @return A sharedEaddress carrying the handle and the permission to use it
     function shareEaddress(eaddress ctHash, address receiver) internal returns (sharedEaddress) {
-        ITaskManager(TASK_MANAGER_ADDRESS).shareCtHash(uint256(eaddress.unwrap(ctHash)), receiver);
+        Common.tm().shareCtHash(uint256(eaddress.unwrap(ctHash)), receiver);
         return sharedEaddress.wrap(eaddress.unwrap(ctHash));
     }
 
@@ -3678,7 +3680,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEaddressParam(sharedEaddress shared) internal returns (eaddress) {
         bytes32 handle = sharedEaddress.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), msg.sender);
+        Common.tm().receiveCtHash(uint256(handle), msg.sender);
         return eaddress.wrap(handle);
     }
 
@@ -3689,7 +3691,7 @@ library FHE {
     /// @return The usable handle, with transient access for the rest of this transaction
     function receiveEaddressFromCall(sharedEaddress shared, address callee) internal returns (eaddress) {
         bytes32 handle = sharedEaddress.unwrap(shared);
-        ITaskManager(TASK_MANAGER_ADDRESS).receiveCtHash(uint256(handle), callee);
+        Common.tm().receiveCtHash(uint256(handle), callee);
         return eaddress.wrap(handle);
     }
 

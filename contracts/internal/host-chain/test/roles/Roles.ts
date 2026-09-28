@@ -10,11 +10,9 @@ import {
   requireDefaultAdminIsSignerOrUnset,
   resolveRolesByName,
 } from "../../utils/roles";
-import { taskManagerAddress } from "../../utils/taskManagerAddress";
 
 const { ethers } = hre;
 
-const TASK_MANAGER_ADDRESS = taskManagerAddress();
 
 /**
  * Every `*_ROLE` constant the contract declares, other than DEFAULT_ADMIN_ROLE.
@@ -45,9 +43,9 @@ describe("Role-based access control", function () {
   let plaintextsStorage: any;
 
   before(async function () {
-    await deployOnChainFixture();
+    const fixture = await deployOnChainFixture();
     [owner, other] = await ethers.getSigners();
-    taskManager = await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS);
+    taskManager = fixture.taskManager;
     acl = await ethers.getContractAt("ACL", await taskManager.acl());
     plaintextsStorage = await ethers.getContractAt(
       "PlaintextsStorage",

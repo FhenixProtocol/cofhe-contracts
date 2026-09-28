@@ -6,13 +6,11 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { renounceAllRoles } from "../utils/roles";
-import { taskManagerAddress } from "../utils/taskManagerAddress";
+import { resolveTaskManager } from "../utils/addressBook";
 
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
-// The canonical TaskManager proxy - the root all other host-chain contracts are discovered from.
-const TM_PROXY_ADDRESS = taskManagerAddress();
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -39,6 +37,7 @@ interface ManagedContract {
  */
 async function discoverHostChainContracts(hre: HardhatRuntimeEnvironment): Promise<ManagedContract[]> {
   const { ethers } = hre;
+  const TM_PROXY_ADDRESS = await resolveTaskManager(hre);
   const tm: any = await ethers.getContractAt("TaskManager", TM_PROXY_ADDRESS);
   const aclAddress = await tm.acl();
   const ptStorageAddress = await tm.plaintextsStorage();

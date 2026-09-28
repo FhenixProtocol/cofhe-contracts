@@ -16,7 +16,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import type { Contract } from "ethers";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { deployOnChainFixture, TASK_MANAGER_ADDRESS } from "../onChain/OnChain.fixture";
+import { deployOnChainFixture } from "../onChain/OnChain.fixture";
 
 const BALANCE = 100n;
 const OTHER_BALANCE = 777n;
@@ -30,6 +30,7 @@ async function deploy(name: string): Promise<Contract> {
 
 describe("sharedEuint", function () {
   let taskManager: Contract;
+  let taskManagerAddress: string;
   let acl: Contract;
 
   let vault: Contract, token: Contract, unsafeToken: Contract, attacker: Contract;
@@ -37,12 +38,13 @@ describe("sharedEuint", function () {
   let user: string;
 
   before(async function () {
-    await deployOnChainFixture();
+    const fixture = await deployOnChainFixture();
 
     const [owner] = await hre.ethers.getSigners();
     user = (owner as HardhatEthersSigner).address;
 
-    taskManager = (await hre.ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS)) as unknown as Contract;
+    taskManager = fixture.taskManager as unknown as Contract;
+    taskManagerAddress = fixture.taskManagerAddress;
     acl = (await hre.ethers.getContractAt("ACL", await taskManager.acl())) as unknown as Contract;
   });
 
@@ -64,7 +66,7 @@ describe("sharedEuint", function () {
   /// Every `div` task created in `receipt`, as parsed TaskCreated events.
   function divTasks(receipt: any) {
     return receipt.logs
-      .filter((log: any) => log.address.toLowerCase() === TASK_MANAGER_ADDRESS.toLowerCase())
+      .filter((log: any) => log.address.toLowerCase() === taskManagerAddress.toLowerCase())
       .map((log: any) => taskManager.interface.parseLog({ topics: [...log.topics], data: log.data }))
       .filter((parsed: any) => parsed?.name === "TaskCreated" && parsed.args.operation === "div");
   }

@@ -3,9 +3,7 @@ import hre from "hardhat";
 import type { Contract } from "ethers";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
-import { taskManagerAddress } from "../../utils/taskManagerAddress";
 
-const TASK_MANAGER_ADDRESS = taskManagerAddress();
 
 // A valid euint8 return type and security zone within the fixture's configured range (-128..127).
 const EUINT8 = 2;
@@ -21,9 +19,9 @@ describe("TaskManager access list", function () {
   let other: HardhatEthersSigner;
 
   before(async function () {
-    await deployOnChainFixture();
+    const fixture = await deployOnChainFixture();
     [owner, other] = await hre.ethers.getSigners();
-    taskManager = await hre.ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS);
+    taskManager = fixture.taskManager;
   });
 
   // Reset to a clean baseline (disabled, `other` not listed) so tests are order-independent.

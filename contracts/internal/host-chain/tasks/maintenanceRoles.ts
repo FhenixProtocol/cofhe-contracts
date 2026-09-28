@@ -6,13 +6,11 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { MAINTENANCE_ROLES, resolveRolesByName } from "../utils/roles";
-import { taskManagerAddress } from "../utils/taskManagerAddress";
+import { resolveTaskManager } from "../utils/addressBook";
 
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
-// The canonical TaskManager proxy - the only host-chain contract that declares these roles.
-const TM_PROXY_ADDRESS = taskManagerAddress();
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -66,6 +64,7 @@ task(
   .addParam("revoke", "Revoke the roles instead of granting them", false, types.boolean)
   .addOptionalParam("out", "Path for the Safe batch file, when one is written")
   .setAction(async function (taskArguments, hre) {
+    const TM_PROXY_ADDRESS = await resolveTaskManager(hre);
     const { ethers } = hre;
     const revoke: boolean = taskArguments.revoke;
     const target = ethers.getAddress(requireEnv("MAINTENANCE_ADDRESS"));

@@ -2,67 +2,37 @@ import hre from "hardhat";
 import { expect } from "chai";
 
 import { grantAllRoles } from "../../utils/roles";
-import { taskManagerAddress } from "../../utils/taskManagerAddress";
+import { installAddressBook, registerTaskManager } from "../helpers/addressBook";
 
 const { ethers } = hre;
 
-// ACL.allowTransient (and DeterministicACL.allowTransient) require msg.sender to equal
-// the compile-time TASK_MANAGER_ADDRESS constant, so the TM proxy must be deployed at
-// this fixed address. Mirrors deployProxyAtAddress from test/publiclyAllowed/PubliclyAllowed.ts.
-const TASK_MANAGER_ADDRESS = taskManagerAddress();
-
-/**
- * Install a UUPS proxy's runtime bytecode at a fixed address and initialize it in place.
- *
- * Copying storage slots out of a throwaway proxy is not enough under AccessControl: role
- * membership lives in mapping slots computed from the role and the account, not at a fixed
- * offset, so a copied proxy ends up with a default admin that holds no roles. Initialize through
- * the real proxy instead, exactly as test/onChain/OnChain.fixture.ts does.
- */
-async function deployProxyAtAddress(
-    targetAddress: string,
-    implementationAddress: string,
-    initData: string
-): Promise<void> {
-    const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    // Deploy a throwaway proxy only to capture the proxy runtime bytecode.
-    const tempProxy = await ERC1967Proxy.deploy(implementationAddress, "0x");
-    await tempProxy.waitForDeployment();
-    const proxyBytecode = await ethers.provider.getCode(await tempProxy.getAddress());
-
-    await ethers.provider.send("hardhat_setCode", [targetAddress, proxyBytecode]);
-
-    const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-    await ethers.provider.send("hardhat_setStorageAt", [
-        targetAddress,
-        IMPL_SLOT,
-        ethers.zeroPadValue(implementationAddress, 32),
-    ]);
-
-    const [signer] = await ethers.getSigners();
-    const tx = await signer.sendTransaction({ to: targetAddress, data: initData });
-    await tx.wait();
-}
-
+// The TaskManager is registered in the address book FHE.sol resolves through; ACL is bound to it.
 async function deployTm(factoryName: string) {
-    // Other test files deploy a TaskManager at this same hardcoded address inside the same Hardhat
+    // Other test files install the address book at the same fixed address inside the same Hardhat
     // network process; reset so `initialize` sees fresh storage.
     await ethers.provider.send("hardhat_reset", []);
 
     const [owner] = await ethers.getSigners();
 
+    const addressBook = await installAddressBook(owner);
+
     const TM = await ethers.getContractFactory(factoryName);
     const impl = await TM.deploy();
     await impl.waitForDeployment();
-    const initData = TM.interface.encodeFunctionData("initialize", [owner.address, 0]);
-    await deployProxyAtAddress(TASK_MANAGER_ADDRESS, await impl.getAddress(), initData);
-    const tm = TM.attach(TASK_MANAGER_ADDRESS) as any;
-
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
+    const tmProxy = await ERC1967Proxy.deploy(
+        await impl.getAddress(),
+        TM.interface.encodeFunctionData("initialize", [owner.address, 0]),
+    );
+    await tmProxy.waitForDeployment();
+    const taskManagerAddress = await tmProxy.getAddress();
+    const tm = TM.attach(taskManagerAddress) as any;
+    await registerTaskManager(addressBook, taskManagerAddress);
+
     const ACL = await ethers.getContractFactory("ACL");
     const aclImpl = await ACL.deploy();
     await aclImpl.waitForDeployment();
-    const aclInit = ACL.interface.encodeFunctionData("initialize", [owner.address, 0, TASK_MANAGER_ADDRESS]);
+    const aclInit = ACL.interface.encodeFunctionData("initialize", [owner.address, 0, taskManagerAddress]);
     const aclProxy = await ERC1967Proxy.deploy(await aclImpl.getAddress(), aclInit);
     await aclProxy.waitForDeployment();
 

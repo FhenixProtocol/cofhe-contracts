@@ -10,9 +10,10 @@ describe("Unit tests", function () {
     // get tokens from faucet if we're on localfhenix and don't have a balance
     await getTokensFromFaucet();
 
-    const { testContract, testContract2 } = await deployOnChainFixture();
+    const { testContract, testContract2, taskManager } = await deployOnChainFixture();
     this.testContract = testContract;
     this.testContract2 = testContract2;
+    this.taskManager = taskManager;
 
     // set admin account/signer
     const signers = await hre.ethers.getSigners();
