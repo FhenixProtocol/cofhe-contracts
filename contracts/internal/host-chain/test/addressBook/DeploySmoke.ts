@@ -90,6 +90,27 @@ describe("hardhat deploy against the address book", function () {
     }
   });
 
+  it("leaves a fresh mainnet TaskManager disabled", async function () {
+    this.timeout(300_000);
+    await ethers.provider.send("hardhat_reset", []);
+    const [deployer, , safe, maintenance] = await ethers.getSigners();
+    setDeployEnv(deployer.address, safe.address);
+    process.env.MAINTENANCE_ADDRESS = maintenance.address;
+    const networkConfig = hre.network.config as any;
+    const chainId = networkConfig.chainId;
+    networkConfig.chainId = 1;
+    try {
+      await installAddressBook(deployer);
+      await hre.run("deploy", { reset: true });
+    } finally {
+      networkConfig.chainId = chainId;
+    }
+
+    const taskManager = await ethers.getContractAt("TaskManager", await resolveTaskManager(hre));
+    expect(await taskManager.isEnabled()).to.equal(false);
+    expect(await taskManager.hasRole(await taskManager.PAUSER_ROLE(), maintenance.address)).to.equal(true);
+  });
+
   it("nominates SAFE_ADMIN_ADDRESS as the book's pending owner", async function () {
     this.timeout(300_000);
     await ethers.provider.send("hardhat_reset", []);

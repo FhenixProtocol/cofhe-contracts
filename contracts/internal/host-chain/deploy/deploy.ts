@@ -86,13 +86,10 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
     throw e;
   }
 
-  // Open the coprocessor intake kill-switch - except on mainnet, which ships closed.
-  //
-  // A proxy coming off the deterministic bootstrap stub is already disabled: `isEnabled` lives in
-  // slot 7, the stub's storage stops at slot 4, and `initializeV2` deliberately leaves that slot
-  // alone. So skipping the call here is all it takes for a mainnet deployment to end with intake
-  // closed - no explicit `disable()` needed. Going live is a separate, deliberate step by a
-  // PAUSER_ROLE holder (the Safe, or the maintenance wallet) once the configuration is verified.
+  // Open the coprocessor intake kill-switch - except on mainnet, which ships closed: a fresh
+  // TaskManager is disabled right after it is deployed, and a re-run must not touch a live one.
+  // Going live is a separate, deliberate step by a PAUSER_ROLE holder (the Safe, or the
+  // maintenance wallet) once the configuration is verified.
   if (isMainnetDeployment()) {
     console.log(
       chalk.yellow(
@@ -639,6 +636,12 @@ const func: DeployFunction = async function () {
     // getVersion() > 0 is how the local stack tells a configured TaskManager from a bare proxy.
     const incTx = await TMProxyContract.connect(adminSigner).incVersion();
     await incTx.wait();
+    // `initialize` opens intake; on mainnet it must stay closed until go-live. Only here: a re-run
+    // upgrades a live TaskManager and must not pause it.
+    if (isMainnetDeployment()) {
+      const disableTx = await TMProxyContract.connect(adminSigner).disable();
+      await disableTx.wait();
+    }
     registerFresh = true;
   }
   await updateTaskManagerAddressInJsonArtifact(TMProxyAddress, hre);
