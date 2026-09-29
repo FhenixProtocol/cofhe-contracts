@@ -71,3 +71,39 @@ Each `allow` is about 22,100 gas for a new storage slot plus about 3,700 gas of 
 ## User ideas
 
 <!-- Add ideas here. For each: what, where, status, result. -->
+
+### U1. A fused or batch FHE op for the transfer (Haim, 2026-09-29)
+
+- **What:** one task that runs a whole sequence of ops off-chain in FHEOS and returns only the handles the contract keeps. For a transfer: `transfer(balFrom, balTo, amount) → (newFrom, newTo, moved)`. A generic form takes a small op sequence ("batch"), so auctions, votes and swaps can use it too.
+- **Why:** the intermediate handles (`success`, `zero`, `spent`) cost tasks, not storage. The 5 tasks cost 133.5k (measured); only 3 results must live on.
+- **Where:** TaskManager (a task with several output handles, for example handle = hash(op, inputs, output index)) + FHEOS (run the sequence) + the token. The TaskManager already accepts 3 inputs per task.
+- **Expected:** about 95–100k per transfer (~23%). Derived from the measured per-task cost (~27k), not measured as a whole.
+- **Open questions:** a transfer-only op vs a generic batch op; handle derivation for several outputs; FHEOS support and latency.
+- **Status:** Not tried. Next step: measure the on-chain side on a fork with a modified TaskManager that accepts one multi-output task.
+
+### U2. Permissions attached to the task (Haim, 2026-09-29)
+
+- **What:** the task call carries the output permissions (for example "newFrom → this + from"), so the TaskManager writes them in the same call. No separate `allow` calls.
+- **Why:** each of the 7 allows costs 25.8k: 22.1k for the new storage slot + about 3.7k call overhead (measured).
+- **Where:** TaskManager + FHE.sol API.
+- **Expected:** about 26k per transfer (the call overhead of 7 allows). The storage writes stay. Derived, not measured.
+- **Status:** Not tried. Measure together with U1.
+
+### U3. Owner permissions from token state instead of ACL entries (Haim, 2026-09-29)
+
+- **What:** the decryption network checks ownership through the token (for example "is this handle `balanceOf(user)`?") instead of an ACL slot per (handle, account).
+- **Why:** 7 × 22.1k = 155k of each transfer is ACL storage. The minimum for "confidential ERC20" semantics is the two balances and who owns them, which the token already stores.
+- **Where:** ACL model, decryption network, SDK permits. A protocol design change with security implications.
+- **Expected:** at least ~44k (the two owner allows), more if the contract's own access is also implied. Derived, not measured.
+- **Status:** Not tried. Needs a design review first.
+
+### Combined target (derived, not measured)
+
+| Version | Gas per transfer |
+|---|---|
+| Today (FHERC20, measured) | 421,500 |
+| + zero cache (measured) | 401,000 |
+| + U1 fused or batch op | ~305,000 |
+| + U2 permissions attached to the task | ~280,000 |
+| + U3 ACL model change | ~235,000 or less |
+| Plain ERC20 (measured) | 34,500 |
