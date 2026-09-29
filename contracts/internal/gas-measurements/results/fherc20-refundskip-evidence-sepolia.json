@@ -1,0 +1,16 @@
+{
+  "confidentialTransferEvents.original": 2,
+  "confidentialTransferEvents.refundSkip": 1,
+  "indicator.alice.original": 7984000000,
+  "indicator.alice.refundSkip": 7983999800,
+  "indicator.dave.original": 7984000000,
+  "indicator.dave.refundSkip": 7984000100,
+  "refundSelect.holderEOA.condition": "0xb3e26d30bbd0fa3e41a1d86cb7844842fbb2638ed221cf36790bbd9c9f3e8000",
+  "refundSelect.holderEOA.ifFalse": "0x10a95ba7198c3f18e3a0a8fc20e76e02749c3350355b12e4c98e89f45b3f0500",
+  "refundSelect.holderEOA.ifTrue": "0x43662edd94f2cbb937c25150b4e534c629d27a2e7f7c7b9e5d7367635dbc8500",
+  "refundSelect.holderEOA.refundHandle": "0x5625cd2bd6ae9fe003278d80c9a82162930f14c44242ab7906d88b4f183c0500",
+  "refundSelect.newEOA.condition": "0xb3e26d30bbd0fa3e41a1d86cb7844842fbb2638ed221cf36790bbd9c9f3e8000",
+  "refundSelect.newEOA.ifFalse": "0x7e8f1e429ba54f4b3ca24ccfab1e4bbbc53598deb67ca8944ebfbf8d56e10500",
+  "refundSelect.newEOA.ifTrue": "0x43662edd94f2cbb937c25150b4e534c629d27a2e7f7c7b9e5d7367635dbc8500",
+  "refundSelect.newEOA.refundHandle": "0x3dad69baee75374a10768137fdbb81aab7d70e09d3e2d7218c584821b75a0500"
+}

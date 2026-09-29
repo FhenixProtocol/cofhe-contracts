@@ -1,0 +1,22 @@
+{
+  "aclImpl": "0xB78000d9c885e37e66633fAFb7E712C26d52D27F",
+  "chain": "arbitrumSepolia",
+  "forkBlock": 313944377,
+  "plaintextsStorageImpl": "0xcF19Bc30d7914ac6C28854355bf18190aC31bFC8",
+  "rows": {
+    "constantsAllowThis.transferAndCallToHolderEOA": 754758,
+    "constantsAllowThis.transferAndCallToNewEOA": 789744,
+    "constantsAllowThis.transferToHolder": 398898,
+    "constantsRefundSkip.transferAndCallToHolderEOA": 402449,
+    "constantsRefundSkip.transferAndCallToNewEOA": 434635,
+    "constantsRefundSkip.transferToHolder": 398898,
+    "original.transferAndCallToHolderEOA": 841517,
+    "original.transferAndCallToNewEOA": 897190,
+    "original.transferToHolder": 421530,
+    "refundSkip.transferAndCallToHolderEOA": 425084,
+    "refundSkip.transferAndCallToNewEOA": 477955,
+    "refundSkip.transferToHolder": 421530
+  },
+  "sourceCommit": "5138cb8644b19b24a75caf3f383a17457e823e16",
+  "tmImpl": "0xd5A90bcFa4DB735D2385FCd8B980b01d9cAbC1BE"
+}
