@@ -16,7 +16,7 @@ import {
   requireDefaultAdminIsSignerOrUnset,
   resolveAdminDelay,
 } from "../utils/roles";
-import { addressBookAddress, taskManagerId } from "../utils/addressBook";
+import { addressBookAddress, registeredTaskManager, taskManagerId } from "../utils/addressBook";
 import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
 import { readCommittedAddresses } from "../utils/addressBookDeterministic";
 
@@ -511,39 +511,6 @@ function resolveAdmin(candidateSigners: any[]) {
     console.log(chalk.yellow("TM_ADMIN_ADDRESS not set - using the committed dev key (local network only)"));
   }
   return { adminSigner, adminDelay };
-}
-
-/**
- * The TaskManager registered under `id`, or null when the book reports the id as unset. Any other
- * failure propagates: a transient RPC error must never be read as "unset", because the fresh-deploy
- * branch would then register a second TaskManager over the live one.
- */
-async function registeredTaskManager(addressBook: any, id: bigint): Promise<string | null> {
-  try {
-    return await addressBook.getTm(id);
-  } catch (error: any) {
-    if (isTaskManagerNotSet(addressBook, error)) {
-      return null;
-    }
-    throw error;
-  }
-}
-
-function isTaskManagerNotSet(addressBook: any, error: any): boolean {
-  if (error?.revert?.name === "TaskManagerNotSet") {
-    return true;
-  }
-  const data: unknown = error?.data ?? error?.error?.data ?? error?.info?.error?.data;
-  if (typeof data === "string") {
-    try {
-      if (addressBook.interface.parseError(data)?.name === "TaskManagerNotSet") {
-        return true;
-      }
-    } catch {
-      // not decodable as one of the book's errors
-    }
-  }
-  return /TaskManagerNotSet/.test(String(error?.message ?? ""));
 }
 
 const func: DeployFunction = async function () {

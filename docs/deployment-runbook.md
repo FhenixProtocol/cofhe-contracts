@@ -26,6 +26,8 @@ Run with `<net>` = `sepolia`, `arbitrumSepolia` or `baseSepolia`:
 3. `REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>` — deploys and configures the TaskManager (intake enabled), deploys ACL, ACPShareRegistry and PlaintextsStorage, registers the TaskManager in the book, prints all addresses. With `SAFE_ADMIN_ADDRESS` set it also grants that address every role, starts the admin transfers and nominates it as book owner. Output: `ignition/deployments/chain-<chainId>/artifacts/TaskManager#TaskManager.json` (ABI + `address`); copy it to the services' `CONFIG_PATH/deployments/<chainId>/TaskManager.json` (slim-listener, result-processor) and put its `address` in the dispatcher's `tm_contract_address` and fheos's `PERMIT_CHAINS_JSON`.
 4. `npx hardhat verify --network <net> <address>` — verifies sources (optional).
 
+Chain that already has a TaskManager (for example the legacy one): run step 2, then instead of step 3 run `npx hardhat task:registerTaskManager --address <existing TaskManager> --network <net>` — points id 1 at it and writes the same artifact as step 3 (`--force true` to repoint an id that is already set). The existing ACL and PlaintextsStorage stay as they are, so the final-state table below does not apply.
+
 Only when `SAFE_ADMIN_ADDRESS` was set:
 
 5. `npx hardhat task:acceptAdminAsSafe --network <net>` — accepts the admin transfers and the book ownership as that address: directly when `SAFE_OWNER_KEY` is its own key, through the Safe when it is a Safe owner key, otherwise writes a Safe batch file. Run after `TM_ADMIN_DELAY`; re-run to verify.
