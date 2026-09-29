@@ -7,7 +7,7 @@ import {HardhatRuntimeEnvironment} from "hardhat/types/runtime";
 // deployer nor the zero address, so CreateX guards it as keccak256(abi.encode(salt)) - i.e. the
 // resulting address is deployer-agnostic and depends only on this salt and the init code.
 export const DETERMINISTIC_SALT =
-  "0xF4E00000F4E00000F4E00000F4E00000F4E00000F4E00000F4E00000F4E00000";
+  "0xF4E00000F4E00000F4E00000F4E00000F4E00000F40000000000000004B16B1C";
 
 /**
  * Deploys `initCode` through CreateX's `deployCreate2` directly, without ignition. Used on live
