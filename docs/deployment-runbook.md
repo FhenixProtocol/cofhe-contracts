@@ -33,16 +33,51 @@ Only when `SAFE_ADMIN_ADDRESS` was set:
 
 Final state after step 3 (deployer keeps everything):
 
-| Contract | Final state |
-| --- | --- |
-| CoFHEAddressBook | Implementation v1; owner = deployer; `getTm(1)` = TaskManager; no other ids |
-| TaskManager | `defaultAdmin` = deployer, holding all seven roles (UPGRADER, PAUSER, SECURITY_ZONE_MANAGER, ACCESS_LIST_MANAGER, VERIFIER_SIGNER_MANAGER, DECRYPT_SIGNER_MANAGER, CONFIG_MANAGER); `isEnabled` = true; access list disabled and empty; security zones 0..0; `verifierSigner` = `VERIFIER_ADDRESS`; `decryptResultSigner` = `DECRYPT_RESULT_SIGNER`; `acl` and `plaintextsStorage` set; `getVersion()` = 1 |
-| ACL | `defaultAdmin` = deployer (+ UPGRADER); `taskManager` = TaskManager; `defaultRevokerContract` = ACPTimestampRevoker; `shareRegistry` = ACPShareRegistry; no permissions yet |
-| PlaintextsStorage | `defaultAdmin` = deployer (+ UPGRADER); `taskManager` = TaskManager; empty |
-| ACPShareRegistry | deployer holds DEFAULT_ADMIN_ROLE and UPGRADER_ROLE; empty |
-| ACPTimestampRevoker | No owner or configuration; per-issuer revocation state only |
+| Contract | State | Value |
+| --- | --- | --- |
+| CoFHEAddressBook | implementation (ERC-1967 slot) | v1 implementation from `deterministic/addresses.json` |
+| CoFHEAddressBook | `owner()` | deployer |
+| CoFHEAddressBook | `pendingOwner()` | none |
+| CoFHEAddressBook | `getTm(1)` | TaskManager proxy |
+| CoFHEAddressBook | `getTm(any other id)` | reverts `TaskManagerNotSet` |
+| TaskManager | `defaultAdmin()` | deployer |
+| TaskManager | `defaultAdminDelay()` | `TM_ADMIN_DELAY` |
+| TaskManager | `pendingDefaultAdmin()` | none |
+| TaskManager | PAUSER_ROLE, SECURITY_ZONE_MANAGER_ROLE | deployer only |
+| TaskManager | UPGRADER_ROLE, ACCESS_LIST_MANAGER_ROLE, VERIFIER_SIGNER_MANAGER_ROLE, DECRYPT_SIGNER_MANAGER_ROLE, CONFIG_MANAGER_ROLE | deployer only |
+| TaskManager | `isEnabled()` | true |
+| TaskManager | `accessListEnabled()` | false |
+| TaskManager | `accessList(account)` | false for every account |
+| TaskManager | security zones min / max (no getter; set by `setSecurityZones`) | 0 / 0 |
+| TaskManager | `verifierSigner()` | `VERIFIER_ADDRESS` |
+| TaskManager | `decryptResultSigner()` | `DECRYPT_RESULT_SIGNER` |
+| TaskManager | `acl()` | ACL proxy |
+| TaskManager | `plaintextsStorage()` | PlaintextsStorage proxy |
+| TaskManager | `getVersion()` | 1 |
+| TaskManager | `isInitialized()` | true |
+| TaskManager | `_aggregators(account)` (legacy) | false for every account |
+| ACL | `defaultAdmin()` | deployer |
+| ACL | `defaultAdminDelay()` | `TM_ADMIN_DELAY` |
+| ACL | `pendingDefaultAdmin()` | none |
+| ACL | UPGRADER_ROLE | deployer only |
+| ACL | `getTaskManagerAddress()` | TaskManager proxy |
+| ACL | `defaultRevokerContract()` | ACPTimestampRevoker |
+| ACL | `shareRegistry()` | ACPShareRegistry proxy |
+| ACL | permissions (`isAllowed`, `persistAllowed`, `globalAllowed`, `isAllowedForDecryption`, delegations) | none granted |
+| PlaintextsStorage | `defaultAdmin()` | deployer |
+| PlaintextsStorage | `defaultAdminDelay()` | `TM_ADMIN_DELAY` |
+| PlaintextsStorage | `pendingDefaultAdmin()` | none |
+| PlaintextsStorage | UPGRADER_ROLE | deployer only |
+| PlaintextsStorage | `getTaskManagerAddress()` | TaskManager proxy |
+| PlaintextsStorage | `getResult(ctHash)` | (0, false) for every handle |
+| ACPShareRegistry | DEFAULT_ADMIN_ROLE | deployer only |
+| ACPShareRegistry | UPGRADER_ROLE | deployer only |
+| ACPShareRegistry | shares (`sharesFor`, `getShare`) | none |
+| ACPTimestampRevoker | owner / roles | none (not upgradeable, no admin) |
+| ACPTimestampRevoker | `revokeAllAt(issuer)` | 0 for every issuer |
+| ACPTimestampRevoker | `revokedSingle(issuer, id)` | false for every pair |
 
-With `SAFE_ADMIN_ADDRESS` set and steps 5 and 6 done: that address owns the book, is `defaultAdmin` with every role on TaskManager, ACL and PlaintextsStorage (transfer delay `TM_ADMIN_DELAY`), and holds DEFAULT_ADMIN_ROLE and UPGRADER_ROLE on ACPShareRegistry; the deployer holds nothing.
+With `SAFE_ADMIN_ADDRESS` set and steps 5 and 6 done, every `deployer` above reads that address instead, and the deployer holds nothing.
 
 ## Mainnet
 
@@ -89,17 +124,59 @@ Run from `contracts/internal/registry-chain`:
 9. `pnpm acceptAdminAsSafe:arbitrumOne` — accepts as the Safe (through it, or via a batch file).
 10. `pnpm renounceDeployerRoles:arbitrumOne` — strips the deployer.
 
-Final state after step 5, before go-live:
+Final state after step 5, before go-live (the deployer holds nothing anywhere):
 
-| Contract | Final state |
-| --- | --- |
-| CoFHEAddressBook | Implementation v1; owner = Safe; `getTm(1)` = TaskManager; no other ids |
-| TaskManager | `defaultAdmin` = Safe (transfer delay `TM_ADMIN_DELAY`), holding all seven roles; `MAINTENANCE_ADDRESS` holds PAUSER_ROLE and SECURITY_ZONE_MANAGER_ROLE only; deployer holds nothing; `isEnabled` = false until step 7, then true; access list disabled and empty; security zones 0..0; `verifierSigner` and `decryptResultSigner` = the production signers; `acl` and `plaintextsStorage` set; `getVersion()` = 1 |
-| ACL | `defaultAdmin` = Safe (+ UPGRADER); `taskManager` = TaskManager; `defaultRevokerContract` = ACPTimestampRevoker; `shareRegistry` = ACPShareRegistry; no permissions yet |
-| PlaintextsStorage | `defaultAdmin` = Safe (+ UPGRADER); `taskManager` = TaskManager; empty |
-| ACPShareRegistry | Safe holds DEFAULT_ADMIN_ROLE and UPGRADER_ROLE; deployer holds nothing; empty |
-| ACPTimestampRevoker | No owner or configuration; per-issuer revocation state only |
-| CommitmentRegistry (Arbitrum One) | `defaultAdmin` = Safe (transfer delay `REGISTRY_ADMIN_DELAY`), holding UPGRADER, POSTER_MANAGER and VERSION_MANAGER; poster = `POSTER_ADDRESS`; commitment version 2 active; deployer holds nothing |
+| Contract | State | Value |
+| --- | --- | --- |
+| CoFHEAddressBook | implementation (ERC-1967 slot) | v1 implementation from `deterministic/addresses.json` |
+| CoFHEAddressBook | `owner()` | Safe |
+| CoFHEAddressBook | `pendingOwner()` | none |
+| CoFHEAddressBook | `getTm(1)` | TaskManager proxy |
+| CoFHEAddressBook | `getTm(any other id)` | reverts `TaskManagerNotSet` |
+| TaskManager | `defaultAdmin()` | Safe |
+| TaskManager | `defaultAdminDelay()` | `TM_ADMIN_DELAY` |
+| TaskManager | `pendingDefaultAdmin()` | none |
+| TaskManager | PAUSER_ROLE, SECURITY_ZONE_MANAGER_ROLE | Safe and `MAINTENANCE_ADDRESS` |
+| TaskManager | UPGRADER_ROLE, ACCESS_LIST_MANAGER_ROLE, VERIFIER_SIGNER_MANAGER_ROLE, DECRYPT_SIGNER_MANAGER_ROLE, CONFIG_MANAGER_ROLE | Safe only |
+| TaskManager | `isEnabled()` | false until step 7, then true |
+| TaskManager | `accessListEnabled()` | false |
+| TaskManager | `accessList(account)` | false for every account |
+| TaskManager | security zones min / max (no getter; set by `setSecurityZones`) | 0 / 0 |
+| TaskManager | `verifierSigner()` | `VERIFIER_ADDRESS` (production signer) |
+| TaskManager | `decryptResultSigner()` | `DECRYPT_RESULT_SIGNER` (production signer) |
+| TaskManager | `acl()` | ACL proxy |
+| TaskManager | `plaintextsStorage()` | PlaintextsStorage proxy |
+| TaskManager | `getVersion()` | 1 |
+| TaskManager | `isInitialized()` | true |
+| TaskManager | `_aggregators(account)` (legacy) | false for every account |
+| ACL | `defaultAdmin()` | Safe |
+| ACL | `defaultAdminDelay()` | `TM_ADMIN_DELAY` |
+| ACL | `pendingDefaultAdmin()` | none |
+| ACL | UPGRADER_ROLE | Safe only |
+| ACL | `getTaskManagerAddress()` | TaskManager proxy |
+| ACL | `defaultRevokerContract()` | ACPTimestampRevoker |
+| ACL | `shareRegistry()` | ACPShareRegistry proxy |
+| ACL | permissions (`isAllowed`, `persistAllowed`, `globalAllowed`, `isAllowedForDecryption`, delegations) | none granted |
+| PlaintextsStorage | `defaultAdmin()` | Safe |
+| PlaintextsStorage | `defaultAdminDelay()` | `TM_ADMIN_DELAY` |
+| PlaintextsStorage | `pendingDefaultAdmin()` | none |
+| PlaintextsStorage | UPGRADER_ROLE | Safe only |
+| PlaintextsStorage | `getTaskManagerAddress()` | TaskManager proxy |
+| PlaintextsStorage | `getResult(ctHash)` | (0, false) for every handle |
+| ACPShareRegistry | DEFAULT_ADMIN_ROLE | Safe only |
+| ACPShareRegistry | UPGRADER_ROLE | Safe only |
+| ACPShareRegistry | shares (`sharesFor`, `getShare`) | none |
+| ACPTimestampRevoker | owner / roles | none (not upgradeable, no admin) |
+| ACPTimestampRevoker | `revokeAllAt(issuer)` | 0 for every issuer |
+| ACPTimestampRevoker | `revokedSingle(issuer, id)` | false for every pair |
+| CommitmentRegistry (Arbitrum One) | `defaultAdmin()` | Safe |
+| CommitmentRegistry (Arbitrum One) | `defaultAdminDelay()` | `REGISTRY_ADMIN_DELAY` |
+| CommitmentRegistry (Arbitrum One) | `pendingDefaultAdmin()` | none |
+| CommitmentRegistry (Arbitrum One) | UPGRADER_ROLE, POSTER_MANAGER_ROLE, VERSION_MANAGER_ROLE | Safe only |
+| CommitmentRegistry (Arbitrum One) | `isPoster(POSTER_ADDRESS)` | true; no other poster |
+| CommitmentRegistry (Arbitrum One) | `getVersionStatus(0x…02)` | Active |
+| CommitmentRegistry (Arbitrum One) | `getVersionStatus(any other version)` | not active |
+| CommitmentRegistry (Arbitrum One) | `getSize(0x…02)` / commitments | 0 / none |
 
 ## Upgrades
 
