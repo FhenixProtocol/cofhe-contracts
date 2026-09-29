@@ -1,0 +1,137 @@
+--- a/contracts/utils/FHESafeMath.sol
++++ b/contracts/utils/FHESafeMath.sol (variant: src/variants/FHESafeMathZeroCache.sol)
+@@ -10,7 +10,8 @@
+  * NOTE: An uninitialized `euint64` value is evaluated as 0.
+  * This library may return an uninitialized value if all inputs are uninitialized.
+  */
+-library FHESafeMath {
++/// Variant of FHESafeMath: trySpend takes the caller's cached encrypted zero.
++library FHESafeMathZeroCache {
+     /**
+      * @dev Try to increase the encrypted value `oldValue` by `delta`. If the operation is successful,
+      * `success` will be true and `updated` will be the new value. Otherwise, `success` will be false
+@@ -55,18 +56,18 @@
+      */
+     function trySpend(
+         euint64 balance,
+-        euint64 amount
++        euint64 amount,
++        euint64 zero
+     ) internal returns (ebool success, euint64 updated, euint64 spent) {
+         if (!FHE.isInitialized(balance)) {
+             // Nothing to spend from: the debit can only succeed for a zero `amount`, and either
+             // way both outputs are 0. One trivially-encrypted zero serves as all three handles.
+-            euint64 zero = FHE.asEuint64(0);
+             if (!FHE.isInitialized(amount)) return (FHE.asEbool(true), zero, zero);
+             return (FHE.eq(amount, zero), zero, zero);
+         }
+ 
+         success = FHE.gte(balance, amount);
+-        spent = FHE.select(success, amount, FHE.asEuint64(0));
++        spent = FHE.select(success, amount, zero);
+         // `spent` is `amount` only when it fits, 0 otherwise, so this can never underflow.
+         updated = FHE.sub(balance, spent);
+     }
+--- a/contracts/FHERC20/FHERC20Core.sol
++++ b/contracts/FHERC20/FHERC20Core.sol (variant: src/variants/FHERC20CoreZeroCache.sol)
+@@ -4,10 +4,11 @@
+ import { FHE, euint64, externalEuint64, sharedEuint64, ebool } from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+ import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+ 
+-import { IFHERC20, IERC7984 } from "../interfaces/IFHERC20.sol";
+-import { FHESafeMath } from "../utils/FHESafeMath.sol";
+-import { FHERC20Utils } from "./utils/FHERC20Utils.sol";
+-import { FHERC20InvalidReceiver, FHERC20InvalidSender, FHERC20UnauthorizedSpender, FHERC20ZeroBalance, FHERC20UnauthorizedUseOfEncryptedAmount, FHERC20IncompatibleFunction } from "./utils/FHERC20Errors.sol";
++import { IFHERC20, IERC7984 } from "@fhenixprotocol/confidential-contracts/interfaces/IFHERC20.sol";
++import { FHESafeMath } from "@fhenixprotocol/confidential-contracts/utils/FHESafeMath.sol";
++import { FHESafeMathZeroCache } from "./FHESafeMathZeroCache.sol";
++import { FHERC20Utils } from "@fhenixprotocol/confidential-contracts/FHERC20/utils/FHERC20Utils.sol";
++import { FHERC20InvalidReceiver, FHERC20InvalidSender, FHERC20UnauthorizedSpender, FHERC20ZeroBalance, FHERC20UnauthorizedUseOfEncryptedAmount, FHERC20IncompatibleFunction } from "@fhenixprotocol/confidential-contracts/FHERC20/utils/FHERC20Errors.sol";
+ 
+ /**
+  * @dev Shared core of the {IFHERC20} reference implementation — the single home of all FHERC20
+@@ -32,7 +33,7 @@
+  * per transfer, signalling that this is a confidential token. ERC-20 mutative functions
+  * (`transfer`, `transferFrom`, `approve`) revert unconditionally.
+  */
+-abstract contract FHERC20Core is IFHERC20, ReentrancyGuardTransient {
++abstract contract FHERC20CoreZeroCache is IFHERC20, ReentrancyGuardTransient {
+     /// @custom:storage-location erc7201:fherc20.storage.FHERC20
+     struct FHERC20Storage {
+         mapping(address account => euint64) _balances;
+@@ -45,6 +46,8 @@
+         mapping(address account => uint32) _indicatedBalances;
+         uint32 _indicatedTotalSupply;
+         uint256 _indicatorTick;
++        // asEuint64(0) is the same handle every time; caching it saves one TaskManager task per use.
++        euint64 _zero;
+     }
+ 
+     // keccak256(abi.encode(uint256(keccak256("fherc20.storage.FHERC20")) - 1)) & ~bytes32(uint256(0xff))
+@@ -75,6 +78,9 @@
+         uint8 decimals_,
+         string memory contractURI_
+     ) internal {
++        euint64 zero = FHE.asEuint64(0);
++        FHE.allowThis(zero);
++        _getFHERC20Storage()._zero = zero;
+         FHERC20Storage storage $ = _getFHERC20Storage();
+         $._name = name_;
+         $._symbol = symbol_;
+@@ -350,7 +356,7 @@
+ 
+         ebool success = FHERC20Utils.checkOnTransferReceived(msg.sender, from, to, sent, data);
+ 
+-        euint64 refund = _update(to, from, FHE.select(success, FHE.asEuint64(0), sent));
++        euint64 refund = _update(to, from, FHE.select(success, _getFHERC20Storage()._zero, sent));
+         transferred = FHE.sub(sent, refund);
+     }
+ 
+@@ -374,13 +380,13 @@
+             FHE.allowThis(ptr);
+             $._totalSupply = ptr;
+             $._indicatedTotalSupply = _incrementIndicator($._indicatedTotalSupply);
+-            transferred = FHE.select(success, amount, FHE.asEuint64(0));
++            transferred = FHE.select(success, amount, $._zero);
+         } else {
+             euint64 fromBalance = $._balances[from];
+             if (!FHE.isInitialized(fromBalance)) revert FHERC20ZeroBalance(from);
+             // `trySpend` returns the amount actually debited, so the credit leg below needs no
+             // second `FHE.select` on `amount`.
+-            (, ptr, transferred) = FHESafeMath.trySpend(fromBalance, amount);
++            (, ptr, transferred) = FHESafeMathZeroCache.trySpend(fromBalance, amount, $._zero);
+             FHE.allowThis(ptr);
+             FHE.allow(ptr, from);
+             $._balances[from] = ptr;
+@@ -393,7 +399,8 @@
+             $._totalSupply = ptr;
+             $._indicatedTotalSupply = _decrementIndicator($._indicatedTotalSupply);
+         } else {
+-            ptr = FHE.add($._balances[to], transferred);
++            euint64 toBalance = $._balances[to];
++            ptr = FHE.add(FHE.isInitialized(toBalance) ? toBalance : $._zero, transferred);
+             FHE.allowThis(ptr);
+             FHE.allow(ptr, to);
+             $._balances[to] = ptr;
+--- a/contracts/FHERC20/FHERC20.sol
++++ b/contracts/FHERC20/FHERC20.sol (variant: src/variants/FHERC20ZeroCache.sol)
+@@ -5,8 +5,8 @@
+ import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+ import { IERC165 } from "@openzeppelin/contracts/interfaces/IERC165.sol";
+ import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+-import { IFHERC20, IERC7984 } from "../interfaces/IFHERC20.sol";
+-import { FHERC20Core } from "./FHERC20Core.sol";
++import { IFHERC20, IERC7984 } from "@fhenixprotocol/confidential-contracts/interfaces/IFHERC20.sol";
++import { FHERC20CoreZeroCache } from "./FHERC20CoreZeroCache.sol";
+ 
+ /**
+  * @dev Reference implementation for {IFHERC20} — constructor-based host over {FHERC20Core}.
+@@ -17,7 +17,7 @@
+  *
+  * See {FHERC20Core} for the full behavioral documentation.
+  */
+-abstract contract FHERC20 is Context, ERC165, FHERC20Core {
++abstract contract FHERC20ZeroCache is Context, ERC165, FHERC20CoreZeroCache {
+     constructor(string memory name_, string memory symbol_, uint8 decimals_, string memory contractURI_) {
+         __FHERC20Core_init(name_, symbol_, decimals_, contractURI_);
+     }

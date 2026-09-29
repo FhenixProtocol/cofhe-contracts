@@ -1,0 +1,18 @@
+{
+  "aclImpl": "0xB78000d9c885e37e66633fAFb7E712C26d52D27F",
+  "chain": "arbitrumSepolia",
+  "forkBlock": 313939468,
+  "plaintextsStorageImpl": "0xcF19Bc30d7914ac6C28854355bf18190aC31bFC8",
+  "rows": {
+    "original.transferAgain": 421530,
+    "original.transferFromByOperator": 424798,
+    "original.transferToHolder": 421530,
+    "original.transferToNewHolder": 474401,
+    "zeroCache.transferAgain": 400997,
+    "zeroCache.transferFromByOperator": 404265,
+    "zeroCache.transferToHolder": 400997,
+    "zeroCache.transferToNewHolder": 433283
+  },
+  "sourceCommit": "5138cb8644b19b24a75caf3f383a17457e823e16",
+  "tmImpl": "0xd5A90bcFa4DB735D2385FCd8B980b01d9cAbC1BE"
+}
