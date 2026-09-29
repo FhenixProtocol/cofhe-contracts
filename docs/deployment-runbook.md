@@ -14,8 +14,8 @@ Set in `contracts/internal/host-chain/.env`:
 | `VERIFIER_ADDRESS` | zk-verifier signing address (non-zero) |
 | `DECRYPT_RESULT_SIGNER` | Dispatcher signing address (non-zero) |
 | `REGISTER_TASK_MANAGER` | `1` on the first deploy only |
-| `SAFE_ADMIN_ADDRESS` | Optional. Address that takes over every role and the address book (a Safe; the accept step runs through it). Unset keeps the deployer as admin. |
-| `SAFE_OWNER_KEY` | Optional. Threshold-1 Safes only: lets the accept step execute through the Safe. |
+| `SAFE_ADMIN_ADDRESS` | Optional. Address that takes over every role and the address book (a Safe or an EOA). Unset keeps the deployer as admin. |
+| `SAFE_OWNER_KEY` | With `SAFE_ADMIN_ADDRESS`: the EOA's own private key (accepts directly), or a threshold-1 Safe owner key (accepts through the Safe). |
 | `SEPOLIA_RPC_URL` / `ARBITRUM_SEPOLIA_RPC_URL` / `BASE_SEPOLIA_RPC_URL` | Keyed RPC (optional) |
 | `ETHERSCAN_API_KEY` | For `hardhat verify` (optional) |
 
@@ -28,7 +28,7 @@ Run with `<net>` = `sepolia`, `arbitrumSepolia` or `baseSepolia`:
 
 Only when `SAFE_ADMIN_ADDRESS` was set:
 
-5. `npx hardhat task:acceptAdminAsSafe --network <net>` — accepts the admin transfers and the book ownership as that address (through the Safe with `SAFE_OWNER_KEY`, otherwise writes a Safe batch file). Execute after `TM_ADMIN_DELAY`; re-run to verify.
+5. `npx hardhat task:acceptAdminAsSafe --network <net>` — accepts the admin transfers and the book ownership as that address: directly when `SAFE_OWNER_KEY` is its own key, through the Safe when it is a Safe owner key, otherwise writes a Safe batch file. Run after `TM_ADMIN_DELAY`; re-run to verify.
 6. `npx hardhat task:renounceDeployerRoles --network <net>` — strips every role from the deployer.
 
 ## Mainnet

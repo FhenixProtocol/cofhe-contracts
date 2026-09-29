@@ -13,19 +13,21 @@ const ENV_KEYS = [
   "TM_ADMIN_ADDRESS",
   "TM_ADMIN_DELAY",
   "SAFE_ADMIN_ADDRESS",
+  "SAFE_OWNER_KEY",
   "MAINTENANCE_ADDRESS",
   "REGISTER_TASK_MANAGER",
 ] as const;
 
 // deploy.ts loads ../.env with dotenv, which never overrides a variable that is already set,
 // so set every one it reads rather than deleting it.
-function setDeployEnv(deployer: string, safe = "") {
+function setDeployEnv(deployer: string, safe = "", safeOwnerKey = "") {
   process.env.AGGREGATOR_KEY = ethers.Wallet.createRandom().privateKey;
   process.env.VERIFIER_ADDRESS = ethers.ZeroAddress;
   process.env.DECRYPT_RESULT_SIGNER = ethers.ZeroAddress;
   process.env.TM_ADMIN_ADDRESS = deployer;
   process.env.TM_ADMIN_DELAY = "";
   process.env.SAFE_ADMIN_ADDRESS = safe;
+  process.env.SAFE_OWNER_KEY = safeOwnerKey;
   process.env.MAINTENANCE_ADDRESS = "";
   process.env.REGISTER_TASK_MANAGER = "";
 }
@@ -64,6 +66,28 @@ describe("hardhat deploy against the address book", function () {
     await hre.run("deploy", { reset: true });
     expect(await resolveTaskManager(hre)).to.equal(first);
     expect(addressBookAddress()).to.equal(await book.getAddress());
+  });
+
+  it("hands over to an EOA that accepts directly with its own key", async function () {
+    this.timeout(300_000);
+    await ethers.provider.send("hardhat_reset", []);
+    const [deployer] = await ethers.getSigners();
+    const newOwner = ethers.Wallet.createRandom().connect(ethers.provider);
+    setDeployEnv(deployer.address, newOwner.address, newOwner.privateKey);
+
+    const book = await installAddressBook(deployer);
+    await hre.run("deploy", { reset: true });
+    // Funding mines a block, so the zero admin delay used on local networks has passed.
+    await (await deployer.sendTransaction({ to: newOwner.address, value: ethers.parseEther("1") })).wait();
+    await hre.run("task:acceptAdminAsSafe");
+
+    expect(await book.owner()).to.equal(newOwner.address);
+    const taskManager = await ethers.getContractAt("TaskManager", await resolveTaskManager(hre));
+    const acl = await ethers.getContractAt("ACL", await taskManager.acl());
+    const plaintextsStorage = await ethers.getContractAt("PlaintextsStorage", await taskManager.plaintextsStorage());
+    for (const contract of [taskManager, acl, plaintextsStorage]) {
+      expect(await contract.defaultAdmin()).to.equal(newOwner.address);
+    }
   });
 
   it("nominates SAFE_ADMIN_ADDRESS as the book's pending owner", async function () {

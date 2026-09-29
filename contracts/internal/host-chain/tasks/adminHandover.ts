@@ -88,6 +88,15 @@ task(
   // as the verifier when re-run after it executes.
   const ownerKey = process.env.SAFE_OWNER_KEY?.trim();
   const ownerSigner = ownerKey ? new ethers.Wallet(ownerKey, ethers.provider) : null;
+  // An EOA final admin (testnets) accepts directly: SAFE_OWNER_KEY is then its own key.
+  const acceptsDirectly = ownerSigner !== null && ownerSigner.address.toLowerCase() === safeAddress.toLowerCase();
+  const send = async (to: string, data: string) => {
+    if (acceptsDirectly) {
+      await (await ownerSigner!.sendTransaction({ to, data })).wait();
+    } else {
+      await execTransactionThroughSafe(hre, safeAddress, ownerSigner!, to, data);
+    }
+  };
   console.log(
     ownerSigner
       ? chalk.green(`Accepting as Safe ${safeAddress}, sending as owner ${ownerSigner.address}`)
@@ -130,7 +139,7 @@ task(
         toPaste.push({ name, address, data: acceptData, readyIn: 0n });
         continue;
       }
-      await execTransactionThroughSafe(hre, safeAddress, ownerSigner, address, acceptData);
+      await send(address, acceptData);
       const newOwner: string = await contract.owner();
       if (newOwner.toLowerCase() !== safeAddress.toLowerCase()) {
         throw new Error(`${name} (${address}): accept executed but owner is ${newOwner}`);
@@ -164,7 +173,7 @@ task(
           `Re-run this task afterwards; contracts already accepted are skipped.`,
       );
     }
-    await execTransactionThroughSafe(hre, safeAddress, ownerSigner, address, data);
+    await send(address, data);
     const newAdmin: string = await contract.defaultAdmin();
     if (newAdmin.toLowerCase() !== safeAddress.toLowerCase()) {
       throw new Error(`${name} (${address}): accept executed but default admin is ${newAdmin}`);
