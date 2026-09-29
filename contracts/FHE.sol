@@ -33,7 +33,7 @@ type sharedEaddress is bytes32;
 // The CoFHEAddressBook proxy - one fixed address on every chain - resolves TASK_MANAGER_ID to the
 // TaskManager this release of FHE.sol talks to.
 //solhint-disable const-name-snakecase
-address constant COFHE_ADDRESS_BOOK = 0x4E3A97FCeaBD6d68ADC89CF91C53b7a17D5cb99a;
+address constant COFHE_ADDRESS_BOOK = 0xCfC70F44dE8257332aa58c636F078E3942034486;
 uint256 constant TASK_MANAGER_ID = 1;
 
 library Common {

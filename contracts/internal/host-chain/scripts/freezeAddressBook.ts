@@ -17,8 +17,9 @@ import {
  * Freezes the address book's creation bytecode and the canonical addresses derived from it.
  *
  * First run: ADDRESS_BOOK_BOOTSTRAP_OWNER must be set - the address that owns every new chain's
- * book until it is handed over. Later runs reuse the committed owner and refuse to move an address
- * unless FREEZE_FORCE=1, because moving it means a new FHE.sol release.
+ * book until it is handed over. Later runs reuse the committed owner unless the variable is set
+ * again, and refuse to move an address unless FREEZE_FORCE=1, because moving it means a new
+ * FHE.sol release.
  */
 async function main() {
   await hre.run("compile");
@@ -34,7 +35,7 @@ async function main() {
         "every new chain's address book until it is handed over.",
     );
   }
-  const owner = getAddress(committed?.bootstrapOwner ?? ownerEnv!);
+  const owner = getAddress(ownerEnv || committed!.bootstrapOwner);
   const computed = computeAddressBookAddresses(owner, artifacts);
 
   const moved =

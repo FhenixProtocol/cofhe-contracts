@@ -11,7 +11,7 @@ End state on every contract: the Gnosis Safe holds `DEFAULT_ADMIN_ROLE` and ever
 
 | Role | Address | Env var(s) | Needs gas? |
 |---|---|---|---|
-| Deployer / temporary admin | `0x6578D0E3A6d902896415c51cf4188fFBEBE753DB` (the address book's bootstrap owner - it registers the TaskManager in the book, so no other key can complete a fresh deployment) | `DEPLOYER_PRIVATE_KEY` (its private key), `TM_ADMIN_ADDRESS` (its address) | Yes — pays for the whole deployment on each chain |
+| Deployer / temporary admin | `0xf514Ad1dc08781639177ffc09c959689d40dADd1` (the address book's bootstrap owner - it registers the TaskManager in the book, so no other key can complete a fresh deployment) | `DEPLOYER_PRIVATE_KEY` (its private key), `TM_ADMIN_ADDRESS` (its address) | Yes — pays for the whole deployment on each chain |
 | Final admin | The Gnosis Safe (deployed at the same address on both chains) | `SAFE_ADMIN_ADDRESS`; optionally `SAFE_OWNER_KEY` (threshold-1 Safes only — lets the accept task execute through the Safe; leave unset for a multisig and it prints the transactions for the Safe app) | Whoever executes the Safe transactions pays for them |
 | Verifier signer | zk-verifier's production signing address | `VERIFIER_ADDRESS` | No — address only |
 | Decrypt-result signer | dispatcher's production signing address | `DECRYPT_RESULT_SIGNER` | No — address only |
