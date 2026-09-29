@@ -35,8 +35,8 @@ const INITIALIZE = new Interface(["function initialize(address initialOwner)"]);
  * keccak256(abi.encode(salt)), so the resulting address depends only on the salt and the init
  * code - never on who sends the deployment.
  */
-export function guardedSalt(): string {
-  return keccak256(AbiCoder.defaultAbiCoder().encode(["bytes32"], [DETERMINISTIC_SALT]));
+export function guardedSalt(salt: string = DETERMINISTIC_SALT): string {
+  return keccak256(AbiCoder.defaultAbiCoder().encode(["bytes32"], [salt]));
 }
 
 export function proxyInitCode(owner: string, implementation: string, artifacts: FrozenArtifacts): string {
@@ -47,8 +47,12 @@ export function proxyInitCode(owner: string, implementation: string, artifacts: 
   ]);
 }
 
-export function computeAddressBookAddresses(owner: string, artifacts: FrozenArtifacts): ComputedAddresses {
-  const salt = guardedSalt();
+export function computeAddressBookAddresses(
+  owner: string,
+  artifacts: FrozenArtifacts,
+  rawSalt: string = DETERMINISTIC_SALT,
+): ComputedAddresses {
+  const salt = guardedSalt(rawSalt);
   const addressBookImplV1 = getCreate2Address(CREATEX_ADDRESS, salt, keccak256(artifacts.implCreationCode));
   const initCode = proxyInitCode(owner, addressBookImplV1, artifacts);
   const addressBook = getCreate2Address(CREATEX_ADDRESS, salt, keccak256(initCode));
