@@ -105,7 +105,7 @@ Run once per `<net>` = `ethereum` and `arbitrumOne`:
 4. `npx hardhat task:acceptAdminAsSafe --network <net>` — accepts the admin transfers and the book ownership as the Safe: through the Safe with `SAFE_OWNER_KEY`, otherwise writes `safe-batches/<net>-accept-admin-<unix>.json` to import in the Safe app. Execute after `TM_ADMIN_DELAY`; re-run to verify.
 5. `npx hardhat task:renounceDeployerRoles --network <net>` — strips every role from the deployer (refuses until the Safe is admin everywhere).
 6. `npx hardhat verify --network <net> <address>` — verifies sources.
-7. Go-live: a `PAUSER_ROLE` holder calls `enable()` on the TaskManager — opens intake.
+7. Go-live: an `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks, then a `PAUSER_ROLE` holder calls `enable()` on the TaskManager — opens intake to those accounts.
 
 Registry chain, set in `contracts/internal/registry-chain/.env`:
 
@@ -139,8 +139,8 @@ Final state after step 5, before go-live (the deployer holds nothing anywhere):
 | TaskManager | PAUSER_ROLE, SECURITY_ZONE_MANAGER_ROLE | Safe and `MAINTENANCE_ADDRESS` |
 | TaskManager | UPGRADER_ROLE, ACCESS_LIST_MANAGER_ROLE, VERIFIER_SIGNER_MANAGER_ROLE, DECRYPT_SIGNER_MANAGER_ROLE, CONFIG_MANAGER_ROLE | Safe only |
 | TaskManager | `isEnabled()` | false until step 7, then true |
-| TaskManager | `accessListEnabled()` | false |
-| TaskManager | `accessList(account)` | false for every account |
+| TaskManager | `accessListEnabled()` | true |
+| TaskManager | `accessList(account)` | false for every account until an ACCESS_LIST_MANAGER_ROLE holder adds it with `addToAccessList` |
 | TaskManager | security zones min / max (no getter; set by `setSecurityZones`) | 0 / 0 |
 | TaskManager | `verifierSigner()` | `VERIFIER_ADDRESS` (production signer) |
 | TaskManager | `decryptResultSigner()` | `DECRYPT_RESULT_SIGNER` (production signer) |

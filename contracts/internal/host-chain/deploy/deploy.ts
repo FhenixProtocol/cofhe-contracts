@@ -636,11 +636,14 @@ const func: DeployFunction = async function () {
     // getVersion() > 0 is how the local stack tells a configured TaskManager from a bare proxy.
     const incTx = await TMProxyContract.connect(adminSigner).incVersion();
     await incTx.wait();
-    // `initialize` opens intake; on mainnet it must stay closed until go-live. Only here: a re-run
-    // upgrades a live TaskManager and must not pause it.
+    // `initialize` opens intake to everyone; on mainnet intake stays closed until go-live and is
+    // then gated by the access list. Only here: a re-run upgrades a live TaskManager and must not
+    // touch either switch.
     if (isMainnetDeployment()) {
       const disableTx = await TMProxyContract.connect(adminSigner).disable();
       await disableTx.wait();
+      const accessListTx = await TMProxyContract.connect(adminSigner).enableAccessList();
+      await accessListTx.wait();
     }
     registerFresh = true;
   }

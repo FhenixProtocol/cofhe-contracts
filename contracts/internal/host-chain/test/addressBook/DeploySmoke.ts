@@ -90,7 +90,7 @@ describe("hardhat deploy against the address book", function () {
     }
   });
 
-  it("leaves a fresh mainnet TaskManager disabled", async function () {
+  it("leaves a fresh mainnet TaskManager disabled with the access list on", async function () {
     this.timeout(300_000);
     await ethers.provider.send("hardhat_reset", []);
     const [deployer, , safe, maintenance] = await ethers.getSigners();
@@ -108,6 +108,7 @@ describe("hardhat deploy against the address book", function () {
 
     const taskManager = await ethers.getContractAt("TaskManager", await resolveTaskManager(hre));
     expect(await taskManager.isEnabled()).to.equal(false);
+    expect(await taskManager.accessListEnabled()).to.equal(true);
     expect(await taskManager.hasRole(await taskManager.PAUSER_ROLE(), maintenance.address)).to.equal(true);
   });
 
