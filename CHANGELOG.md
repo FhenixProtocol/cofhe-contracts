@@ -12,6 +12,7 @@
 - **FHE.sol resolves the TaskManager through `CoFHEAddressBook`**, an upgradeable book at one canonical address, replacing the deterministic TaskManager proxy. Run `task:deployAddressBook` before `hardhat deploy`; replace the removed `TASK_MANAGER_ADDRESS` with `ICoFHEAddressBook.getTm(1)`.
 
 ### Fixed
+- **CreateX deploys no longer misreport a lagging RPC as a wrong address.** The deploy reads the created address from CreateX's `ContractCreation` log and waits for `eth_getCode` to catch up; re-run `task:deployAddressBook` after an old failure, it is idempotent.
 - **A fresh mainnet TaskManager now starts disabled with the access list enabled.** `initialize` opens intake to everyone, so on chain IDs 1 and 42161 the deploy closes it and turns the access list on; go-live is `addToAccessList` then `enable()`.
 - **ACP share-registry deploy fixed for real this time** — the previous fix (below) forwarded `(admin, adminDelay)` to `getProxyContract`, but `ACPShareRegistry` is plain `AccessControl` and its `initialize` takes only `(admin)`; encoding the call threw `too many arguments`, and the surrounding catch still *returned* the error instead of rethrowing, so every deploy since kept silently skipping `setShareRegistry`. `ACPInfrastructureSetup` now deploys the registry with the one-argument initializer and rethrows on any failure, so a broken ACP setup fails the deploy instead of shipping without a share registry.
 

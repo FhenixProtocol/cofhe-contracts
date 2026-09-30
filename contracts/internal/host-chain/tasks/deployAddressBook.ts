@@ -18,8 +18,15 @@ const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a92
 const OWNABLE_SLOT = "0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300";
 
 async function addressInSlot(hre: HardhatRuntimeEnvironment, at: string, slot: string): Promise<string> {
-  const raw = await hre.ethers.provider.getStorage(at, slot);
-  return hre.ethers.getAddress("0x" + raw.slice(-40));
+  // A lagging RPC node answers with an empty slot for a proxy that was created moments ago.
+  for (let attempt = 0; ; attempt++) {
+    const raw = await hre.ethers.provider.getStorage(at, slot);
+    const address = hre.ethers.getAddress("0x" + raw.slice(-40));
+    if (address !== hre.ethers.ZeroAddress || attempt >= 5) {
+      return address;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
 }
 
 /**

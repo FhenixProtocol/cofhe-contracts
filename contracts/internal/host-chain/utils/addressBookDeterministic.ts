@@ -5,6 +5,8 @@ import { AbiCoder, Interface, concat, getAddress, getCreate2Address, keccak256 }
 import { CREATEX_ADDRESS } from "./deployCreateX";
 import { DETERMINISTIC_SALT } from "./deployDeterministic";
 
+export { createdAddressFromReceipt } from "./deployDeterministic";
+
 export const DETERMINISTIC_DIR = path.join(__dirname, "../deterministic");
 export const IMPL_HEX_FILE = path.join(DETERMINISTIC_DIR, "CoFHEAddressBookV1.creation.hex");
 export const PROXY_HEX_FILE = path.join(DETERMINISTIC_DIR, "ERC1967Proxy.creation.hex");

@@ -1,6 +1,7 @@
 import chalk from "chalk";
 
 import {CREATEX_ADDRESS, isAlreadyDeployed} from "./deployCreateX";
+import { Interface, getAddress } from "ethers";
 import {HardhatRuntimeEnvironment} from "hardhat/types/runtime";
 
 // The salt every deterministic CoFHE deployment uses. Its first 20 bytes match neither the
@@ -31,12 +32,60 @@ export async function deployCreate2ViaCreateX(
     signer,
   );
   const tx = await createX.deployCreate2(DETERMINISTIC_SALT, initCode);
-  await tx.wait();
-  if (!(await isAlreadyDeployed(hre, expectedAddress))) {
+  const receipt = await tx.wait();
+  const created = createdAddressFromReceipt(receipt);
+  if (created && created.toLowerCase() !== expectedAddress.toLowerCase()) {
     throw new Error(
-      `${label}: deployCreate2 succeeded but no code at the expected address ${expectedAddress}. ` +
-        `The init code does not reproduce the canonical address on this network.`,
+      `${label}: CreateX deployed to ${created}, not to the expected ${expectedAddress}. The init code or the ` +
+        `salt does not reproduce the canonical address on this network.`,
+    );
+  }
+  // A load-balanced RPC can answer eth_getCode from a node that has not seen the block yet.
+  if (!(await waitForCode(hre, expectedAddress))) {
+    throw new Error(
+      `${label}: CreateX reported the contract at ${expectedAddress} but the RPC still returns no code there ` +
+        `after ${CODE_WAIT_ATTEMPTS * CODE_WAIT_DELAY_MS / 1000}s. The endpoint is lagging; re-run once it has caught up.`,
     );
   }
   console.log(chalk.green(`${label} deployed to the deterministic address:`, expectedAddress));
+}
+
+const CREATEX_EVENTS = new Interface(["event ContractCreation(address indexed newContract, bytes32 indexed salt)"]);
+const CODE_WAIT_ATTEMPTS = 15;
+const CODE_WAIT_DELAY_MS = 2000;
+
+/** The address CreateX names in its ContractCreation log, or null when the receipt carries none. */
+export function createdAddressFromReceipt(
+  receipt: { logs: readonly { address: string; topics: readonly string[]; data: string }[] } | null,
+): string | null {
+  for (const log of receipt?.logs ?? []) {
+    if (log.address.toLowerCase() !== CREATEX_ADDRESS.toLowerCase()) {
+      continue;
+    }
+    try {
+      const parsed = CREATEX_EVENTS.parseLog({ topics: [...log.topics], data: log.data });
+      if (parsed?.name === "ContractCreation") {
+        return getAddress(parsed.args.newContract);
+      }
+    } catch {
+      // some other CreateX event
+    }
+  }
+  return null;
+}
+
+/** Polls eth_getCode until `address` has code, for lagging RPC pools. */
+export async function waitForCode(
+  hre: HardhatRuntimeEnvironment,
+  address: string,
+  attempts = CODE_WAIT_ATTEMPTS,
+  delayMs = CODE_WAIT_DELAY_MS,
+): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    if (await isAlreadyDeployed(hre, address)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
 }
