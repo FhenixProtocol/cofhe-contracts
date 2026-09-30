@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- **`CommitmentRegistry` deploy reads the version to activate from `COMMITMENT_VERSION`** (canonical `0x` + 64 hex), with no default. Pass the environment's value (today `0x…02`) on every fresh registry deploy.
+
 ## v0.3.0 - 2026-09-08
 
 > Live on testnet-v2 since 2026-08-24, except the admin change events and the `setSecurityZones` fix.
