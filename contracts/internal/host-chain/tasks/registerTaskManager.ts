@@ -52,4 +52,19 @@ task(
       console.log(chalk.green(`TaskManager id ${id} now points at ${target}`));
     }
     await updateTaskManagerAddressInJsonArtifact(target, hre);
+
+    // The same handover `hardhat deploy` does for the book: nominate the final admin, to be accepted
+    // by task:acceptAdminAsSafe. The existing TaskManager stack is left as it is.
+    const finalAdmin = process.env.SAFE_ADMIN_ADDRESS?.trim();
+    if (finalAdmin) {
+      const nominee = ethers.getAddress(finalAdmin);
+      const pending: string = await book.pendingOwner();
+      if (pending.toLowerCase() === nominee.toLowerCase()) {
+        console.log(chalk.green(`CoFHEAddressBook: ${nominee} is already the pending owner`));
+      } else {
+        const tx = await book.connect(signer).transferOwnership(nominee);
+        await tx.wait();
+        console.log(chalk.green(`CoFHEAddressBook: nominated ${nominee} as owner (accepted by task:acceptAdminAsSafe)`));
+      }
+    }
   });
