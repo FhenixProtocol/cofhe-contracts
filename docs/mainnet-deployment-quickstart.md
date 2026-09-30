@@ -144,7 +144,7 @@ pnpm acceptAdminAsSafe:arbitrumOne
 pnpm renounceDeployerRoles:arbitrumOne
 ```
 
-It needs `POSTER_ADDRESS`, `REGISTRY_ADMIN_DELAY`, `SAFE_ADMIN_ADDRESS`, and
+It needs `POSTER_ADDRESS`, `REGISTRY_ADMIN_DELAY`, `COMMITMENT_VERSION`, `SAFE_ADMIN_ADDRESS`, and
 `COMMITMENT_REGISTRY_ADDRESS` (printed by the deploy) in that project's own `.env`.
 
 ## Final checklist
