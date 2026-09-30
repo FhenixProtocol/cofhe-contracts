@@ -1,7 +1,7 @@
 {
 	"name": "@fhenixprotocol/cofhe-contracts",
 	"description": "Smart Contract Library for the CoFHE with FHE primitives",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"author": {
 		"name": "FhenixProtocol",
 		"url": "https://github.com/FhenixProtocol/cofhe-contracts"
@@ -15,7 +15,7 @@
 		"ICofhe.sol"
 	],
 	"scripts": {
-		"postinstall": "node -e \"console.log('\\x1b[31m%s\\x1b[0m', 'Breaking changes detected in v0.1.0: encrypted type handles changed from uint256 to bytes32. You must regenerate ABIs and contract bindings. Migration guide: https://github.com/FhenixProtocol/cofhe-contracts/blob/master/CHANGELOG.md')\""
+		"postinstall": "node -e \"console.log('\\x1b[31m%s\\x1b[0m', 'Breaking change in v0.4.0: TASK_MANAGER_ADDRESS was replaced by COFHE_ADDRESS_BOOK + TASK_MANAGER_ID; FHE.sol now resolves the TaskManager through the CoFHEAddressBook. Regenerate ABIs and bindings. Migration guide: https://github.com/FhenixProtocol/cofhe-contracts/blob/master/CHANGELOG.md')\""
 	},
 	"keywords": [
 		"blockchain",

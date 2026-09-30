@@ -4,9 +4,6 @@ const { ethers } = hre;
 import { Wallet } from "ethers";
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
 
-// TaskManager is deployed at this fixed address by the fixture (ACL/PlaintextsStorage
-// hardcode it, and ACL.allowTransient requires msg.sender to equal it).
-const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
 // euint8, within the fixture's configured security-zone range (-128..127).
 const EUINT8 = 2;
@@ -54,9 +51,9 @@ describe("TaskManager batchVerifyInputs contract binding", function () {
   const INPUTS: Input[] = [{ ctHash: CT_HASH, securityZone: SECURITY_ZONE, utype: EUINT8 }];
 
   before(async function () {
-    await deployOnChainFixture();
+    const fixture = await deployOnChainFixture();
     [owner, caller, user] = await ethers.getSigners();
-    taskManager = await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS);
+    taskManager = fixture.taskManager;
     await taskManager.connect(owner).setVerifierSigner(VERIFIER.address);
     chainId = (await ethers.provider.getNetwork()).chainId;
   });

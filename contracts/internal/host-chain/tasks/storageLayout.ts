@@ -15,7 +15,7 @@ import {
   type StorageLayout,
 } from "@openzeppelin/upgrades-core";
 
-const TRACKED_CONTRACTS = ["TaskManager", "ACL", "PlaintextsStorage", "ACPShareRegistry"];
+const TRACKED_CONTRACTS = ["TaskManager", "ACL", "PlaintextsStorage", "ACPShareRegistry", "CoFHEAddressBook"];
 
 const SNAPSHOT_FILE = "storage-layout-snapshot.json";
 

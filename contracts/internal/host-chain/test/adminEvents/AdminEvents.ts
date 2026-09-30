@@ -2,7 +2,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import type { TaskManager } from "../../types";
-import { deployOnChainFixture, TASK_MANAGER_ADDRESS } from "../onChain/OnChain.fixture";
+import { deployOnChainFixture } from "../onChain/OnChain.fixture";
 
 const { ethers } = hre;
 
@@ -26,9 +26,9 @@ describe("TaskManager admin change events", function () {
   let snapshot: string;
 
   before(async function () {
-    await deployOnChainFixture();
+    const fixture = await deployOnChainFixture();
     [admin, other] = await ethers.getSigners();
-    taskManager = (await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS)) as unknown as TaskManager;
+    taskManager = fixture.taskManager as unknown as TaskManager;
     originalAcl = await taskManager.acl();
     originalPlaintextsStorage = await taskManager.plaintextsStorage();
     await taskManager.connect(admin).setSecurityZones(BASELINE_MIN, BASELINE_MAX);

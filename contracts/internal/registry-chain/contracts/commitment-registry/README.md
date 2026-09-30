@@ -104,7 +104,7 @@ pnpm test
 # Run with gas report
 pnpm test:gas
 
-# Estimate gas on Arbitrum Sepolia (needs KEY in .env)
+# Estimate gas on Arbitrum Sepolia (needs DEPLOYER_PRIVATE_KEY in .env)
 npx hardhat run scripts/estimateGasArbitrum.ts --network arbitrumSepolia
 ```
 

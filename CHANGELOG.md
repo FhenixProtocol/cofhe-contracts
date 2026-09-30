@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### Added
+- **`task:registerTaskManager --address <tm>`** points the address book's id at an already deployed TaskManager and, with `SAFE_ADMIN_ADDRESS` set, nominates that address as book owner. Run it after `task:deployAddressBook` instead of `hardhat deploy`, then `task:acceptAdminAsSafe`.
+- **Mainnet deployment support (Ethereum, Arbitrum One)** — `ethereum` and `arbitrumOne` networks in both hardhat projects (env-driven keyed RPCs with keyless public defaults, Etherscan API v2 verification via `ETHERSCAN_API_KEY`), and a Safe-first admin handover: on chain IDs 1/42161 the deploys refuse to run without `SAFE_ADMIN_ADDRESS` and end by granting the Safe every operational role and beginning the two-step default-admin transfer on each default-admin-rules contract (ACPShareRegistry is plain AccessControl, so its `DEFAULT_ADMIN_ROLE` is granted directly). New `task:acceptAdminAsSafe` accepts as the Safe — executing *through* it when `SAFE_OWNER_KEY` is set (threshold-1, pre-validated owner signature; refuses larger thresholds), or printing the ready-to-paste Safe-app transactions (to / value / data) for a multisig, doubling as the verifier on re-run — and `task:renounceDeployerRoles` strips the deployer once — and only once — the Safe is the admin; the registry chain gets script equivalents. `task:deployDeterministicTM` now has a live-network path: the canonical TaskManager CREATE2 address embeds `initialize(0x55A07F9f…)` — the intentionally-public dev key — so the bootstrap signs the proxy creation and an immediate `transferOwnership(TM_ADMIN_ADDRESS)` with consecutive nonces broadcast back-to-back, verifies the final owner, and aborts loudly if the address is already occupied by a foreign owner (possible squat). Runbook: `docs/mainnet-deployment.md`.
+
+### Changed
+- **`task:acceptAdminAsSafe` accepts directly when `SAFE_OWNER_KEY` is the final admin's own key**, so a testnet handover can target an EOA. Mainnet flow unchanged.
+- **`KEY` is renamed `DEPLOYER_PRIVATE_KEY`** in the host-chain and registry-chain `.env` files and CI. Rename it in your `.env` before running any deploy or task.
+- **FHE.sol resolves the TaskManager through `CoFHEAddressBook`**, an upgradeable book at one canonical address, replacing the deterministic TaskManager proxy. Run `task:deployAddressBook` before `hardhat deploy`; replace the removed `TASK_MANAGER_ADDRESS` with `ICoFHEAddressBook.getTm(1)`.
+
+### Fixed
+- **CreateX deploys no longer misreport a lagging RPC as a wrong address.** The deploy reads the created address from CreateX's `ContractCreation` log and waits for `eth_getCode` to catch up; re-run `task:deployAddressBook` after an old failure, it is idempotent.
+- **A fresh mainnet TaskManager now starts disabled with the access list enabled.** `initialize` opens intake to everyone, so on chain IDs 1 and 42161 the deploy closes it and turns the access list on; go-live is `addToAccessList` then `enable()`.
+- **ACP share-registry deploy fixed for real this time** — the previous fix (below) forwarded `(admin, adminDelay)` to `getProxyContract`, but `ACPShareRegistry` is plain `AccessControl` and its `initialize` takes only `(admin)`; encoding the call threw `too many arguments`, and the surrounding catch still *returned* the error instead of rethrowing, so every deploy since kept silently skipping `setShareRegistry`. `ACPInfrastructureSetup` now deploys the registry with the one-argument initializer and rethrows on any failure, so a broken ACP setup fails the deploy instead of shipping without a share registry.
+
 ## v0.3.0 - 2026-09-08
 
 > Live on testnet-v2 since 2026-08-24, except the admin change events and the `setSecurityZones` fix.

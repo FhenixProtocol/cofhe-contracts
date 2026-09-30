@@ -21,18 +21,27 @@ const config: HardhatUserConfig = {
     hardhat: { allowUnlimitedContractSize: true },
     localfhenix: {
       url: "http://127.0.0.1:42069",
-      accounts: process.env.KEY ? [process.env.KEY] : [],
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
     },
     localfhenixk8s: {
       url: "http://hostchain:8547",
-      accounts: process.env.KEY ? [process.env.KEY] : [],
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
     },
     arbitrumSepolia: {
       chainId: 421614,
       // Keyed provider endpoints must come from the environment — public repo, keyless default only.
       url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://arbitrum-sepolia-rpc.publicnode.com",
-      accounts: process.env.KEY ? [process.env.KEY] : [],
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
     },
+    arbitrumOne: {
+      chainId: 42161,
+      url: process.env.ARBITRUM_ONE_RPC_URL || "https://arbitrum-one-rpc.publicnode.com",
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+  },
+  etherscan: {
+    // Etherscan API v2 - a single key serves every supported chain.
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
   },
   typechain: { outDir: "types", target: "ethers-v6" },
   gasReporter: {

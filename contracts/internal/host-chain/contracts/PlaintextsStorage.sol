@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity >=0.8.25 <0.9.0;
-import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
 import {LegacyOwnable} from "./LegacyOwnable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
@@ -22,11 +21,20 @@ contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpg
     }
 
     mapping(uint256 => PlaintextResult) private plaintextResults;
+    address private taskManager;
 
     error OnlyTaskManagerAllowed(address caller);
 
+    /// @notice Returned when the TaskManager address being set is zero.
+    error InvalidTaskManagerAddress();
+
+    /// @notice             Emitted when the TaskManager address is updated.
+    /// @param oldAddress   Previous address.
+    /// @param newAddress   New address.
+    event TaskManagerUpdated(address oldAddress, address newAddress);
+
     modifier onlyTaskManager() {
-        if (msg.sender != taskManagerAddress) {
+        if (msg.sender != taskManager) {
             revert OnlyTaskManagerAllowed(msg.sender);
         }
         _;
@@ -51,9 +59,10 @@ contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpg
         _disableInitializers();
     }
 
-    function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+    function initialize(address initialAdmin, uint48 initialDelay, address initialTaskManager) public initializer {
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __UUPSUpgradeable_init();
+        _setTaskManager(initialTaskManager);
     }
 
     /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
@@ -68,6 +77,29 @@ contract PlaintextsStorage is UUPSUpgradeable, AccessControlDefaultAdminRulesUpg
         LegacyOwnable.requireLegacyOwner(msg.sender);
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         _grantRole(UPGRADER_ROLE, initialAdmin);
+    }
+
+    /// @notice The TaskManager allowed to store results.
+    function getTaskManagerAddress() external view returns (address) {
+        return taskManager;
+    }
+
+    /// @notice             Sets the TaskManager allowed to store results.
+    /// @dev                Any proxy upgraded to this implementation from one that recorded no
+    ///                     TaskManager (pre-roles proxies migrated through initializeV2 included)
+    ///                     rejects every TaskManager call until this is set; upgrade with
+    ///                     upgradeToAndCall(impl, setTaskManager(tm)) to keep it atomic.
+    /// @param newAddress   The new TaskManager address.
+    function setTaskManager(address newAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setTaskManager(newAddress);
+    }
+
+    function _setTaskManager(address newAddress) private {
+        if (newAddress == address(0)) {
+            revert InvalidTaskManagerAddress();
+        }
+        emit TaskManagerUpdated(taskManager, newAddress);
+        taskManager = newAddress;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
