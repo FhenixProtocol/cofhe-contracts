@@ -16,6 +16,7 @@
 - **`task:acceptAdminAsSafe` accepts directly when `SAFE_OWNER_KEY` is the final admin's own key**, so a testnet handover can target an EOA. Mainnet flow unchanged.
 - **`KEY` is renamed `DEPLOYER_PRIVATE_KEY`** in the host-chain and registry-chain `.env` files and CI. Rename it in your `.env` before running any deploy or task.
 - **FHE.sol resolves the TaskManager through `CoFHEAddressBook`**, an upgradeable book at one canonical address, replacing the deterministic TaskManager proxy. Run `task:deployAddressBook` before `hardhat deploy`; replace the removed `TASK_MANAGER_ADDRESS` with `ICoFHEAddressBook.getTm(1)`.
+- **BREAKING — pointer-based `ACPShareRegistry`.** `share(acp, metadata)` emits the full ACP and an opaque metadata blob in `Shared` (now `shareId` indexed) and stores only the share head: issuer, expiration, recipient, revoker and the block of that event. `sharesFor` returns `(shareIds, heads)` and `getShare` a head; `removeShare` and `isShareValid` are unchanged. A share costs 186k–265k gas for 1–100 ctHashes, against 317k–2,564k (Arbitrum Sepolia).
 
 ### Fixed
 - **Local `task:deployAddressBook` makes the book owner the admin `hardhat deploy` picks** (`TM_ADMIN_ADDRESS`, else the `AGGREGATOR_KEY` wallet), so the local deploy no longer refuses the book. The local book address changes. No action needed.
