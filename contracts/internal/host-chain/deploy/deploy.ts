@@ -24,13 +24,19 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
  * @param adminSigner The admin account, which becomes the default admin and holds every role
  * @param adminDelay The default-admin transfer delay to initialize with
  * @param contractName The name of the contract to deploy
+ * @param initArgs The `initialize` arguments, for a contract whose initializer takes other than (admin, delay)
  * @returns The proxy contract and its address
  */
-async function getProxyContract(adminSigner: any, adminDelay: number, contractName: string) {
+async function getProxyContract(
+  adminSigner: any,
+  adminDelay: number,
+  contractName: string,
+  initArgs: unknown[] = [adminSigner.address, adminDelay],
+) {
   const TaskManager = await ethers.getContractFactory(contractName);
   const ProxyContract = await upgrades.deployProxy(
     TaskManager,
-    [adminSigner.address, adminDelay],
+    initArgs,
     { kind: "uups", initializer: "initialize" },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
@@ -202,6 +208,8 @@ async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminD
       ownerSigner,
       adminDelay,
       "ACPShareRegistry",
+      // plain AccessControl: initialize(admin), no admin-transfer delay
+      [ownerSigner.address],
     );
     const registryTx = await aclContract
       .connect(ownerSigner)
