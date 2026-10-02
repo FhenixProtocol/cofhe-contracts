@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING — pointer-based `ACPShareRegistry`.** `share(acp, metadata)` emits the full ACP and an opaque metadata blob in `Shared` (now `shareId` indexed) and stores only the share head: issuer, expiration, recipient, revoker and the block of that event. `sharesFor` returns `(shareIds, heads)` and `getShare` a head; `removeShare` and `isShareValid` are unchanged. A share costs 186k–265k gas for 1–100 ctHashes, against 317k–2,564k (Arbitrum Sepolia). Storage moves to a new ERC-7201 namespace: deploy a new proxy and point the ACL's `shareRegistry` at it.
+
+### Added
+- **The npm package ships the ACP contracts** — `ACPShareRegistry.sol`, `ACPTimestampRevoker.sol` and `Permissioned.sol`, under `internal/host-chain/contracts/`, so the SDK mocks can use them instead of copies. `@openzeppelin/contracts-upgradeable` becomes a dependency (they import it).
+
+### Fixed
+- The deploy script passed `(admin, delay)` to the share registry's one-argument `initialize`, which threw inside the ACP infrastructure setup's `try/catch`.
+
 ## v0.3.0 - 2026-09-08
 
 > Live on testnet-v2 since 2026-08-24, except the admin change events and the `setSecurityZones` fix.

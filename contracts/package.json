@@ -12,7 +12,10 @@
 	},
 	"files": [
 		"FHE.sol",
-		"ICofhe.sol"
+		"ICofhe.sol",
+		"internal/host-chain/contracts/ACPShareRegistry.sol",
+		"internal/host-chain/contracts/ACPTimestampRevoker.sol",
+		"internal/host-chain/contracts/Permissioned.sol"
 	],
 	"scripts": {
 		"postinstall": "node -e \"console.log('\\x1b[31m%s\\x1b[0m', 'Breaking changes detected in v0.1.0: encrypted type handles changed from uint256 to bytes32. You must regenerate ABIs and contract bindings. Migration guide: https://github.com/FhenixProtocol/cofhe-contracts/blob/master/CHANGELOG.md')\""
@@ -33,6 +36,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@openzeppelin/contracts": "^5.0.0"
+		"@openzeppelin/contracts": "^5.0.0",
+		"@openzeppelin/contracts-upgradeable": "^5.0.0"
 	}
 }
