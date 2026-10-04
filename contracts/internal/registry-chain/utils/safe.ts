@@ -16,8 +16,13 @@ const SAFE_ABI = [
  * Uses the Safe's "pre-validated" signature type (v = 1): when the account sending the
  * transaction is the owner encoded in the signature's `r` slot, the Safe counts it as an
  * approval without an ECDSA signature. That covers exactly one approval, so this works only on
- * Safes with threshold 1 - anything higher needs the Safe app or transaction service, and this
- * helper refuses rather than half-approving.
+ * Safes with threshold 1, and this helper refuses rather than half-approving.
+ *
+ * Threshold 1 is this helper's scope, not a lasting assumption: it is a convenience for testnets
+ * and for the period before more signers are added. Multisig Safes take the other path,
+ * `writeSafeBatch` plus the Safe app's Transaction Builder. Raising the threshold later needs no
+ * code change - unset SAFE_OWNER_KEY and the scripts write a batch instead. Post-handover
+ * operations (accepting the admin transfer, upgrades) use the same two paths.
  *
  * With safeTxGas = 0 and gasPrice = 0 the Safe reverts (GS013) when the inner call fails, so a
  * successful receipt means the inner call succeeded.
@@ -48,6 +53,9 @@ export async function execTransactionThroughSafe(
         `Safes; propose the transaction through the Safe app instead.`,
     );
   }
+  // Mirrors the Safe's own rule for a 1-of-N Safe: any single owner may execute. The signature
+  // below is pre-validated (r = owner address, s = 0, v = 1: "msg.sender approves"), so a
+  // non-owner would hit a GS0xx revert anyway; this check only fails readably before gas is spent.
   if (!(await safe.isOwner(ownerSigner.address))) {
     throw new Error(`${ownerSigner.address} is not an owner of Safe ${safeAddress}.`);
   }
@@ -106,8 +114,9 @@ export interface SafeBatchTransaction {
  * @param description  Batch description shown in the Safe app.
  * @param transactions The calls to include, in order.
  * @param outPath      Overrides the default `<project>/safe-batches/<network>-<slug>-<unix>.json`.
- *                     Falls back to SAFE_BATCH_OUT, so the scripts that take no CLI parameters
- *                     can still be redirected.
+ *                     When omitted, a non-empty SAFE_BATCH_OUT is used instead, so the scripts
+ *                     that take no CLI parameters can still be redirected; an empty variable (as
+ *                     in .env.example) means the default.
  * @returns The path written.
  */
 export function writeSafeBatch(
@@ -162,12 +171,12 @@ export function writeSafeBatch(
 
   const path =
     outPath ??
-    process.env.SAFE_BATCH_OUT?.trim() ??
-    join(
-      hre.config.paths.root,
-      "safe-batches",
-      `${hre.network.name}-${slug}-${Math.floor(now / 1000)}.json`,
-    );
+    (process.env.SAFE_BATCH_OUT?.trim() ||
+      join(
+        hre.config.paths.root,
+        "safe-batches",
+        `${hre.network.name}-${slug}-${Math.floor(now / 1000)}.json`,
+      ));
   fs.mkdirSync(dirname(path), { recursive: true });
   fs.writeFileSync(path, `${JSON.stringify(batch, null, 2)}\n`);
   return path;
