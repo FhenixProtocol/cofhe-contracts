@@ -13,6 +13,7 @@ End state on every contract: the Gnosis Safe holds `DEFAULT_ADMIN_ROLE` and ever
 |---|---|---|---|
 | Deployer / temporary admin | `0xf514Ad1dc08781639177ffc09c959689d40dADd1` (the address book's bootstrap owner - it registers the TaskManager in the book, so no other key can complete a fresh deployment) | `DEPLOYER_PRIVATE_KEY` (its private key), `TM_ADMIN_ADDRESS` (its address) | Yes — pays for the whole deployment on each chain |
 | Final admin | The Gnosis Safe (deployed at the same address on both chains) | `SAFE_ADMIN_ADDRESS`; optionally `SAFE_OWNER_KEY` (threshold-1 Safes only — lets the accept task execute through the Safe; leave unset for a multisig and it prints the transactions for the Safe app) | Whoever executes the Safe transactions pays for them |
+| Maintenance wallet (hardware) | a wallet that gets only `PAUSER_ROLE` and `SECURITY_ZONE_MANAGER_ROLE` on the TaskManager | `MAINTENANCE_ADDRESS` | Yes — for pause/enable and security-zone changes |
 | Verifier signer | zk-verifier's production signing address | `VERIFIER_ADDRESS` | No — address only |
 | Decrypt-result signer | dispatcher's production signing address | `DECRYPT_RESULT_SIGNER` | No — address only |
 | Poster | blockchain-poster's production wallet address (registry chain) | `POSTER_ADDRESS` | No — address only |
@@ -50,6 +51,7 @@ npx hardhat task:deployAddressBook --network <net>
 # 2. Full deployment (REGISTER_TASK_MANAGER=1 the first time on a chain, when no TaskManager is registered yet):
 #    deploys ACL, ACPShareRegistry, PlaintextsStorage, runs setup, grants every role to the
 #    Safe and begins the default-admin transfers. Record the printed addresses.
+#    On chain IDs 1 / 42161 the fresh TaskManager is left disabled with the access list on (see Go-live).
 REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>
 
 # 3. Accept the transfers and the address-book ownership as the Safe. With SAFE_OWNER_KEY set (threshold-1 Safe) this executes
@@ -63,7 +65,11 @@ npx hardhat task:acceptAdminAsSafe --network <net>
 npx hardhat task:renounceDeployerRoles --network <net>
 ```
 
-Step 2 refuses to run on chain IDs 1 / 42161 unless `SAFE_ADMIN_ADDRESS`, `TM_ADMIN_ADDRESS`, `TM_ADMIN_DELAY`, `VERIFIER_ADDRESS` and `DECRYPT_RESULT_SIGNER` are all set. Steps 3–4 are idempotent and can be re-run.
+Step 2 refuses to run on chain IDs 1 / 42161 unless `SAFE_ADMIN_ADDRESS`, `TM_ADMIN_ADDRESS`, `TM_ADMIN_DELAY`, `VERIFIER_ADDRESS`, `DECRYPT_RESULT_SIGNER` and `MAINTENANCE_ADDRESS` are all set. Steps 3–4 are idempotent and can be re-run.
+
+- The signer, Safe and maintenance addresses are validated before any contract deploys, so a bad value fails the run while it is still a no-op.
+- A `DEPLOYER_PRIVATE_KEY` equal to the public example key in `.env.example` is refused on those chains.
+- `SAFE_ADMIN_ADDRESS` must already have code on the chain — deploy the Safe there first.
 
 Verify sources (proxy + implementation are linked automatically):
 
@@ -92,6 +98,15 @@ The deploy activates the initial commitment version (must match `COMMITMENT_VERS
 - `owner()` on CoFHEAddressBook is the Safe.
 - `defaultAdmin()` is the Safe on TaskManager, ACL, PlaintextsStorage (and CommitmentRegistry); the Safe holds `DEFAULT_ADMIN_ROLE` on ACPShareRegistry (plain AccessControl — no two-step transfer there).
 - The deployer (`TM_ADMIN_ADDRESS` / registry deployer) holds **no** role on any contract (`task:renounceDeployerRoles` output confirms).
-- TaskManager: `isEnabled() == true`, `verifierSigner()` / `decryptResultSigner()` are the production addresses, `acl()` / `plaintextsStorage()` set, ACL's `shareRegistry()` set.
+- TaskManager: `isEnabled() == false`, `accessListEnabled() == true`, `verifierSigner()` / `decryptResultSigner()` are the production addresses, `acl()` / `plaintextsStorage()` set, ACL's `shareRegistry()` set.
 - CommitmentRegistry: poster is `POSTER_ADDRESS`, initial version Active.
 - Sources verified on Etherscan / Arbiscan.
+
+## Go-live (per host chain)
+
+Intake stays closed until this runs; do it only once the checklist above passes.
+
+1. An `ACCESS_LIST_MANAGER_ROLE` holder (the Safe) calls `addToAccessList(accounts)` with the contracts allowed to create tasks.
+2. A `PAUSER_ROLE` holder (the Safe or the maintenance wallet) calls `enable()`.
+
+Then check: `isEnabled() == true`, and `accessList(<account>) == true` for each listed account.
