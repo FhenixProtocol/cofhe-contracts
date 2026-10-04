@@ -41,6 +41,17 @@ library Common {
         return ITaskManager(ICoFHEAddressBook(COFHE_ADDRESS_BOOK).getTm(TASK_MANAGER_ID));
     }
 
+    function tryTm() internal view returns (ITaskManager, bool) {
+        if (COFHE_ADDRESS_BOOK.code.length == 0) {
+            return (ITaskManager(address(0)), false);
+        }
+        try ICoFHEAddressBook(COFHE_ADDRESS_BOOK).getTm(TASK_MANAGER_ID) returns (address taskManager) {
+            return (ITaskManager(taskManager), true);
+        } catch {
+            return (ITaskManager(address(0)), false);
+        }
+    }
+
     error InvalidHexCharacter(bytes1 char);
     error SecurityZoneOutOfBounds(int32 value);
 
@@ -154,7 +165,11 @@ library Impl {
     }
 
     function getDecryptResultSafe(bytes32 input) internal view returns (uint256 result, bool decrypted) {
-        return Common.tm().getDecryptResultSafe(uint256(input));
+        (ITaskManager taskManager, bool found) = Common.tryTm();
+        if (!found) {
+            return (0, false);
+        }
+        return taskManager.getDecryptResultSafe(uint256(input));
     }
 
     function publishDecryptResult(bytes32 ctHash, uint256 result, bytes memory signature) internal {
@@ -178,7 +193,11 @@ library Impl {
     }
 
     function verifyDecryptResultSafe(bytes32 ctHash, uint256 result, bytes memory signature) internal view returns (bool) {
-        return Common.tm().verifyDecryptResultSafe(uint256(ctHash), result, signature);
+        (ITaskManager taskManager, bool found) = Common.tryTm();
+        if (!found) {
+            return false;
+        }
+        return taskManager.verifyDecryptResultSafe(uint256(ctHash), result, signature);
     }
 
     function verifyDecryptResultBatch(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool) {
@@ -194,7 +213,11 @@ library Impl {
     }
 
     function verifyDecryptResultBatchSafe(uint256[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
-        return Common.tm().verifyDecryptResultBatchSafe(ctHashes, results, signatures);
+        (ITaskManager taskManager, bool found) = Common.tryTm();
+        if (!found) {
+            return new bool[](ctHashes.length);
+        }
+        return taskManager.verifyDecryptResultBatchSafe(ctHashes, results, signatures);
     }
 
     function verifyDecryptResultBatchSafe(bytes32[] memory ctHashes, uint256[] memory results, bytes[] memory signatures) internal view returns (bool[] memory) {
