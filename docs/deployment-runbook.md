@@ -230,7 +230,7 @@ TaskManager.addToAccessList(accounts)   # an ACCESS_LIST_MANAGER_ROLE holder
 TaskManager.enable()                    # a PAUSER_ROLE holder
 ```
 
-If the deploy ran with placeholder signers, set the production ones first: the task executes through the Safe with `SAFE_OWNER_KEY`, otherwise it writes a Transaction Builder batch (`task:setVerifierSignerAsSafe` / `task:setDecryptResultSignerAsSafe` set one at a time). Then an `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks, and a `PAUSER_ROLE` holder calls `enable()` on the TaskManager. Opens intake to those accounts.
+If the deploy ran with placeholder signers, set the production ones first: the task executes through the Safe with `SAFE_OWNER_KEY`, otherwise it writes a Transaction Builder batch (`task:setVerifierSignerAsSafe` / `task:setDecryptResultSignerAsSafe` set one at a time; full procedure in [set-signers-as-safe.md](set-signers-as-safe.md)). Then an `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks, and a `PAUSER_ROLE` holder calls `enable()` on the TaskManager. Opens intake to those accounts.
 
 Check: `verifierSigner()` and `decryptResultSigner()` are the production signers, `isEnabled()` is true and `accessList(account)` is true for each added account.
 
