@@ -96,6 +96,8 @@ describe("hardhat deploy against the address book", function () {
     const [deployer, , safe, maintenance] = await ethers.getSigners();
     setDeployEnv(deployer.address, safe.address);
     process.env.MAINTENANCE_ADDRESS = maintenance.address;
+    // Mainnet deploys require code at SAFE_ADMIN_ADDRESS; a stub stands in for the Safe.
+    await ethers.provider.send("hardhat_setCode", [safe.address, "0x00"]);
     const networkConfig = hre.network.config as any;
     const chainId = networkConfig.chainId;
     networkConfig.chainId = 1;

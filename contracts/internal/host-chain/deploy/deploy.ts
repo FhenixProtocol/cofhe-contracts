@@ -414,15 +414,21 @@ function requireNotExampleKey(deployer: string) {
 /**
  * Resolves the address that ends up holding DEFAULT_ADMIN and every operational role once the
  * deployment settles - on mainnet, the Gnosis Safe. Returns null when unset, which is refused on
- * mainnet chain IDs: without it the deployer EOA would remain the admin of every proxy.
+ * mainnet chain IDs: without it the deployer EOA would remain the admin of every proxy. On those
+ * chains the address must also have code - a Safe never deployed there, or a typo, would otherwise
+ * be handed an admin transfer nobody can accept.
  */
-function resolveFinalAdmin(ethers: any): string | null {
+async function resolveFinalAdmin(ethers: any): Promise<string | null> {
   const raw = process.env.SAFE_ADMIN_ADDRESS?.trim();
+  const chainId = (hre.network.config as any)?.chainId;
   if (raw) {
-    return ethers.getAddress(raw);
+    const address = ethers.getAddress(raw);
+    if (isMainnetDeployment() && (await ethers.provider.getCode(address)) === "0x") {
+      throw new Error(`SAFE_ADMIN_ADDRESS ${address} has no code on chain ${chainId}; deploy the Safe there first`);
+    }
+    return address;
   }
   if (isMainnetDeployment()) {
-    const chainId = (hre.network.config as any)?.chainId;
     throw new Error(
       `SAFE_ADMIN_ADDRESS must be set on chain ${chainId}. Refusing to leave the deployer EOA ` +
         `as DEFAULT_ADMIN of the mainnet proxies - set it to the Safe that takes over.`,
@@ -590,7 +596,7 @@ const func: DeployFunction = async function () {
   const { adminSigner, adminDelay } = resolveAdmin([...aggregatorSigners, signer]);
   // Resolved before anything deploys, so a missing Safe address fails the run while it is
   // still a no-op instead of after the proxies exist.
-  const finalAdmin = resolveFinalAdmin(ethers);
+  const finalAdmin = await resolveFinalAdmin(ethers);
   const maintenanceAddress = resolveMaintenanceAddress(ethers);
   const signers = resolveSigners(ethers);
 

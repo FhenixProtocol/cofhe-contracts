@@ -65,15 +65,21 @@ const EXAMPLE_DEPLOYER_ADDRESS = "0x4e6206fC78674E5eFf48Dcd0166060f95a832c60";
 /**
  * Resolves the address that ends up holding DEFAULT_ADMIN and every operational role once the
  * deployment settles - on mainnet, the Gnosis Safe. Returns null when unset, which is refused
- * on mainnet chain IDs: without it the deployer EOA would remain the registry's admin.
+ * on mainnet chain IDs: without it the deployer EOA would remain the registry's admin. On those
+ * chains the address must also have code - a Safe never deployed there, or a typo, would otherwise
+ * be handed an admin transfer nobody can accept.
  * Mirrors the host-chain deploy's resolveFinalAdmin.
  */
-function resolveFinalAdmin(): string | null {
+async function resolveFinalAdmin(): Promise<string | null> {
   const raw = process.env.SAFE_ADMIN_ADDRESS?.trim();
-  if (raw) {
-    return hre.ethers.getAddress(raw);
-  }
   const chainId = (hre.network.config as any)?.chainId;
+  if (raw) {
+    const address = hre.ethers.getAddress(raw);
+    if (MAINNET_CHAIN_IDS.has(chainId) && (await hre.ethers.provider.getCode(address)) === "0x") {
+      throw new Error(`SAFE_ADMIN_ADDRESS ${address} has no code on chain ${chainId}; deploy the Safe there first`);
+    }
+    return address;
+  }
   if (MAINNET_CHAIN_IDS.has(chainId)) {
     throw new Error(
       `SAFE_ADMIN_ADDRESS must be set on chain ${chainId}. Refusing to leave the deployer EOA ` +
@@ -115,7 +121,7 @@ async function main() {
   const adminDelay = resolveAdminDelay();
   // Resolved before anything deploys, so a missing Safe address fails the run while it is
   // still a no-op instead of after the proxy exists.
-  const finalAdmin = resolveFinalAdmin();
+  const finalAdmin = await resolveFinalAdmin();
   console.log("Deploying CommitmentRegistry with account:", deployer.address);
 
   const { proxy: registry, address: proxyAddress } = await deployUUPSProxy(
