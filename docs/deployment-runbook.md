@@ -21,17 +21,77 @@ Set in `contracts/internal/host-chain/.env`:
 
 Run with `<net>` = `sepolia`, `arbitrumSepolia` or `baseSepolia`:
 
-1. `pnpm install && pnpm compile` — installs and compiles.
-2. `npx hardhat task:deployAddressBook --network <net>` — deploys CoFHEAddressBook (implementation + proxy) at the canonical address via CreateX and verifies it.
-3. `REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>` — deploys and configures the TaskManager (intake enabled), deploys ACL, ACPShareRegistry and PlaintextsStorage, registers the TaskManager in the book, prints all addresses. With `SAFE_ADMIN_ADDRESS` set it also grants that address every role, starts the admin transfers and nominates it as book owner. Output: `ignition/deployments/chain-<chainId>/artifacts/TaskManager#TaskManager.json` (ABI + `address`); copy it to the services' `CONFIG_PATH/deployments/<chainId>/TaskManager.json` (slim-listener, result-processor) and put its `address` in the dispatcher's `tm_contract_address` and fheos's `PERMIT_CHAINS_JSON`.
-4. `npx hardhat verify --network <net> <address>` — verifies sources (optional).
+### Step 1 — Install and compile
 
-Chain that already has a TaskManager (for example the legacy one): run step 2, then instead of step 3 run `npx hardhat task:registerTaskManager --address <existing TaskManager> --network <net>` — points id 1 at it and writes the same artifact as step 3 (`--force true` to repoint an id that is already set). With `SAFE_ADMIN_ADDRESS` set it also nominates that address as book owner (accepted in step 5). The existing TaskManager, ACL and PlaintextsStorage stay as they are, so the final-state table below does not apply.
+```bash
+pnpm install && pnpm compile
+```
+
+Check: `pnpm compile` exits without errors.
+
+### Step 2 — Deploy the address book
+
+```bash
+npx hardhat task:deployAddressBook --network <net>
+```
+
+Deploys CoFHEAddressBook (implementation + proxy) at the canonical address via CreateX and verifies it.
+
+Check: the printed address matches `addressBook` in `deterministic/addresses.json`.
+
+### Step 3 — Deploy and register the TaskManager
+
+```bash
+REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>
+```
+
+Deploys and configures the TaskManager (intake enabled), deploys ACL, ACPShareRegistry and PlaintextsStorage, registers the TaskManager in the book, prints all addresses. With `SAFE_ADMIN_ADDRESS` set it also grants that address every role, starts the admin transfers and nominates it as book owner.
+
+Output: `ignition/deployments/chain-<chainId>/artifacts/TaskManager#TaskManager.json` (ABI + `address`); copy it to the services' `CONFIG_PATH/deployments/<chainId>/TaskManager.json` (slim-listener, result-processor) and put its `address` in the dispatcher's `tm_contract_address` and fheos's `PERMIT_CHAINS_JSON`.
+
+Check: the log says `Registered TaskManager <address> as id 1 in the address book` and the artifact's `address` is that address.
+
+### Step 4 — Verify sources (optional)
+
+```bash
+npx hardhat verify --network <net> <address>
+```
+
+Check: the explorer shows the contract as verified.
+
+### Chain that already has a TaskManager
+
+For example the legacy one: run step 2, then instead of step 3:
+
+```bash
+npx hardhat task:registerTaskManager --address <existing TaskManager> --network <net>
+```
+
+Points id 1 at it and writes the same artifact as step 3 (`--force true` to repoint an id that is already set). With `SAFE_ADMIN_ADDRESS` set it also nominates that address as book owner (accepted in step 5). The existing TaskManager, ACL and PlaintextsStorage stay as they are, so the final-state table below does not apply.
+
+Check: the log says `TaskManager id 1 now points at <existing TaskManager>`.
 
 Only when `SAFE_ADMIN_ADDRESS` was set:
 
-5. `npx hardhat task:acceptAdminAsSafe --network <net>` — accepts the admin transfers and the book ownership as that address: directly when `SAFE_OWNER_KEY` is its own key, through the Safe when it is a Safe owner key, otherwise writes a Safe batch file. Run after `TM_ADMIN_DELAY`; re-run to verify.
-6. `npx hardhat task:renounceDeployerRoles --network <net>` — strips every role from the deployer.
+### Step 5 — Accept the admin transfers
+
+```bash
+npx hardhat task:acceptAdminAsSafe --network <net>
+```
+
+Accepts the admin transfers and the book ownership as that address: directly when `SAFE_OWNER_KEY` is its own key, through the Safe when it is a Safe owner key, otherwise writes a Safe batch file. Run after `TM_ADMIN_DELAY`.
+
+Check: re-run the task; every contract reports `already the owner` or `already the default admin`.
+
+### Step 6 — Renounce the deployer's roles
+
+```bash
+npx hardhat task:renounceDeployerRoles --network <net>
+```
+
+Strips every role from the deployer.
+
+Check: the task ends with `Done - the Safe is the default admin and sole role holder.`
 
 Final state after step 3 (deployer keeps everything):
 
@@ -101,13 +161,74 @@ Set in `contracts/internal/host-chain/.env`:
 
 Run once per `<net>` = `ethereum` and `arbitrumOne`:
 
-1. `pnpm install && pnpm compile` — installs and compiles.
-2. `npx hardhat task:deployAddressBook --network <net>` — deploys CoFHEAddressBook at the canonical address via CreateX and verifies it.
-3. `REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>` — deploys and configures the TaskManager (intake stays disabled), deploys ACL, ACPShareRegistry and PlaintextsStorage, registers the TaskManager in the book, grants the maintenance roles, grants the Safe every role and starts the admin transfers, nominates the Safe as book owner, prints all addresses. Output: `ignition/deployments/chain-<chainId>/artifacts/TaskManager#TaskManager.json` (ABI + `address`); copy it to the services' `CONFIG_PATH/deployments/<chainId>/TaskManager.json` (slim-listener, result-processor) and put its `address` in the dispatcher's `tm_contract_address` and fheos's `PERMIT_CHAINS_JSON`.
-4. `npx hardhat task:acceptAdminAsSafe --network <net>` — accepts the admin transfers and the book ownership as the Safe: through the Safe with `SAFE_OWNER_KEY`, otherwise writes `safe-batches/<net>-accept-admin-<unix>.json` to import in the Safe app. Execute after `TM_ADMIN_DELAY`; re-run to verify.
-5. `npx hardhat task:renounceDeployerRoles --network <net>` — strips every role from the deployer (refuses until the Safe is admin everywhere).
-6. `npx hardhat verify --network <net> <address>` — verifies sources.
-7. Go-live: an `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks, then a `PAUSER_ROLE` holder calls `enable()` on the TaskManager — opens intake to those accounts.
+### Step 1 — Install and compile
+
+```bash
+pnpm install && pnpm compile
+```
+
+Check: `pnpm compile` exits without errors.
+
+### Step 2 — Deploy the address book
+
+```bash
+npx hardhat task:deployAddressBook --network <net>
+```
+
+Deploys CoFHEAddressBook at the canonical address via CreateX and verifies it.
+
+Check: the printed address matches `addressBook` in `deterministic/addresses.json`.
+
+### Step 3 — Deploy and register the TaskManager
+
+```bash
+REGISTER_TASK_MANAGER=1 npx hardhat deploy --network <net>
+```
+
+Deploys and configures the TaskManager (intake stays disabled), deploys ACL, ACPShareRegistry and PlaintextsStorage, registers the TaskManager in the book, grants the maintenance roles, grants the Safe every role and starts the admin transfers, nominates the Safe as book owner, prints all addresses.
+
+Output: `ignition/deployments/chain-<chainId>/artifacts/TaskManager#TaskManager.json` (ABI + `address`); copy it to the services' `CONFIG_PATH/deployments/<chainId>/TaskManager.json` (slim-listener, result-processor) and put its `address` in the dispatcher's `tm_contract_address` and fheos's `PERMIT_CHAINS_JSON`.
+
+Check: the log says `Registered TaskManager <address> as id 1 in the address book` and the artifact's `address` is that address.
+
+### Step 4 — Accept the admin transfers as the Safe
+
+```bash
+npx hardhat task:acceptAdminAsSafe --network <net>
+```
+
+Accepts the admin transfers and the book ownership as the Safe: through the Safe with `SAFE_OWNER_KEY`, otherwise writes `safe-batches/<net>-accept-admin-<unix>.json` to import in the Safe app. Execute after `TM_ADMIN_DELAY`.
+
+Check: re-run the task; every contract reports `already the owner` or `already the default admin`.
+
+### Step 5 — Renounce the deployer's roles
+
+```bash
+npx hardhat task:renounceDeployerRoles --network <net>
+```
+
+Strips every role from the deployer (refuses until the Safe is admin everywhere).
+
+Check: the task ends with `Done - the Safe is the default admin and sole role holder.`
+
+### Step 6 — Verify sources
+
+```bash
+npx hardhat verify --network <net> <address>
+```
+
+Check: the explorer shows the contract as verified.
+
+### Step 7 — Go-live
+
+```text
+TaskManager.addToAccessList(accounts)   # an ACCESS_LIST_MANAGER_ROLE holder
+TaskManager.enable()                    # a PAUSER_ROLE holder
+```
+
+An `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks, then a `PAUSER_ROLE` holder calls `enable()` on the TaskManager. Opens intake to those accounts.
+
+Check: `isEnabled()` is true and `accessList(account)` is true for each added account.
 
 Registry chain, set in `contracts/internal/registry-chain/.env`:
 
@@ -122,9 +243,35 @@ Registry chain, set in `contracts/internal/registry-chain/.env`:
 
 Run from `contracts/internal/registry-chain`:
 
-8. `pnpm install && pnpm compile && pnpm deploy:arbitrumOne` — deploys CommitmentRegistry, grants posting rights to `POSTER_ADDRESS`, activates the initial commitment version, grants the Safe every role and starts the admin transfer; prints `COMMITMENT_REGISTRY_ADDRESS`.
-9. `pnpm acceptAdminAsSafe:arbitrumOne` — accepts as the Safe (through it, or via a batch file).
-10. `pnpm renounceDeployerRoles:arbitrumOne` — strips the deployer.
+### Step 8 — Deploy the CommitmentRegistry
+
+```bash
+pnpm install && pnpm compile && pnpm deploy:arbitrumOne
+```
+
+Deploys CommitmentRegistry, grants posting rights to `POSTER_ADDRESS`, activates the initial commitment version, grants the Safe every role and starts the admin transfer; prints `COMMITMENT_REGISTRY_ADDRESS`.
+
+Check: the last line is `COMMITMENT_REGISTRY_ADDRESS=<address>`; set it in `.env` before step 9.
+
+### Step 9 — Accept the admin transfer as the Safe
+
+```bash
+pnpm acceptAdminAsSafe:arbitrumOne
+```
+
+Accepts as the Safe (through it, or via a batch file). Execute after `REGISTRY_ADMIN_DELAY`.
+
+Check: re-run the script; it reports `Safe is already the default admin`.
+
+### Step 10 — Renounce the deployer
+
+```bash
+pnpm renounceDeployerRoles:arbitrumOne
+```
+
+Strips the deployer.
+
+Check: the script ends with `Done - the Safe is the default admin and sole role holder.`
 
 Final state after step 5, before go-live (the deployer holds nothing anywhere):
 
@@ -183,10 +330,24 @@ Final state after step 5, before go-live (the deployer holds nothing anywhere):
 ## Upgrades
 
 - `npx hardhat task:upgradeTM --network <net> --key <admin key>` — upgrades the TaskManager in place after validating the storage layout (`--onlyvalidate true` checks only).
-- `hardhat deploy` again — upgrades the TaskManager and deploys fresh ACL, ACPShareRegistry and PlaintextsStorage; existing ACL permissions are not carried over.
+- `hardhat deploy` again — upgrades the registered TaskManager in place and keeps its ACL and PlaintextsStorage; the setup (signers, intake) is not rerun. `FULL_REDEPLOY=1 npx hardhat deploy --network <net>` also deploys fresh ACL, ACPShareRegistry and PlaintextsStorage and reruns the setup: ACL permissions and stored plaintexts are not carried over, and the signers and intake state are overwritten from the environment.
 
 After the handover only the Safe holds `UPGRADER_ROLE`, so `task:upgradeTM` deploys the implementation with any funded key and hands the upgrade itself to the Safe:
 
-1. `npx hardhat task:upgradeTM --network <net> --key <any funded key> --onlyvalidate true` — storage layout only.
-2. With `SAFE_ADMIN_ADDRESS` set, run it again without `--onlyvalidate`: with `SAFE_OWNER_KEY` it executes `upgradeToAndCall` and `incVersion` through the Safe; otherwise it writes `safe-batches/<net>-upgrade-tm-<unix>.json` to import under Apps -> Transaction Builder in the Safe app, then sign and execute.
-3. Verify `getVersion()` went up by one and the implementation slot points at the printed new address.
+### Step 1 — Validate the storage layout
+
+```bash
+npx hardhat task:upgradeTM --network <net> --key <any funded key> --onlyvalidate true
+```
+
+Check: the task prints `Storage layout is compatible with the previous implementation`.
+
+### Step 2 — Upgrade through the Safe
+
+```bash
+npx hardhat task:upgradeTM --network <net> --key <any funded key>
+```
+
+With `SAFE_ADMIN_ADDRESS` set: with `SAFE_OWNER_KEY` it executes `upgradeToAndCall` and `incVersion` through the Safe; otherwise it writes `safe-batches/<net>-upgrade-tm-<unix>.json` to import under Apps -> Transaction Builder in the Safe app, then sign and execute.
+
+Check: `getVersion()` went up by one and the implementation slot points at the printed new address.
