@@ -444,7 +444,7 @@ type Signers = { verifierAddress: string; decryptResultSigner: string };
  * valid addresses, and non-zero off a local network. Resolved before anything deploys: these used
  * to be read inside TaskManagerSetup, so a bad value surfaced only after the proxies existed.
  */
-function resolveSigners(ethers: any): Signers {
+function resolveSigners(ethers: any, adminAddress: string): Signers {
   const resolveSigner = (name: string): string => {
     const raw = process.env[name]?.trim();
     if (!raw) {
@@ -458,6 +458,15 @@ function resolveSigners(ethers: any): Signers {
     }
     if (address === ethers.ZeroAddress && !isLocalNetwork(hre)) {
       throw new Error(`refusing to set ${name} to 0 on a non-local network!`);
+    }
+    // Twice now a deploy shipped the admin's own address as a signer because the value was
+    // copied from TM_ADMIN_ADDRESS. The signers are the zk-verifier's and the decryptor's keys,
+    // never an admin wallet, so the TaskManager would trust whoever holds the admin key.
+    if (address.toLowerCase() === adminAddress.toLowerCase() && !isLocalNetwork(hre)) {
+      throw new Error(
+        `${name} is the admin/deployer address ${address}. It must be the signing key of the ` +
+          `${name === "VERIFIER_ADDRESS" ? "zk-verifier" : "decryptor (teecryptor)"}, not an admin wallet.`,
+      );
     }
     return address;
   };
@@ -569,7 +578,10 @@ function resolveAdmin(candidateSigners: any[]) {
 const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
-  console.log(chalk.green("Network:", JSON.stringify(hre.network.config, (_, v) => typeof v === 'bigint' ? v.toString() : v)));
+  // Never print `accounts`: on live networks it holds the deployer's private key, and this line
+  // ends up in terminals, CI logs and pasted deploy reports.
+  const { accounts: _accounts, ...networkConfigWithoutKeys } = hre.network.config as any;
+  console.log(chalk.green("Network:", JSON.stringify(networkConfigWithoutKeys, (_, v) => typeof v === 'bigint' ? v.toString() : v)));
   console.log("\n");
 
   // Note: we need to use an unused account for deployment via ignition, or it will complain
@@ -598,7 +610,7 @@ const func: DeployFunction = async function () {
   // still a no-op instead of after the proxies exist.
   const finalAdmin = await resolveFinalAdmin(ethers);
   const maintenanceAddress = resolveMaintenanceAddress(ethers);
-  const signers = resolveSigners(ethers);
+  const signers = resolveSigners(ethers, adminSigner.address);
 
   const bookAddress = addressBookAddress();
   if (!(await isAlreadyDeployed(hre, bookAddress))) {
