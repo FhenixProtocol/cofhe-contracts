@@ -25,6 +25,25 @@ const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
 /**
+ * Waits until `address` has code on the connected RPC.
+ *
+ * A load-balanced RPC can serve the first call after a deployment from a node that has not seen
+ * the deployment block yet; that call returns `0x` and ethers fails to decode it, killing the run
+ * midway. Polls once a second, up to `attempts` times.
+ */
+async function waitForCode(address: string, label: string, attempts = 30) {
+  for (let i = 0; i < attempts; i++) {
+    if (await isAlreadyDeployed(hre, address)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(
+    `${label} at ${address} still has no code after ${attempts}s - the RPC is lagging or the deployment was dropped.`,
+  );
+}
+
+/**
  * Deploys a UUPS proxy for `contractName` and grants the admin every role it declares.
  * @param adminSigner The admin account, which becomes the default admin and holds every role
  * @param contractName The name of the contract to deploy
@@ -48,6 +67,7 @@ async function getProxyContract(adminSigner: any, contractName: string, initArgs
       ProxyAddress,
     ),
   );
+  await waitForCode(ProxyAddress, `${contractName} proxy`);
   // `initialize` grants only DEFAULT_ADMIN_ROLE, so grant every role the contract declares to the
   // deployer - including UPGRADER_ROLE, without which this proxy could never be upgraded again.
   await grantAllRoles(ProxyContract, adminSigner);
