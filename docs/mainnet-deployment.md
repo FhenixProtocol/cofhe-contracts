@@ -106,7 +106,8 @@ The deploy activates the initial commitment version (must match `COMMITMENT_VERS
 
 Intake stays closed until this runs; do it only once the checklist above passes.
 
-1. An `ACCESS_LIST_MANAGER_ROLE` holder (the Safe) calls `addToAccessList(accounts)` with the contracts allowed to create tasks.
-2. A `PAUSER_ROLE` holder (the Safe or the maintenance wallet) calls `enable()`.
+1. If the deploy ran with placeholder signers, set the production ones first: a `VERIFIER_SIGNER_MANAGER_ROLE` holder calls `setVerifierSigner(<zk-verifier signer>)` and a `DECRYPT_SIGNER_MANAGER_ROLE` holder calls `setDecryptResultSigner(<teecryptor signer>)`. Before `renounceDeployerRoles` the deployer can do this directly; afterwards it is a Safe batch.
+2. An `ACCESS_LIST_MANAGER_ROLE` holder (the Safe) calls `addToAccessList(accounts)` with the contracts allowed to create tasks.
+3. A `PAUSER_ROLE` holder (the Safe or the maintenance wallet) calls `enable()`.
 
-Then check: `isEnabled() == true`, and `accessList(<account>) == true` for each listed account.
+Then check: `verifierSigner()` and `decryptResultSigner()` are the production signers and not an admin wallet, `isEnabled() == true`, and `accessList(<account>) == true` for each listed account.
