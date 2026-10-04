@@ -669,6 +669,29 @@ const func: DeployFunction = async function () {
     registerFresh = true;
   }
   await updateTaskManagerAddressInJsonArtifact(TMProxyAddress, hre);
+
+  // A registered TaskManager keeps its satellites: the ACL holds every permission granted so far
+  // and PlaintextsStorage every stored plaintext, and TaskManagerSetup would overwrite the live
+  // signers and reopen intake. Only an explicit FULL_REDEPLOY=1 runs the fresh-deploy steps below
+  // against a registered TaskManager, which throws both away.
+  if (!registerFresh) {
+    const currentAcl = await TMProxyContract.acl();
+    const currentPlaintextsStorage = await TMProxyContract.plaintextsStorage();
+    if (process.env.FULL_REDEPLOY?.trim() !== "1") {
+      console.log(chalk.green(`Keeping ACL ${currentAcl} and PlaintextsStorage ${currentPlaintextsStorage}`));
+      console.log(
+        chalk.green("Upgrade complete. Set FULL_REDEPLOY=1 to redeploy the satellites and rerun TaskManagerSetup."),
+      );
+      return;
+    }
+    console.log(
+      chalk.red(
+        `WARNING: FULL_REDEPLOY=1 - replacing ACL ${currentAcl} and PlaintextsStorage ` +
+          `${currentPlaintextsStorage}. ACL permissions and stored plaintexts are NOT carried over, ` +
+          `and the signers and enable() state are overwritten from the environment.`,
+      ),
+    );
+  }
   await TaskManagerSetup(TMProxyContract, adminSigner, signers);
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));

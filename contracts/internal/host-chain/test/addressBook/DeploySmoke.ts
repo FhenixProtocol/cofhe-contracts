@@ -16,6 +16,7 @@ const ENV_KEYS = [
   "SAFE_OWNER_KEY",
   "MAINTENANCE_ADDRESS",
   "REGISTER_TASK_MANAGER",
+  "FULL_REDEPLOY",
 ] as const;
 
 // deploy.ts loads ../.env with dotenv, which never overrides a variable that is already set,
@@ -30,6 +31,7 @@ function setDeployEnv(deployer: string, safe = "", safeOwnerKey = "") {
   process.env.SAFE_OWNER_KEY = safeOwnerKey;
   process.env.MAINTENANCE_ADDRESS = "";
   process.env.REGISTER_TASK_MANAGER = "";
+  process.env.FULL_REDEPLOY = "";
 }
 
 describe("hardhat deploy against the address book", function () {
@@ -62,9 +64,14 @@ describe("hardhat deploy against the address book", function () {
     const first = await resolveTaskManager(hre);
     expect(await ethers.provider.getCode(first)).to.not.equal("0x");
     expect(await book.getTm(taskManagerId())).to.equal(first);
+    const taskManager = await ethers.getContractAt("TaskManager", first);
+    const acl = await taskManager.acl();
+    const plaintextsStorage = await taskManager.plaintextsStorage();
 
     await hre.run("deploy", { reset: true });
     expect(await resolveTaskManager(hre)).to.equal(first);
+    expect(await taskManager.acl()).to.equal(acl);
+    expect(await taskManager.plaintextsStorage()).to.equal(plaintextsStorage);
     expect(addressBookAddress()).to.equal(await book.getAddress());
   });
 
