@@ -84,8 +84,9 @@ async function getProxyContract(adminSigner: any, contractName: string, initArgs
  *
  * @param TMProxyContract The TaskManager proxy contract
  * @param adminSigner The signer holding the operational roles on the TaskManager
+ * @param signers The verifier and decrypt-result signer addresses, validated by resolveSigners
  */
-async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
+async function TaskManagerSetup(TMProxyContract: any, adminSigner: any, signers: Signers) {
   // Get the implementation address using ERC1967 storage slot
   try {
     const currentImplementation = await getImplementationAddress(
@@ -144,18 +145,9 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
 
   try {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
-    if (
-      process.env.VERIFIER_ADDRESS === "0x0000000000000000000000000000000000000000" &&
-      !isLocalNetwork(hre)
-    ) {
-      throw new Error("refusing to set VERIFIER_ADDRESS to 0 on a non-local network!");
-    }
-
-    const tx = await connectedImplementation.setVerifierSigner(
-      process.env.VERIFIER_ADDRESS,
-    );
+    const tx = await connectedImplementation.setVerifierSigner(signers.verifierAddress);
     await tx.wait();
-    console.log(chalk.green(`Successfully set verifier signer address: ${process.env.VERIFIER_ADDRESS}`));
+    console.log(chalk.green(`Successfully set verifier signer address: ${signers.verifierAddress}`));
   } catch (e) {
     console.error(chalk.red(`Failed setVerifierSigner transaction: ${e}`));
     throw e;
@@ -164,18 +156,9 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
   // Set the decrypt result signer (dispatcher's signing key)
   try {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
-    if (
-      process.env.DECRYPT_RESULT_SIGNER === "0x0000000000000000000000000000000000000000" &&
-      !isLocalNetwork(hre)
-    ) {
-      throw new Error("refusing to set DECRYPT_RESULT_SIGNER to 0 on a non-local network!");
-    }
-
-    const tx = await connectedImplementation.setDecryptResultSigner(
-      process.env.DECRYPT_RESULT_SIGNER,
-    );
+    const tx = await connectedImplementation.setDecryptResultSigner(signers.decryptResultSigner);
     await tx.wait();
-    console.log(chalk.green(`Successfully set decrypt result signer address: ${process.env.DECRYPT_RESULT_SIGNER}`));
+    console.log(chalk.green(`Successfully set decrypt result signer address: ${signers.decryptResultSigner}`));
   } catch (e) {
     console.error(chalk.red(`Failed setDecryptResultSigner transaction: ${e}`));
     throw e;
@@ -434,6 +417,36 @@ function resolveFinalAdmin(ethers: any): string | null {
   return null;
 }
 
+type Signers = { verifierAddress: string; decryptResultSigner: string };
+
+/**
+ * Resolves the TaskManager signers from VERIFIER_ADDRESS and DECRYPT_RESULT_SIGNER. Both must be
+ * valid addresses, and non-zero off a local network. Resolved before anything deploys: these used
+ * to be read inside TaskManagerSetup, so a bad value surfaced only after the proxies existed.
+ */
+function resolveSigners(ethers: any): Signers {
+  const resolveSigner = (name: string): string => {
+    const raw = process.env[name]?.trim();
+    if (!raw) {
+      throw new Error(`${name} must be set.`);
+    }
+    let address: string;
+    try {
+      address = ethers.getAddress(raw);
+    } catch {
+      throw new Error(`${name} is not a valid address: ${JSON.stringify(raw)}`);
+    }
+    if (address === ethers.ZeroAddress && !isLocalNetwork(hre)) {
+      throw new Error(`refusing to set ${name} to 0 on a non-local network!`);
+    }
+    return address;
+  };
+  return {
+    verifierAddress: resolveSigner("VERIFIER_ADDRESS"),
+    decryptResultSigner: resolveSigner("DECRYPT_RESULT_SIGNER"),
+  };
+}
+
 /**
  * Resolves the maintenance wallet - a hardware wallet that holds only the narrow operational
  * roles in {@link MAINTENANCE_ROLES}, so day-to-day pausing and security-zone changes do not need
@@ -565,6 +578,7 @@ const func: DeployFunction = async function () {
   // still a no-op instead of after the proxies exist.
   const finalAdmin = resolveFinalAdmin(ethers);
   const maintenanceAddress = resolveMaintenanceAddress(ethers);
+  const signers = resolveSigners(ethers);
 
   const bookAddress = addressBookAddress();
   if (!(await isAlreadyDeployed(hre, bookAddress))) {
@@ -635,7 +649,7 @@ const func: DeployFunction = async function () {
     registerFresh = true;
   }
   await updateTaskManagerAddressInJsonArtifact(TMProxyAddress, hre);
-  await TaskManagerSetup(TMProxyContract, adminSigner);
+  await TaskManagerSetup(TMProxyContract, adminSigner, signers);
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));
   // Deploy and upgrade ACL contract
