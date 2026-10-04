@@ -397,6 +397,20 @@ function isMainnetDeployment(): boolean {
   return MAINNET_CHAIN_IDS.has((hre.network.config as any)?.chainId);
 }
 
+// The address of the intentionally public DEPLOYER_PRIVATE_KEY in .env.example. The local stack
+// copies that file verbatim, so the key stays; a mainnet network must never sign with it.
+const EXAMPLE_DEPLOYER_ADDRESS = "0x4e6206fC78674E5eFf48Dcd0166060f95a832c60";
+
+/** Refuses a production deployment signed by the public example key. */
+function requireNotExampleKey(deployer: string) {
+  if (isMainnetDeployment() && deployer.toLowerCase() === EXAMPLE_DEPLOYER_ADDRESS.toLowerCase()) {
+    const chainId = (hre.network.config as any)?.chainId;
+    throw new Error(
+      `DEPLOYER_PRIVATE_KEY is the public example key from .env.example; refusing to deploy on chain ${chainId}`,
+    );
+  }
+}
+
 /**
  * Resolves the address that ends up holding DEFAULT_ADMIN and every operational role once the
  * deployment settles - on mainnet, the Gnosis Safe. Returns null when unset, which is refused on
@@ -554,7 +568,7 @@ const func: DeployFunction = async function () {
 
   // Note: we need to use an unused account for deployment via ignition, or it will complain
   const [signer, signerProxy] = await ethers.getSigners();
-  
+  requireNotExampleKey(signer.address);
 
   console.log(chalk.bold.blue("-----------------------Funding-----------------------------"));
   if (hre.network.name.includes("localfhenix")) {

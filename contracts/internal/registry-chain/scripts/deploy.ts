@@ -58,6 +58,10 @@ function resolveAdminDelay() {
 // Chains where a deployment must not end with an EOA holding DEFAULT_ADMIN.
 const MAINNET_CHAIN_IDS = new Set([1, 42161]);
 
+// The address of the intentionally public DEPLOYER_PRIVATE_KEY in .env.example. The local stack
+// copies that file verbatim, so the key stays; a mainnet network must never sign with it.
+const EXAMPLE_DEPLOYER_ADDRESS = "0x4e6206fC78674E5eFf48Dcd0166060f95a832c60";
+
 /**
  * Resolves the address that ends up holding DEFAULT_ADMIN and every operational role once the
  * deployment settles - on mainnet, the Gnosis Safe. Returns null when unset, which is refused
@@ -101,6 +105,12 @@ function resolvePosterAddress() {
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
+  const chainId = (hre.network.config as any)?.chainId;
+  if (MAINNET_CHAIN_IDS.has(chainId) && deployer.address.toLowerCase() === EXAMPLE_DEPLOYER_ADDRESS.toLowerCase()) {
+    throw new Error(
+      `DEPLOYER_PRIVATE_KEY is the public example key from .env.example; refusing to deploy on chain ${chainId}`,
+    );
+  }
   const posterAddress = resolvePosterAddress();
   const adminDelay = resolveAdminDelay();
   // Resolved before anything deploys, so a missing Safe address fails the run while it is
