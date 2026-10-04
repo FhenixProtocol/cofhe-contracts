@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **`task:setVerifierSignerAsSafe`, `task:setDecryptResultSignerAsSafe` and `task:setSignersAsSafe`** set the TaskManager's signers once the Safe holds the signer-manager roles: through the Safe with `SAFE_OWNER_KEY`, otherwise as a Transaction Builder batch. Refuse address(0) and the Safe itself; re-run to verify. Use them at go-live when the deploy ran with placeholder signers.
 - **`task:upgradeTM` works after the handover.** When the signer lacks `UPGRADER_ROLE` it deploys the implementation and hands `upgradeToAndCall` + `incVersion` to the Safe at `SAFE_ADMIN_ADDRESS`: executed through it with `SAFE_OWNER_KEY`, otherwise written as a Safe-app batch under `safe-batches/`.
 - **`task:upgradeACL` and `task:upgradePlaintextsStorage`** upgrade the registered TaskManager's satellites in place, running `setTaskManager` inside `upgradeToAndCall` so the proxy is never live without one. Run them from the default admin; `--onlyvalidate true` checks the layout only.
 - **`task:registerTaskManager --address <tm>`** points the address book's id at an already deployed TaskManager and, with `SAFE_ADMIN_ADDRESS` set, nominates that address as book owner. Run it after `task:deployAddressBook` instead of `hardhat deploy`, then `task:acceptAdminAsSafe`.

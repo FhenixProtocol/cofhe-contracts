@@ -221,14 +221,18 @@ Check: the explorer shows the contract as verified.
 
 ### Step 7 — Go-live
 
+```bash
+npx hardhat task:setSignersAsSafe --verifier <zk-verifier signer> --decrypt <teecryptor signer> --network <net>
+```
+
 ```text
 TaskManager.addToAccessList(accounts)   # an ACCESS_LIST_MANAGER_ROLE holder
 TaskManager.enable()                    # a PAUSER_ROLE holder
 ```
 
-An `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks, then a `PAUSER_ROLE` holder calls `enable()` on the TaskManager. Opens intake to those accounts.
+If the deploy ran with placeholder signers, set the production ones first: the task executes through the Safe with `SAFE_OWNER_KEY`, otherwise it writes a Transaction Builder batch (`task:setVerifierSignerAsSafe` / `task:setDecryptResultSignerAsSafe` set one at a time). Then an `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks, and a `PAUSER_ROLE` holder calls `enable()` on the TaskManager. Opens intake to those accounts.
 
-Check: `isEnabled()` is true and `accessList(account)` is true for each added account.
+Check: `verifierSigner()` and `decryptResultSigner()` are the production signers, `isEnabled()` is true and `accessList(account)` is true for each added account.
 
 Registry chain, set in `contracts/internal/registry-chain/.env`:
 
