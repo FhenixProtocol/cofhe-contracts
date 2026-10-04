@@ -8,6 +8,7 @@ import {
   readCommittedAddresses,
   readFrozenArtifacts,
 } from "../utils/addressBookDeterministic";
+import type { ComputedAddresses, FrozenArtifacts } from "../utils/addressBookDeterministic";
 import { CREATEX_ADDRESS, deployCreateX, isAlreadyDeployed } from "../utils/deployCreateX";
 import { deployCreate2ViaCreateX } from "../utils/deployDeterministic";
 import { fundAccount } from "../utils/fund";
@@ -56,12 +57,14 @@ export async function verifyAddressBookDeployment(
   }
 }
 
-async function deployBook(hre: HardhatRuntimeEnvironment, signer: any, owner: string) {
-  const frozen = readFrozenArtifacts();
-  const { addressBookImplV1, addressBook, proxyInitCode } = computeAddressBookAddresses(owner, frozen);
-  await deployCreate2ViaCreateX(hre, signer, addressBookImplV1, frozen.implCreationCode, "CoFHEAddressBook v1 implementation");
-  await deployCreate2ViaCreateX(hre, signer, addressBook, proxyInitCode, "CoFHEAddressBook proxy");
-  return { addressBookImplV1, addressBook };
+async function deployBook(
+  hre: HardhatRuntimeEnvironment,
+  signer: any,
+  frozen: FrozenArtifacts,
+  book: ComputedAddresses,
+): Promise<void> {
+  await deployCreate2ViaCreateX(hre, signer, book.addressBookImplV1, frozen.implCreationCode, "CoFHEAddressBook v1 implementation");
+  await deployCreate2ViaCreateX(hre, signer, book.addressBook, book.proxyInitCode, "CoFHEAddressBook proxy");
 }
 
 task("task:deployAddressBook", "Deploy the CoFHEAddressBook at its canonical address").setAction(
@@ -80,7 +83,10 @@ task("task:deployAddressBook", "Deploy the CoFHEAddressBook at its canonical add
       if (!(await isAlreadyDeployed(hre, CREATEX_ADDRESS))) {
         await deployCreateX(hre, signer);
       }
-      const { addressBookImplV1, addressBook } = await deployBook(hre, signer, signer.address);
+      const frozen = readFrozenArtifacts();
+      const book = computeAddressBookAddresses(signer.address, frozen);
+      const { addressBookImplV1, addressBook } = book;
+      await deployBook(hre, signer, frozen, book);
       await verifyAddressBookDeployment(hre, addressBook, addressBookImplV1, [signer.address]);
       // The in-process Hardhat network is gone when the command ends; nothing compiles against it.
       if (hre.network.name !== "hardhat" && addressBookAddress().toLowerCase() !== addressBook.toLowerCase()) {
@@ -98,13 +104,17 @@ task("task:deployAddressBook", "Deploy the CoFHEAddressBook at its canonical add
       );
     }
     const committed = readCommittedAddresses();
-    const { addressBookImplV1, addressBook } = await deployBook(hre, signer, committed.bootstrapOwner);
+    const frozen = readFrozenArtifacts();
+    const book = computeAddressBookAddresses(committed.bootstrapOwner, frozen);
+    const { addressBookImplV1, addressBook } = book;
+    // Compare before any transaction is sent: a drifted freeze must not deploy anything.
     if (addressBook !== committed.addressBook || addressBookImplV1 !== committed.addressBookImplV1) {
       throw new Error(
         `Computed ${addressBook} / ${addressBookImplV1} but deterministic/addresses.json says ` +
           `${committed.addressBook} / ${committed.addressBookImplV1}. Run the FrozenBytecode test.`,
       );
     }
+    await deployBook(hre, signer, frozen, book);
     const acceptedOwners = [committed.bootstrapOwner];
     const finalAdmin = process.env.SAFE_ADMIN_ADDRESS?.trim();
     if (finalAdmin) {
