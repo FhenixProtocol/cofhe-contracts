@@ -184,3 +184,9 @@ Final state after step 5, before go-live (the deployer holds nothing anywhere):
 
 - `npx hardhat task:upgradeTM --network <net> --key <admin key>` — upgrades the TaskManager in place after validating the storage layout (`--onlyvalidate true` checks only).
 - `hardhat deploy` again — upgrades the TaskManager and deploys fresh ACL, ACPShareRegistry and PlaintextsStorage; existing ACL permissions are not carried over.
+
+After the handover only the Safe holds `UPGRADER_ROLE`, so `task:upgradeTM` deploys the implementation with any funded key and hands the upgrade itself to the Safe:
+
+1. `npx hardhat task:upgradeTM --network <net> --key <any funded key> --onlyvalidate true` — storage layout only.
+2. With `SAFE_ADMIN_ADDRESS` set, run it again without `--onlyvalidate`: with `SAFE_OWNER_KEY` it executes `upgradeToAndCall` and `incVersion` through the Safe; otherwise it writes `safe-batches/<net>-upgrade-tm-<unix>.json` to import under Apps -> Transaction Builder in the Safe app, then sign and execute.
+3. Verify `getVersion()` went up by one and the implementation slot points at the printed new address.
