@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **`task:addToAccessList --accounts <addr>[,<addr>...]`** adds one or more contracts to the TaskManager's access list: directly when the signer holds `ACCESS_LIST_MANAGER_ROLE`, otherwise through the Safe with `SAFE_OWNER_KEY` or as a Transaction Builder batch. Re-run to verify.
 - **`task:setVerifierSignerAsSafe`, `task:setDecryptResultSignerAsSafe` and `task:setSignersAsSafe`** set the TaskManager's signers once the Safe holds the signer-manager roles: through the Safe with `SAFE_OWNER_KEY`, otherwise as a Transaction Builder batch. Refuse address(0) and the Safe itself; re-run to verify. Use them at go-live when the deploy ran with placeholder signers.
 - **`task:upgradeTM` works after the handover.** When the signer lacks `UPGRADER_ROLE` it deploys the implementation and hands `upgradeToAndCall` + `incVersion` to the Safe at `SAFE_ADMIN_ADDRESS`: executed through it with `SAFE_OWNER_KEY`, otherwise written as a Safe-app batch under `safe-batches/`.
 - **`task:upgradeACL` and `task:upgradePlaintextsStorage`** upgrade the satellites in place, running `setTaskManager` inside `upgradeToAndCall`. After the handover the Safe at `SAFE_ADMIN_ADDRESS` sends the upgrade, as in `task:upgradeTM`; `--onlyvalidate true` checks the layout only.

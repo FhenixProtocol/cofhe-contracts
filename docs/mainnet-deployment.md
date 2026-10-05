@@ -107,7 +107,7 @@ The deploy activates the initial commitment version (must match `COMMITMENT_VERS
 Intake stays closed until this runs; do it only once the checklist above passes.
 
 1. If the deploy ran with placeholder signers, set the production ones first: a `VERIFIER_SIGNER_MANAGER_ROLE` holder calls `setVerifierSigner(<zk-verifier signer>)` and a `DECRYPT_SIGNER_MANAGER_ROLE` holder calls `setDecryptResultSigner(<teecryptor signer>)`. Before `renounceDeployerRoles` the deployer can do this directly; afterwards use `npx hardhat task:setSignersAsSafe --verifier <zk-verifier signer> --decrypt <teecryptor signer> --network <net>` (or `task:setVerifierSignerAsSafe` / `task:setDecryptResultSignerAsSafe` for one of them): with `SAFE_OWNER_KEY` it executes through the Safe, otherwise it writes a Transaction Builder batch; re-run to verify. Step by step: [docs/set-signers-as-safe.md](set-signers-as-safe.md).
-2. An `ACCESS_LIST_MANAGER_ROLE` holder (the Safe) calls `addToAccessList(accounts)` with the contracts allowed to create tasks.
+2. An `ACCESS_LIST_MANAGER_ROLE` holder (the Safe) calls `addToAccessList(accounts)` with the contracts allowed to create tasks: `npx hardhat task:addToAccessList --accounts <addr>[,<addr>...] --network <net>` sends it directly when the signer holds the role, otherwise through the Safe with `SAFE_OWNER_KEY` or as a Transaction Builder batch; re-run to verify.
 3. A `PAUSER_ROLE` holder (the Safe or the maintenance wallet) calls `enable()`.
 
 Then check: `verifierSigner()` and `decryptResultSigner()` are the production signers and not an admin wallet, `isEnabled() == true`, and `accessList(<account>) == true` for each listed account.
