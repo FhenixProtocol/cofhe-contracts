@@ -18,6 +18,7 @@
 - **FHE.sol resolves the TaskManager through `CoFHEAddressBook`**, an upgradeable book at one canonical address, replacing the deterministic TaskManager proxy. Run `task:deployAddressBook` before `hardhat deploy`; replace the removed `TASK_MANAGER_ADDRESS` with `ICoFHEAddressBook.getTm(1)`.
 
 ### Fixed
+- **Local `task:deployAddressBook` makes the book owner the admin `hardhat deploy` picks** (`TM_ADMIN_ADDRESS`, else the `AGGREGATOR_KEY` wallet), so the local deploy no longer refuses the book. The local book address changes. No action needed.
 - **The Safe FHE variants no longer revert when no TaskManager is registered.** `FHE.getDecryptResultSafe`, `verifyDecryptResultSafe` and `verifyDecryptResultBatchSafe` return their defaults (`0`/`false`) when the book has no code or no TaskManager is set (`Common.tryTm`); the non-Safe functions still revert.
 - **An empty `SAFE_BATCH_OUT` means the default `safe-batches/` path** instead of being taken as the output file name; `.env.example` ships it empty. No action needed.
 - **Signer addresses are validated before anything deploys**: `VERIFIER_ADDRESS` and `DECRYPT_RESULT_SIGNER` must be set, valid and (off a local network) non-zero, or the deploy fails while it is still a no-op instead of after the proxies exist.

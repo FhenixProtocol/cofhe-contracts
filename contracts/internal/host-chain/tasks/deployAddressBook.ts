@@ -57,6 +57,21 @@ export async function verifyAddressBookDeployment(
   }
 }
 
+/**
+ * The admin `deploy/deploy.ts` picks on a local network (see `resolveAdmin` there): TM_ADMIN_ADDRESS
+ * when set, otherwise the AGGREGATOR_KEY wallet. That admin registers the TaskManager with `setTm`,
+ * so the local book must be owned by it, not by the deployer that sends the CreateX transactions.
+ */
+function localBookOwner(hre: HardhatRuntimeEnvironment, deployer: string): string {
+  const { ethers } = hre;
+  const requestedAdmin = process.env.TM_ADMIN_ADDRESS?.trim();
+  if (requestedAdmin) {
+    return ethers.getAddress(requestedAdmin);
+  }
+  const aggregatorKey = process.env.AGGREGATOR_KEY?.trim();
+  return aggregatorKey ? new ethers.Wallet(aggregatorKey).address : deployer;
+}
+
 async function deployBook(
   hre: HardhatRuntimeEnvironment,
   signer: any,
@@ -73,7 +88,7 @@ task("task:deployAddressBook", "Deploy the CoFHEAddressBook at its canonical add
     const [signer, signerProxy, aggregatorSigner] = await ethers.getSigners();
 
     if (isLocalNetwork(hre)) {
-      // A local chain has no bootstrap owner: the book is owned by the local deployer, so it lands
+      // A local chain has no bootstrap owner: the book is owned by the local admin, so it lands
       // at a local address, and FHE.sol is patched to it before anything compiles against it.
       if (hre.network.name.includes("localfhenix")) {
         await fundAccount(hre, signerProxy);
@@ -84,16 +99,17 @@ task("task:deployAddressBook", "Deploy the CoFHEAddressBook at its canonical add
         await deployCreateX(hre, signer);
       }
       const frozen = readFrozenArtifacts();
-      const book = computeAddressBookAddresses(signer.address, frozen);
+      const owner = localBookOwner(hre, signer.address);
+      const book = computeAddressBookAddresses(owner, frozen);
       const { addressBookImplV1, addressBook } = book;
       await deployBook(hre, signer, frozen, book);
-      await verifyAddressBookDeployment(hre, addressBook, addressBookImplV1, [signer.address]);
+      await verifyAddressBookDeployment(hre, addressBook, addressBookImplV1, [owner]);
       // The in-process Hardhat network is gone when the command ends; nothing compiles against it.
       if (hre.network.name !== "hardhat" && addressBookAddress().toLowerCase() !== addressBook.toLowerCase()) {
         setAddressBookAddressInSolidity(addressBook);
         await hre.run("compile");
       }
-      console.log(chalk.green(`Local CoFHEAddressBook at ${addressBook}, owned by ${signer.address}`));
+      console.log(chalk.green(`Local CoFHEAddressBook at ${addressBook}, owned by ${owner}`));
       return;
     }
 
