@@ -1,75 +1,19 @@
-import * as fs from "fs"
-import * as path from "path"
+import * as fs from "fs";
+import * as path from "path";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 
-function updateTaskManagerAddressInFile(newAddress: string, filePath: string, searchValue: RegExp, replaceValue: string) {
-    let fileContent = fs.readFileSync(filePath, 'utf8');
-
-    // Replace the address in the file content
-    const updatedContent = fileContent.replace(searchValue, replaceValue);
-
-    // Write the updated content back to the file
-    fs.writeFileSync(filePath, updatedContent, 'utf8');
-    console.log(`Updated ${filePath} with new address: ${newAddress}`);
-}
-
-// Only needed for development purposes, in production the address is constant
-export function updateTaskManagerAddressInSolidity(newProxyAddress: string) {
-    // Update the address in FHE.sol
-    let filePath = path.join(__dirname, '../node_modules/@fhenixprotocol/', 'cofhe-contracts', 'FHE.sol');
-    updateTaskManagerAddressInFile(
-      newProxyAddress,
-      filePath,
-      /address constant TASK_MANAGER_ADDRESS = .+;/,
-      `address constant TASK_MANAGER_ADDRESS = ${newProxyAddress};`
-    );
-
-    // Update the address in addresses/TaskManagerAddress.sol
-    filePath = path.join(__dirname, '../contracts/addresses/', 'TaskManagerAddress.sol');
-    updateTaskManagerAddressInFile(
-      newProxyAddress,
-      filePath,
-      /address constant taskManagerAddress = .+;/,
-      `address constant taskManagerAddress = ${newProxyAddress};`
-    );
-}
-
+/**
+ * Writes the TaskManager artifact plus its address where the local stack picks it up.
+ * `cofhe_utils.sh` copies this file to every service that needs the TaskManager ABI and address.
+ */
 export async function updateTaskManagerAddressInJsonArtifact(newAddress: string, hre: HardhatRuntimeEnvironment) {
   const artifactsDir = path.join(
     __dirname,
     `../ignition/deployments/chain-${await hre.getChainId()}/artifacts/`,
   );
-  const filePath = path.join(artifactsDir, "DeterministicTM#DeterministicTM.json");
-
   fs.mkdirSync(artifactsDir, { recursive: true });
-
-  let json: any;
-  if (fs.existsSync(filePath)) {
-    json = JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } else {
-    // Ignition artifact was not written (e.g. create2 strategy on a fresh chain) — synthesise it
-    json = { address: newAddress };
-  }
-  json.address = newAddress;
-
-  // Write the updated content back to the file
-  fs.writeFileSync(filePath, JSON.stringify(json, null, 4), "utf8");
+  const filePath = path.join(artifactsDir, "TaskManager#TaskManager.json");
+  const artifact = await hre.artifacts.readArtifact("TaskManager");
+  fs.writeFileSync(filePath, JSON.stringify({ ...artifact, address: newAddress }, null, 4), "utf8");
   console.log(`Updated ${filePath} with new address: ${newAddress}`);
-  const newFilePath = path.join(
-    __dirname,
-    `../ignition/deployments/chain-${await hre.getChainId()}/artifacts/`,
-    "TaskManager#TaskManager.json",
-  );
-  fs.renameSync(filePath, newFilePath);
-  console.log(`Renamed ${filePath} to ${newFilePath}`);
-}
-
-export async function readTaskManagerAddressFromSolidity() {
-    const filePath = path.join(__dirname, '../node_modules/@fhenixprotocol/', 'cofhe-contracts', 'FHE.sol');
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const address = fileContent.match(/address constant TASK_MANAGER_ADDRESS = (.+);/)?.[1];
-    if (!address) {
-        throw new Error('TaskManager address not found in FHE.sol');
-    }
-    return address;
 }

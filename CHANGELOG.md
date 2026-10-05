@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+### Added
+- **`task:setVerifierSignerAsSafe`, `task:setDecryptResultSignerAsSafe` and `task:setSignersAsSafe`** set the TaskManager's signers once the Safe holds the signer-manager roles: through the Safe with `SAFE_OWNER_KEY`, otherwise as a Transaction Builder batch. Refuse address(0) and the Safe itself; re-run to verify. Use them at go-live when the deploy ran with placeholder signers.
+- **`task:upgradeTM` works after the handover.** When the signer lacks `UPGRADER_ROLE` it deploys the implementation and hands `upgradeToAndCall` + `incVersion` to the Safe at `SAFE_ADMIN_ADDRESS`: executed through it with `SAFE_OWNER_KEY`, otherwise written as a Safe-app batch under `safe-batches/`.
+- **`task:upgradeACL` and `task:upgradePlaintextsStorage`** upgrade the satellites in place, running `setTaskManager` inside `upgradeToAndCall`. After the handover the Safe at `SAFE_ADMIN_ADDRESS` sends the upgrade, as in `task:upgradeTM`; `--onlyvalidate true` checks the layout only.
+- **`task:registerTaskManager --address <tm>`** points the address book's id at an already deployed TaskManager and, with `SAFE_ADMIN_ADDRESS` set, nominates that address as book owner. Run it after `task:deployAddressBook` instead of `hardhat deploy`, then `task:acceptAdminAsSafe`.
+- **Mainnet deployment support (Ethereum, Arbitrum One)** — `ethereum` and `arbitrumOne` networks in both hardhat projects (env-driven keyed RPCs with public defaults, Etherscan API v2 verification via `ETHERSCAN_API_KEY`) and a Safe-first flow: `task:deployAddressBook` → `REGISTER_TASK_MANAGER=1 hardhat deploy` → `task:acceptAdminAsSafe` → `task:renounceDeployerRoles`. The TaskManager is a plain UUPS proxy registered as id 1 in the book. On chain IDs 1/42161 the deploy refuses to run without `SAFE_ADMIN_ADDRESS`, `TM_ADMIN_ADDRESS`, `TM_ADMIN_DELAY`, `VERIFIER_ADDRESS`, `DECRYPT_RESULT_SIGNER` and `MAINTENANCE_ADDRESS`, leaves the TaskManager disabled with the access list on, and ends with the Safe holding every role and the two-step default-admin transfer begun on each contract. `task:acceptAdminAsSafe` accepts as the Safe — through it with `SAFE_OWNER_KEY` (threshold 1) or by printing the Safe-app transactions — and `task:renounceDeployerRoles` strips the deployer once the Safe is admin; the registry chain gets script equivalents. Runbook: `docs/mainnet-deployment.md`.
+
+### Changed
+- **`hardhat deploy` on a chain with a registered TaskManager now upgrades it**, keeps its ACL, PlaintextsStorage and signers, and finishes an interrupted maintenance grant or handover. `FULL_REDEPLOY=1` restores the old flow: fresh satellites and setup, dropping permissions and stored plaintexts.
+- **`SAFE_ADMIN_ADDRESS` must have code on mainnet**: on chain IDs 1/42161 both deploys abort when the address is empty, so a Safe not yet deployed there (or a typo) cannot be handed an admin transfer nobody can accept. Deploy the Safe first.
+- **Mainnet deploys refuse the public example key**: on chain IDs 1/42161 both deploys abort when `DEPLOYER_PRIVATE_KEY` is the `.env.example` key (`0x4e6206fC…`). Set a real deployer key before running.
+- **`task:acceptAdminAsSafe` accepts directly when `SAFE_OWNER_KEY` is the final admin's own key**, so a testnet handover can target an EOA. Mainnet flow unchanged.
+- **`KEY` is renamed `DEPLOYER_PRIVATE_KEY`** in the host-chain and registry-chain `.env` files and CI. Rename it in your `.env` before running any deploy or task.
+- **FHE.sol resolves the TaskManager through `CoFHEAddressBook`**, an upgradeable book at one canonical address, replacing the deterministic TaskManager proxy. Run `task:deployAddressBook` before `hardhat deploy`; replace the removed `TASK_MANAGER_ADDRESS` with `ICoFHEAddressBook.getTm(1)`.
+
+### Fixed
+- **The Safe FHE variants no longer revert when no TaskManager is registered.** `FHE.getDecryptResultSafe`, `verifyDecryptResultSafe` and `verifyDecryptResultBatchSafe` return their defaults (`0`/`false`) when the book has no code or no TaskManager is set (`Common.tryTm`); the non-Safe functions still revert.
+- **An empty `SAFE_BATCH_OUT` means the default `safe-batches/` path** instead of being taken as the output file name; `.env.example` ships it empty. No action needed.
+- **Signer addresses are validated before anything deploys**: `VERIFIER_ADDRESS` and `DECRYPT_RESULT_SIGNER` must be set, valid and (off a local network) non-zero, or the deploy fails while it is still a no-op instead of after the proxies exist.
+- **`task:deployAddressBook` compares the computed addresses with `deterministic/addresses.json` before sending any transaction**, so a drifted freeze deploys nothing instead of failing after the implementation landed. No action needed.
+- **The deploy waits for proxy code before granting roles**, polling `eth_getCode` for up to 30 s, so a lagging load-balanced RPC no longer kills the run midway with a decode error. No action needed.
+- **CreateX deploys no longer misreport a lagging RPC as a wrong address.** The deploy reads the created address from CreateX's `ContractCreation` log and waits for `eth_getCode` to catch up; re-run `task:deployAddressBook` after an old failure, it is idempotent.
+- **A fresh mainnet TaskManager now starts disabled with the access list enabled.** `initialize` opens intake to everyone, so on chain IDs 1 and 42161 the deploy closes it and turns the access list on; go-live is `addToAccessList` then `enable()`.
+- **ACP share-registry deploy fixed for real this time** — the previous fix (below) forwarded `(admin, adminDelay)` to `getProxyContract`, but `ACPShareRegistry` is plain `AccessControl` and its `initialize` takes only `(admin)`; encoding the call threw `too many arguments`, and the surrounding catch still *returned* the error instead of rethrowing, so every deploy since kept silently skipping `setShareRegistry`. `ACPInfrastructureSetup` now deploys the registry with the one-argument initializer and rethrows on any failure, so a broken ACP setup fails the deploy instead of shipping without a share registry.
+
 ## v0.3.0 - 2026-09-08
 
 > Live on testnet-v2 since 2026-08-24, except the admin change events and the `setSecurityZones` fix.

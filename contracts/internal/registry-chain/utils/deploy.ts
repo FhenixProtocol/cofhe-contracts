@@ -85,3 +85,42 @@ export async function grantAllRoles(
     }
   }
 }
+
+/**
+ * Renounces every role the signer holds on the contract - the mirror of `grantAllRoles`, with
+ * the same ABI-driven role discovery. DEFAULT_ADMIN_ROLE is excluded on purpose: it leaves via
+ * the two-step default-admin transfer, not via renounce.
+ *
+ * Keep the signature in sync with the sibling copy in `host-chain/utils/roles.ts` - the two
+ * hardhat projects have no shared package, so this is duplicated on purpose.
+ *
+ * @param contract An AccessControl contract instance.
+ * @param signer   The account renouncing its own roles.
+ * @param log      Whether to print each renounce.
+ */
+export async function renounceAllRoles(contract: any, signer: any, log = true) {
+  const connectedContract = contract.connect(signer);
+  const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
+
+  const roleNames: string[] = contract.interface.fragments
+    .filter(
+      (fragment: any) =>
+        fragment.type === "function" &&
+        fragment.inputs.length === 0 &&
+        /^[A-Z0-9_]+_ROLE$/.test(fragment.name) &&
+        fragment.name !== "DEFAULT_ADMIN_ROLE",
+    )
+    .map((fragment: any) => fragment.name);
+
+  for (const roleName of roleNames) {
+    const role = await contract[roleName]();
+    if (role === defaultAdminRole || !(await contract.hasRole(role, signer.address))) {
+      continue;
+    }
+    const tx = await connectedContract.renounceRole(role, signer.address);
+    await tx.wait();
+    if (log) {
+      console.log(`Renounced ${roleName} from ${signer.address}`);
+    }
+  }
+}

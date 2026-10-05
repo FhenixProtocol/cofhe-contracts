@@ -5,32 +5,56 @@ import { Contract } from "ethers";
 import chalk from "chalk";
 import hre, { ethers, upgrades } from "hardhat";
 
-import { deployCreateX } from "../utils/deployCreateX";
+import { deployCreateX, isAlreadyDeployed } from "../utils/deployCreateX";
 import { fundAccount } from "../utils/fund";
 import {
   getDefaultAdmin,
   grantAllRoles,
+  grantRolesByName,
   isLocalNetwork,
+  MAINTENANCE_ROLES,
   requireDefaultAdminIsSignerOrUnset,
   resolveAdminDelay,
 } from "../utils/roles";
+import { addressBookAddress, registeredTaskManager, taskManagerId } from "../utils/addressBook";
+import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
+import { readCommittedAddresses } from "../utils/addressBookDeterministic";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
 /**
- * Deploys a proxy contract for a given contract name
+ * Waits until `address` has code on the connected RPC.
+ *
+ * A load-balanced RPC can serve the first call after a deployment from a node that has not seen
+ * the deployment block yet; that call returns `0x` and ethers fails to decode it, killing the run
+ * midway. Polls once a second, up to `attempts` times.
+ */
+async function waitForCode(address: string, label: string, attempts = 30) {
+  for (let i = 0; i < attempts; i++) {
+    if (await isAlreadyDeployed(hre, address)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(
+    `${label} at ${address} still has no code after ${attempts}s - the RPC is lagging or the deployment was dropped.`,
+  );
+}
+
+/**
+ * Deploys a UUPS proxy for `contractName` and grants the admin every role it declares.
  * @param adminSigner The admin account, which becomes the default admin and holds every role
- * @param adminDelay The default-admin transfer delay to initialize with
  * @param contractName The name of the contract to deploy
+ * @param initArgs Arguments for the contract's `initialize`
  * @returns The proxy contract and its address
  */
-async function getProxyContract(adminSigner: any, adminDelay: number, contractName: string) {
-  const TaskManager = await ethers.getContractFactory(contractName);
+async function getProxyContract(adminSigner: any, contractName: string, initArgs: unknown[]) {
+  const Factory = await ethers.getContractFactory(contractName);
   const ProxyContract = await upgrades.deployProxy(
-    TaskManager,
-    [adminSigner.address, adminDelay],
+    Factory,
+    initArgs,
     { kind: "uups", initializer: "initialize" },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
@@ -43,6 +67,7 @@ async function getProxyContract(adminSigner: any, adminDelay: number, contractNa
       ProxyAddress,
     ),
   );
+  await waitForCode(ProxyAddress, `${contractName} proxy`);
   // `initialize` grants only DEFAULT_ADMIN_ROLE, so grant every role the contract declares to the
   // deployer - including UPGRADER_ROLE, without which this proxy could never be upgraded again.
   await grantAllRoles(ProxyContract, adminSigner);
@@ -59,8 +84,9 @@ async function getProxyContract(adminSigner: any, adminDelay: number, contractNa
  *
  * @param TMProxyContract The TaskManager proxy contract
  * @param adminSigner The signer holding the operational roles on the TaskManager
+ * @param signers The verifier and decrypt-result signer addresses, validated by resolveSigners
  */
-async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
+async function TaskManagerSetup(TMProxyContract: any, adminSigner: any, signers: Signers) {
   // Get the implementation address using ERC1967 storage slot
   try {
     const currentImplementation = await getImplementationAddress(
@@ -81,15 +107,27 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
     throw e;
   }
 
-  // Open the coprocessor intake kill-switch
-  try {
-    const connectedImplementation = TMProxyContract.connect(adminSigner);
-    const enableTx = await connectedImplementation.enable();
-    await enableTx.wait();
-    console.log(chalk.green("Successfully enabled TaskManager"));
-  } catch (e) {
-    console.error(chalk.red(`Failed enable transaction: ${e}`));
-    throw e;
+  // Open the coprocessor intake kill-switch - except on mainnet, which ships closed: a fresh
+  // TaskManager is disabled right after it is deployed, and a re-run must not touch a live one.
+  // Going live is a separate, deliberate step by a PAUSER_ROLE holder (the Safe, or the
+  // maintenance wallet) once the configuration is verified.
+  if (isMainnetDeployment()) {
+    console.log(
+      chalk.yellow(
+        "Mainnet deployment - leaving TaskManager DISABLED. Intake stays closed until a " +
+          "PAUSER_ROLE holder calls enable(); see docs/mainnet-deployment.md.",
+      ),
+    );
+  } else {
+    try {
+      const connectedImplementation = TMProxyContract.connect(adminSigner);
+      const enableTx = await connectedImplementation.enable();
+      await enableTx.wait();
+      console.log(chalk.green("Successfully enabled TaskManager"));
+    } catch (e) {
+      console.error(chalk.red(`Failed enable transaction: ${e}`));
+      throw e;
+    }
   }
 
   // Set the security zones
@@ -107,18 +145,9 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
 
   try {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
-    if (
-      process.env.VERIFIER_ADDRESS === "0x0000000000000000000000000000000000000000" &&
-      !isLocalNetwork(hre)
-    ) {
-      throw new Error("refusing to set VERIFIER_ADDRESS to 0 on a non-local network!");
-    }
-
-    const tx = await connectedImplementation.setVerifierSigner(
-      process.env.VERIFIER_ADDRESS,
-    );
+    const tx = await connectedImplementation.setVerifierSigner(signers.verifierAddress);
     await tx.wait();
-    console.log(chalk.green(`Successfully set verifier signer address: ${process.env.VERIFIER_ADDRESS}`));
+    console.log(chalk.green(`Successfully set verifier signer address: ${signers.verifierAddress}`));
   } catch (e) {
     console.error(chalk.red(`Failed setVerifierSigner transaction: ${e}`));
     throw e;
@@ -127,18 +156,9 @@ async function TaskManagerSetup(TMProxyContract: any, adminSigner: any) {
   // Set the decrypt result signer (dispatcher's signing key)
   try {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
-    if (
-      process.env.DECRYPT_RESULT_SIGNER === "0x0000000000000000000000000000000000000000" &&
-      !isLocalNetwork(hre)
-    ) {
-      throw new Error("refusing to set DECRYPT_RESULT_SIGNER to 0 on a non-local network!");
-    }
-
-    const tx = await connectedImplementation.setDecryptResultSigner(
-      process.env.DECRYPT_RESULT_SIGNER,
-    );
+    const tx = await connectedImplementation.setDecryptResultSigner(signers.decryptResultSigner);
     await tx.wait();
-    console.log(chalk.green(`Successfully set decrypt result signer address: ${process.env.DECRYPT_RESULT_SIGNER}`));
+    console.log(chalk.green(`Successfully set decrypt result signer address: ${signers.decryptResultSigner}`));
   } catch (e) {
     console.error(chalk.red(`Failed setDecryptResultSigner transaction: ${e}`));
     throw e;
@@ -180,7 +200,7 @@ async function ACLSetup(
  * @param aclContract The ACL proxy contract
  * @param ownerSigner The ACL owner (allowed to call the address setters)
  */
-async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminDelay: number) {
+async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any) {
   try {
     const revokerFactory = await ethers.getContractFactory("ACPTimestampRevoker");
     const revoker = await revokerFactory.deploy();
@@ -198,21 +218,36 @@ async function ACPInfrastructureSetup(aclContract: any, ownerSigner: any, adminD
       chalk.green("Successfully set default revoker contract in ACL"),
     );
 
-    const { ProxyAddress: shareRegistryAddress } = await getProxyContract(
-      ownerSigner,
-      adminDelay,
-      "ACPShareRegistry",
+    // Not via getProxyContract: ACPShareRegistry is plain AccessControl (no default-admin
+    // rules), so its initialize takes only the admin - passing an adminDelay too made the
+    // encode throw, which the old catch-and-return silently swallowed, and every deploy since
+    // shipped without a share registry. `initialize` already grants DEFAULT_ADMIN_ROLE and
+    // UPGRADER_ROLE to the owner.
+    const shareRegistryFactory = await ethers.getContractFactory("ACPShareRegistry");
+    const shareRegistryContract = await upgrades.deployProxy(
+      shareRegistryFactory,
+      [ownerSigner.address],
+      { kind: "uups", initializer: "initialize" },
     );
+    await shareRegistryContract.waitForDeployment();
+    const shareRegistryAddress = await shareRegistryContract.getAddress();
+    console.log(
+      chalk.green("Successfully deployed proxy: ACPShareRegistry to:", shareRegistryAddress),
+    );
+
     const registryTx = await aclContract
       .connect(ownerSigner)
       .setShareRegistry(shareRegistryAddress);
     await registryTx.wait();
     console.log(chalk.green("Successfully set share registry in ACL"));
+    console.log("\n");
+    return shareRegistryContract;
   } catch (e) {
+    // Rethrow like the other setup steps: swallowing this used to turn a half-configured ACP
+    // stack into a successful-looking deploy.
     console.error(chalk.red(`Failed ACP infrastructure setup: ${e}`));
-    return e;
+    throw e;
   }
-  console.log("\n");
 }
 
 /**
@@ -336,14 +371,178 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, adminSigner: any,
 
 // The aggregator key comes from the environment, never from a committed file: this repo is
 // public, and a key checked in here once ended up doubling as a live testnet identity.
+// Mainnet deployments have no aggregator identity at all - there, the deployer signer fills
+// that role and this returns an empty list. The local stack still requires the key: it funds
+// the wallet and the stack expects its address as the result-processor.
 function getAggregatorWallets(ethers: any) {
   const key = process.env.AGGREGATOR_KEY;
   if (!key) {
-    throw new Error(
-      "AGGREGATOR_KEY must be set - the deploy funds it and uses it for the ACP infrastructure setup.",
-    );
+    if (isLocalNetwork(hre)) {
+      throw new Error(
+        "AGGREGATOR_KEY must be set on a local network - the deploy funds it and uses it for the ACP infrastructure setup.",
+      );
+    }
+    console.log(chalk.yellow("AGGREGATOR_KEY not set - the deployer signer will run the ACP infrastructure setup."));
+    return [];
   }
   return [new ethers.Wallet(key, ethers.provider)];
+}
+
+// Chains where a deployment must not end with an EOA holding DEFAULT_ADMIN, and must not end
+// with task intake open.
+const MAINNET_CHAIN_IDS = new Set([1, 42161]);
+
+/** True when deploying to a production chain. */
+function isMainnetDeployment(): boolean {
+  return MAINNET_CHAIN_IDS.has((hre.network.config as any)?.chainId);
+}
+
+// The address of the intentionally public DEPLOYER_PRIVATE_KEY in .env.example. The local stack
+// copies that file verbatim, so the key stays; a mainnet network must never sign with it.
+const EXAMPLE_DEPLOYER_ADDRESS = "0x4e6206fC78674E5eFf48Dcd0166060f95a832c60";
+
+/** Refuses a production deployment signed by the public example key. */
+function requireNotExampleKey(deployer: string) {
+  if (isMainnetDeployment() && deployer.toLowerCase() === EXAMPLE_DEPLOYER_ADDRESS.toLowerCase()) {
+    const chainId = (hre.network.config as any)?.chainId;
+    throw new Error(
+      `DEPLOYER_PRIVATE_KEY is the public example key from .env.example; refusing to deploy on chain ${chainId}`,
+    );
+  }
+}
+
+/**
+ * Resolves the address that ends up holding DEFAULT_ADMIN and every operational role once the
+ * deployment settles - on mainnet, the Gnosis Safe. Returns null when unset, which is refused on
+ * mainnet chain IDs: without it the deployer EOA would remain the admin of every proxy. On those
+ * chains the address must also have code - a Safe never deployed there, or a typo, would otherwise
+ * be handed an admin transfer nobody can accept.
+ */
+async function resolveFinalAdmin(ethers: any): Promise<string | null> {
+  const raw = process.env.SAFE_ADMIN_ADDRESS?.trim();
+  const chainId = (hre.network.config as any)?.chainId;
+  if (raw) {
+    const address = ethers.getAddress(raw);
+    if (isMainnetDeployment() && (await ethers.provider.getCode(address)) === "0x") {
+      throw new Error(`SAFE_ADMIN_ADDRESS ${address} has no code on chain ${chainId}; deploy the Safe there first`);
+    }
+    return address;
+  }
+  if (isMainnetDeployment()) {
+    throw new Error(
+      `SAFE_ADMIN_ADDRESS must be set on chain ${chainId}. Refusing to leave the deployer EOA ` +
+        `as DEFAULT_ADMIN of the mainnet proxies - set it to the Safe that takes over.`,
+    );
+  }
+  return null;
+}
+
+type Signers = { verifierAddress: string; decryptResultSigner: string };
+
+/**
+ * Resolves the TaskManager signers from VERIFIER_ADDRESS and DECRYPT_RESULT_SIGNER. Both must be
+ * valid addresses, and non-zero off a local network. Resolved before anything deploys: these used
+ * to be read inside TaskManagerSetup, so a bad value surfaced only after the proxies existed.
+ */
+function resolveSigners(ethers: any, adminAddress: string): Signers {
+  const resolveSigner = (name: string): string => {
+    const raw = process.env[name]?.trim();
+    if (!raw) {
+      throw new Error(`${name} must be set.`);
+    }
+    let address: string;
+    try {
+      address = ethers.getAddress(raw);
+    } catch {
+      throw new Error(`${name} is not a valid address: ${JSON.stringify(raw)}`);
+    }
+    if (address === ethers.ZeroAddress && !isLocalNetwork(hre)) {
+      throw new Error(`refusing to set ${name} to 0 on a non-local network!`);
+    }
+    // Twice now a deploy shipped the admin's own address as a signer because the value was
+    // copied from TM_ADMIN_ADDRESS. The signers are the zk-verifier's and the decryptor's keys,
+    // never an admin wallet, so the TaskManager would trust whoever holds the admin key.
+    if (address.toLowerCase() === adminAddress.toLowerCase() && !isLocalNetwork(hre)) {
+      throw new Error(
+        `${name} is the admin/deployer address ${address}. It must be the signing key of the ` +
+          `${name === "VERIFIER_ADDRESS" ? "zk-verifier" : "decryptor (teecryptor)"}, not an admin wallet.`,
+      );
+    }
+    return address;
+  };
+  return {
+    verifierAddress: resolveSigner("VERIFIER_ADDRESS"),
+    decryptResultSigner: resolveSigner("DECRYPT_RESULT_SIGNER"),
+  };
+}
+
+/**
+ * Resolves the maintenance wallet - a hardware wallet that holds only the narrow operational
+ * roles in {@link MAINTENANCE_ROLES}, so day-to-day pausing and security-zone changes do not need
+ * the Safe.
+ *
+ * Required on mainnet, for the same reason SAFE_ADMIN_ADDRESS is: a production chain that ends up
+ * with no maintenance wallet forces every pause through the Safe, and discovering that during an
+ * incident is too late. Optional elsewhere, so the local stack and the test fixtures still run
+ * without one.
+ */
+function resolveMaintenanceAddress(ethers: any): string | null {
+  const raw = process.env.MAINTENANCE_ADDRESS?.trim();
+  if (raw) {
+    return ethers.getAddress(raw);
+  }
+  if (isMainnetDeployment()) {
+    const chainId = (hre.network.config as any)?.chainId;
+    throw new Error(
+      `MAINTENANCE_ADDRESS must be set on chain ${chainId}. Without it the only holder of ` +
+        `PAUSER_ROLE and SECURITY_ZONE_MANAGER_ROLE is the Safe, so pausing intake needs a ` +
+        `multisig round trip.`,
+    );
+  }
+  return null;
+}
+
+/**
+ * Hands every contract over to `finalAdmin`: grants it all operational roles, and moves
+ * DEFAULT_ADMIN over. On the default-admin-rules contracts (`twoStep`) that is the two-step
+ * transfer, completed only when the new admin calls `acceptDefaultAdminTransfer()` after the
+ * admin delay - for a Safe, via `task:acceptAdminAsSafe`. Plain AccessControl contracts
+ * (ACPShareRegistry) have no transfer mechanism and DEFAULT_ADMIN_ROLE is granted directly.
+ * The deployer keeps its own roles until `task:renounceDeployerRoles` runs after the handover,
+ * so a failed acceptance never leaves a contract unmanageable.
+ *
+ * Idempotent, so a re-run after a run that failed midway finishes the job: a contract already
+ * pending to, or accepted by, `finalAdmin` is skipped, which also keeps `beginDefaultAdminTransfer`
+ * from restarting the admin delay.
+ */
+async function handOverToFinalAdmin(
+  contracts: { name: string; contract: any; admin: any; twoStep: boolean }[],
+  finalAdmin: string,
+) {
+  const isFinalAdmin = (account: string) => account.toLowerCase() === finalAdmin.toLowerCase();
+  for (const { name, contract, admin, twoStep } of contracts) {
+    if (twoStep) {
+      const [pendingAdmin] = await contract.pendingDefaultAdmin();
+      if (isFinalAdmin(pendingAdmin) || isFinalAdmin(await contract.defaultAdmin())) {
+        console.log(chalk.dim(`${name}: already handed over to ${finalAdmin}`));
+        continue;
+      }
+    } else if (await contract.hasRole(await contract.DEFAULT_ADMIN_ROLE(), finalAdmin)) {
+      console.log(chalk.dim(`${name}: already handed over to ${finalAdmin}`));
+      continue;
+    }
+    await grantAllRoles(contract, admin, finalAdmin);
+    if (twoStep) {
+      const tx = await contract.connect(admin).beginDefaultAdminTransfer(finalAdmin);
+      await tx.wait();
+      console.log(chalk.green(`${name}: granted all roles to ${finalAdmin} and began the default-admin transfer`));
+    } else {
+      const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
+      const tx = await contract.connect(admin).grantRole(defaultAdminRole, finalAdmin);
+      await tx.wait();
+      console.log(chalk.green(`${name}: granted all roles and DEFAULT_ADMIN_ROLE to ${finalAdmin}`));
+    }
+  }
 }
 
 /**
@@ -394,12 +593,15 @@ function resolveAdmin(candidateSigners: any[]) {
 const func: DeployFunction = async function () {
   console.log(chalk.bold.blue("-----------------------Network-----------------------------"));
   console.log(chalk.green("Network name:", hre.network.name));
-  console.log(chalk.green("Network:", JSON.stringify(hre.network.config, (_, v) => typeof v === 'bigint' ? v.toString() : v)));
+  // Never print `accounts`: on live networks it holds the deployer's private key, and this line
+  // ends up in terminals, CI logs and pasted deploy reports.
+  const { accounts: _accounts, ...networkConfigWithoutKeys } = hre.network.config as any;
+  console.log(chalk.green("Network:", JSON.stringify(networkConfigWithoutKeys, (_, v) => typeof v === 'bigint' ? v.toString() : v)));
   console.log("\n");
 
   // Note: we need to use an unused account for deployment via ignition, or it will complain
   const [signer, signerProxy] = await ethers.getSigners();
-  
+  requireNotExampleKey(signer.address);
 
   console.log(chalk.bold.blue("-----------------------Funding-----------------------------"));
   if (hre.network.name.includes("localfhenix")) {
@@ -419,30 +621,237 @@ const func: DeployFunction = async function () {
   console.log("\n");
 
   const { adminSigner, adminDelay } = resolveAdmin([...aggregatorSigners, signer]);
+  // Resolved before anything deploys, so a missing Safe address fails the run while it is
+  // still a no-op instead of after the proxies exist.
+  const finalAdmin = await resolveFinalAdmin(ethers);
+  const maintenanceAddress = resolveMaintenanceAddress(ethers);
+  const signers = resolveSigners(ethers, adminSigner.address);
 
-  const TMProxyAddress = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
+  const bookAddress = addressBookAddress();
+  if (!(await isAlreadyDeployed(hre, bookAddress))) {
+    throw new Error(`No CoFHEAddressBook at ${bookAddress} on ${hre.network.name}. Run task:deployAddressBook first.`);
+  }
+  if (!isLocalNetwork(hre)) {
+    const committedBook = readCommittedAddresses().addressBook;
+    if (bookAddress.toLowerCase() !== committedBook.toLowerCase()) {
+      throw new Error(
+        `FHE.sol is compiled against ${bookAddress} but deterministic/addresses.json says ${committedBook}. ` +
+          `The node_modules copy of FHE.sol is stale (a local-stack run patches it) - restore it with ` +
+          `\`cp ../../FHE.sol node_modules/@fhenixprotocol/cofhe-contracts/\` and recompile before deploying.`,
+      );
+    }
+  }
+  const addressBook: any = await ethers.getContractAt("CoFHEAddressBook", bookAddress);
+  const bookOwner: string = await addressBook.owner();
+  const bookOwnerIsAdmin = bookOwner.toLowerCase() === adminSigner.address.toLowerCase();
+  if (!bookOwnerIsAdmin && bookOwner.toLowerCase() !== finalAdmin?.toLowerCase()) {
+    throw new Error(
+      `CoFHEAddressBook at ${bookAddress} is owned by ${bookOwner}, which is neither the admin signer ` +
+        `${adminSigner.address} nor SAFE_ADMIN_ADDRESS. Refusing to continue. On a chain's first deploy the ` +
+        `admin signer must be the bootstrap owner in deterministic/addresses.json; to use a different key, ` +
+        `re-freeze before the first deployment: ADDRESS_BOOK_BOOTSTRAP_OWNER=<its address> FREEZE_FORCE=1 ` +
+        `pnpm freeze:addressBook.`,
+    );
+  }
 
-  // Headline in chalk blue, with length of 60
   console.log(chalk.bold.blue("-----------------------TaskManager--------------------------"));
   const TMFactory = await ethers.getContractFactory("TaskManager");
-  const TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
-  console.log(chalk.green("TMProxyContract attached to:", await TMProxyContract.getAddress()));
-  await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
-  await TaskManagerSetup(TMProxyContract, adminSigner);
+  const id = taskManagerId();
+  let TMProxyContract: any;
+  let TMProxyAddress = await registeredTaskManager(addressBook, id);
+  let registerFresh = false;
+  if (TMProxyAddress) {
+    TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
+    console.log(chalk.green(`TaskManager id ${id} resolves to ${TMProxyAddress} - upgrading in place`));
+    await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
+  } else {
+    if (!isLocalNetwork(hre) && process.env.REGISTER_TASK_MANAGER?.trim() !== "1") {
+      throw new Error(
+        `TaskManager id ${id} reads as unset on ${hre.network.name}. Registering a fresh TaskManager ` +
+          `repoints every FHE.sol contract on this chain, so it needs an explicit REGISTER_TASK_MANAGER=1. ` +
+          `If a TaskManager was already registered here, check the RPC before doing anything else.`,
+      );
+    }
+    if (!bookOwnerIsAdmin) {
+      throw new Error(
+        `TaskManager id ${id} is unset and the admin signer does not own the address book, so it ` +
+          `cannot register a new TaskManager. Have the book owner run setTm, or hand the book back.`,
+      );
+    }
+    const deployed = await getProxyContract(adminSigner, "TaskManager", [adminSigner.address, adminDelay]);
+    TMProxyContract = deployed.ProxyContract;
+    TMProxyAddress = deployed.ProxyAddress;
+    // getVersion() > 0 is how the local stack tells a configured TaskManager from a bare proxy.
+    const incTx = await TMProxyContract.connect(adminSigner).incVersion();
+    await incTx.wait();
+    // `initialize` opens intake to everyone; on mainnet intake stays closed until go-live and is
+    // then gated by the access list. Only here: a re-run upgrades a live TaskManager and must not
+    // touch either switch.
+    if (isMainnetDeployment()) {
+      const disableTx = await TMProxyContract.connect(adminSigner).disable();
+      await disableTx.wait();
+      const accessListTx = await TMProxyContract.connect(adminSigner).enableAccessList();
+      await accessListTx.wait();
+    }
+    registerFresh = true;
+  }
+  await updateTaskManagerAddressInJsonArtifact(TMProxyAddress, hre);
+
+  // A registered TaskManager keeps its satellites: the ACL holds every permission granted so far
+  // and PlaintextsStorage every stored plaintext, and TaskManagerSetup would overwrite the live
+  // signers and reopen intake. Only an explicit FULL_REDEPLOY=1 runs the fresh-deploy steps below
+  // against a registered TaskManager, which throws both away.
+  if (!registerFresh) {
+    const currentAcl = await TMProxyContract.acl();
+    const currentPlaintextsStorage = await TMProxyContract.plaintextsStorage();
+    if (process.env.FULL_REDEPLOY?.trim() !== "1") {
+      console.log(chalk.green(`Keeping ACL ${currentAcl} and PlaintextsStorage ${currentPlaintextsStorage}`));
+      // A fresh deploy registers the TaskManager before the maintenance grant and the handover,
+      // so a run that failed in between lands here on the re-run. Both steps are idempotent:
+      // finish them, or confirm they are already done.
+      await finishHandover({
+        taskManager: TMProxyContract,
+        satellites: finalAdmin ? await currentSatellites(TMProxyContract) : null,
+        addressBook,
+        bookOwnerIsAdmin,
+        adminSigner,
+        adminDelay,
+        maintenanceAddress,
+        finalAdmin,
+      });
+      console.log(
+        chalk.green("Upgrade complete. Set FULL_REDEPLOY=1 to redeploy the satellites and rerun TaskManagerSetup."),
+      );
+      return;
+    }
+    console.log(
+      chalk.red(
+        `WARNING: FULL_REDEPLOY=1 - replacing ACL ${currentAcl} and PlaintextsStorage ` +
+          `${currentPlaintextsStorage}. ACL permissions and stored plaintexts are NOT carried over, ` +
+          `and the signers and enable() state are overwritten from the environment.`,
+      ),
+    );
+  }
+  await TaskManagerSetup(TMProxyContract, adminSigner, signers);
 
   console.log(chalk.bold.blue("---------------------------ACL------------------------------"));
   // Deploy and upgrade ACL contract
-  const {ProxyContract: aclContract} = await getProxyContract(adminSigner, adminDelay, "ACL");
+  const {ProxyContract: aclContract} = await getProxyContract(adminSigner, "ACL", [adminSigner.address, adminDelay, TMProxyAddress]);
   await ACLSetup(TMProxyContract, adminSigner, aclContract);
 
   console.log(chalk.bold.blue("----------------------ACP infrastructure--------------------"));
-  await ACPInfrastructureSetup(aclContract, aggregatorSigners[0], adminDelay);
+  // Both ACL setters below are onlyRole(DEFAULT_ADMIN_ROLE) and the share registry's initial
+  // admin should be the same account, so this has to be the ACL's admin - never the aggregator.
+  // Preferring the aggregator only ever worked because the local stack leaves TM_ADMIN_ADDRESS
+  // unset, which makes the aggregator the admin by accident.
+  const shareRegistryContract = await ACPInfrastructureSetup(aclContract, adminSigner);
 
   // Deploy new PlaintextsStorage contract
   console.log(chalk.bold.blue("---------------------PlaintextsStorage----------------------"));
-  const {ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, adminDelay, "PlaintextsStorage");
+  const {ProxyContract: ptStorageContract, ProxyAddress: ptStorageAddress} = await getProxyContract(adminSigner, "PlaintextsStorage", [adminSigner.address, adminDelay, TMProxyAddress]);
   await PlaintextsStorageSetup(TMProxyContract, ptStorageAddress, adminSigner);
+  if (registerFresh) {
+    const setTx = await addressBook.connect(adminSigner).setTm(id, TMProxyAddress);
+    await setTx.wait();
+    console.log(chalk.green(`Registered TaskManager ${TMProxyAddress} as id ${id} in the address book`));
+  }
+
+  await finishHandover({
+    taskManager: TMProxyContract,
+    satellites: { acl: aclContract, shareRegistry: shareRegistryContract, plaintextsStorage: ptStorageContract },
+    addressBook,
+    bookOwnerIsAdmin,
+    adminSigner,
+    adminDelay,
+    maintenanceAddress,
+    finalAdmin,
+  });
 };
+
+type Satellites = { acl: any; shareRegistry: any; plaintextsStorage: any };
+
+/**
+ * The satellites a registered TaskManager drives. A zero address means its setup never finished,
+ * so there is nothing whole to hand over - fail rather than hand over part of the deployment.
+ */
+async function currentSatellites(taskManager: any): Promise<Satellites> {
+  const aclAddress: string = await taskManager.acl();
+  const ptStorageAddress: string = await taskManager.plaintextsStorage();
+  const acl: any = aclAddress === ethers.ZeroAddress ? null : await ethers.getContractAt("ACL", aclAddress);
+  const shareRegistryAddress: string = acl ? await acl.shareRegistry() : ethers.ZeroAddress;
+  if (!acl || ptStorageAddress === ethers.ZeroAddress || shareRegistryAddress === ethers.ZeroAddress) {
+    throw new Error(
+      `TaskManager ${await taskManager.getAddress()} has acl=${aclAddress}, plaintextsStorage=${ptStorageAddress}, ` +
+        `shareRegistry=${shareRegistryAddress}: its setup never finished, so it cannot be handed over. ` +
+        `Rerun with FULL_REDEPLOY=1.`,
+    );
+  }
+  return {
+    acl,
+    shareRegistry: await ethers.getContractAt("ACPShareRegistry", shareRegistryAddress),
+    plaintextsStorage: await ethers.getContractAt("PlaintextsStorage", ptStorageAddress),
+  };
+}
+
+/**
+ * The last steps of every deploy: grant the maintenance wallet its roles, then start the handover
+ * to `finalAdmin`. Idempotent, so a re-run after a run that failed midway completes them.
+ */
+async function finishHandover(params: {
+  taskManager: any;
+  /** Required when `finalAdmin` is set. */
+  satellites: Satellites | null;
+  addressBook: any;
+  bookOwnerIsAdmin: boolean;
+  adminSigner: any;
+  adminDelay: number;
+  maintenanceAddress: string | null;
+  finalAdmin: string | null;
+}) {
+  const { taskManager, satellites, addressBook, bookOwnerIsAdmin, adminSigner, adminDelay, maintenanceAddress, finalAdmin } =
+    params;
+
+  // Before the handover, while the deployer unambiguously still holds DEFAULT_ADMIN_ROLE:
+  // beginDefaultAdminTransfer only schedules, but granting from the Safe afterwards would need a
+  // Safe transaction for what is a one-line grant here.
+  if (maintenanceAddress) {
+    console.log(chalk.bold.blue("---------------------Maintenance wallet---------------------"));
+    await grantRolesByName(taskManager, adminSigner, maintenanceAddress, MAINTENANCE_ROLES);
+    console.log("");
+  }
+
+  if (!finalAdmin) {
+    return;
+  }
+  if (!satellites) {
+    throw new Error("finishHandover needs the satellites to hand over when SAFE_ADMIN_ADDRESS is set");
+  }
+  console.log(chalk.bold.blue("----------------------Admin handover-------------------------"));
+  await handOverToFinalAdmin(
+    [
+      { name: "TaskManager", contract: taskManager, admin: adminSigner, twoStep: true },
+      { name: "ACL", contract: satellites.acl, admin: adminSigner, twoStep: true },
+      { name: "ACPShareRegistry", contract: satellites.shareRegistry, admin: adminSigner, twoStep: false },
+      { name: "PlaintextsStorage", contract: satellites.plaintextsStorage, admin: adminSigner, twoStep: true },
+    ],
+    finalAdmin,
+  );
+  if (bookOwnerIsAdmin) {
+    if ((await addressBook.pendingOwner()).toLowerCase() === finalAdmin.toLowerCase()) {
+      console.log(chalk.dim(`CoFHEAddressBook: ${finalAdmin} is already the pending owner`));
+    } else {
+      const tx = await addressBook.connect(adminSigner).transferOwnership(finalAdmin);
+      await tx.wait();
+      console.log(chalk.green(`CoFHEAddressBook: nominated ${finalAdmin} as owner (accepted by task:acceptAdminAsSafe)`));
+    }
+  }
+  console.log(
+    chalk.yellow(
+      `Handover started. After the admin delay (${adminDelay}s), run task:acceptAdminAsSafe ` +
+        `to accept as ${finalAdmin}, then task:renounceDeployerRoles to strip the deployer.`,
+    ),
+  );
+}
 
 export default func;
 func.id = "deploy_all";

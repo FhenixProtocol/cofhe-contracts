@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { task, types } from "hardhat/config";
-import type { TaskArguments } from "hardhat/types";
+import type { HardhatRuntimeEnvironment, TaskArguments } from "hardhat/types";
 import { Contract, Wallet } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -10,6 +10,8 @@ import {
   requireDefaultAdminIsSignerOrUnset,
   resolveAdminDelay,
 } from "../utils/roles";
+import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
+import { resolveTaskManager } from "../utils/addressBook";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -26,55 +28,13 @@ async function getImplementationAddress(ethers: any, proxy: any) {
 }
 
 /**
- * Identifies the implementation currently behind the proxy.
- *
- * `defaultAdmin() == null` is NOT a proxy for "this is the deterministic stub" - the pre-roles
- * Ownable TaskManager, which is what is actually deployed on staging/testnet, has no
- * `defaultAdmin()` selector either and so also reads as null. The two have different layouts
- * (`DeterministicTM` packs `aggregator` into slot 0 and has no `randomCounter`), so guessing wrong
- * makes `validateUpgrade` reject the one migration that is genuinely safe.
- *
- * Probe instead: `aggregator()` is a public getter only `DeterministicTM` declares.
- */
-async function detectCurrentImplementation(ethers: any, proxyAddress: string) {
-  const stub = (await ethers.getContractFactory("DeterministicTM")).attach(proxyAddress);
-  try {
-    await stub.aggregator();
-    return "DeterministicTM" as const;
-  } catch {
-    return "TaskManager" as const;
-  }
-}
-
-/**
  * Validates the storage layout of the pending upgrade, and throws if it is incompatible.
- *
- * Skipped for the deterministic bootstrap: DeterministicTM -> TaskManager is knowingly
- * layout-incompatible (TaskManager inserts `randomCounter` at slot 1 and moves the aggregator
- * address to slot 2), so the reinterpreted slots are deliberate, not an accident. `initializeV2`
- * reseeds the ones that matter to fail-closed values. Validation stays strict on every other path,
- * which is where an accidental layout break would actually show up.
  */
 async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any) {
   const proxyAddress = await TMProxyContract.getAddress();
-  const current = await detectCurrentImplementation(ethers, proxyAddress);
-  console.log(chalk.dim(`Current implementation detected as ${current}`));
-
-  if (current === "DeterministicTM") {
-    console.log(
-      chalk.yellow(
-        "⚠ Skipping storage-layout validation: the deterministic bootstrap stub is intentionally " +
-          "layout-incompatible with TaskManager. initializeV2 reseeds the reinterpreted slots.",
-      ),
-    );
-    return;
-  }
-
   try {
     console.log("Importing implementation contract...");
-    await upgrades.forceImport(proxyAddress, await ethers.getContractFactory(current), {
-      kind: "uups",
-    });
+    await upgrades.forceImport(proxyAddress, TMFactory, { kind: "uups" });
 
     console.log("Validating storage layout...");
     await upgrades.validateUpgrade(proxyAddress, TMFactory, { kind: "uups" });
@@ -87,12 +47,41 @@ async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any,
   }
 }
 
-async function upgradeTM(ethers: any, TMProxyContract: any, TMFactory: any, adminSigner: any, adminDelay: number) {
+/** Deploys the new implementation. Any funded key may do this; only the upgrade itself needs a role. */
+async function deployImplementation(TMFactory: any): Promise<string> {
+    const newIplDeployment = await TMFactory.deploy();
+    await newIplDeployment.waitForDeployment();
+    const newIplAddress = await newIplDeployment.getAddress();
+    console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
+    return newIplAddress;
+}
+
+async function reportUpgrade(ethers: any, TMProxyContract: any, oldImplementationAddress: string) {
+    const newImplementationAddress = await getImplementationAddress(ethers, TMProxyContract);
+    console.log(chalk.green("New implementation address:", newImplementationAddress));
+    console.log(chalk.green("TaskManager version:", (await TMProxyContract.getVersion()).toString()));
+    if (oldImplementationAddress === newImplementationAddress) {
+        console.log(chalk.red("WARNING: Implementation address did not change!"));
+    } else {
+        console.log(chalk.green("Implementation address changed successfully!"));
+    }
+    console.log("\n");
+}
+
+/**
+ * Upgrades with the signer's own UPGRADER_ROLE - the pre-handover flow, including the migration
+ * of a pre-roles (Ownable) proxy.
+ */
+async function upgradeAsSigner(
+    ethers: any,
+    TMProxyContract: any,
+    TMFactory: any,
+    adminSigner: any,
+    adminDelay: number,
+    currentDefaultAdmin: string | null,
+    oldImplementationAddress: string,
+) {
     const connectedImplementation = TMProxyContract.connect(adminSigner);
-    const currentDefaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
-    console.log(chalk.green("TMProxyContract default admin:", currentDefaultAdmin ?? "none (pre-roles implementation)"));
-    const oldImplementationAddress = await getImplementationAddress(ethers, connectedImplementation);
-    console.log(chalk.green("Old implementation address:", oldImplementationAddress));
 
     // `_authorizeUpgrade` needs only UPGRADER_ROLE, but `grantAllRoles` below needs
     // DEFAULT_ADMIN_ROLE. Once the admin moves to a Safe and this key holds only UPGRADER_ROLE,
@@ -100,10 +89,7 @@ async function upgradeTM(ethers: any, TMProxyContract: any, TMFactory: any, admi
     // implementation with no operational roles and no version bump. Refuse up front instead.
     requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, adminSigner);
 
-    const newIplDeployment = await TMFactory.deploy();
-    await newIplDeployment.waitForDeployment();
-    const newIplAddress = await newIplDeployment.getAddress();
-    console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
+    const newIplAddress = await deployImplementation(TMFactory);
 
     // A proxy still on the pre-roles (Ownable) implementation has no AccessControl storage.
     // Seed it via initializeV2 in the same transaction as the upgrade. initializeV2 is gated on
@@ -122,14 +108,124 @@ async function upgradeTM(ethers: any, TMProxyContract: any, TMFactory: any, admi
 
     const incTx = await connectedImplementation.incVersion();
     await incTx.wait();
-    const newImplementationAddress = await getImplementationAddress(ethers, connectedImplementation);
-    console.log(chalk.green("New implementation address:", newImplementationAddress));
-    if (oldImplementationAddress === newImplementationAddress) {
-        console.log(chalk.red("WARNING: Implementation address did not change!"));
-    } else {
-        console.log(chalk.green("Implementation address changed successfully!"));
+    await reportUpgrade(ethers, TMProxyContract, oldImplementationAddress);
+}
+
+/**
+ * Upgrades as the Safe that holds UPGRADER_ROLE - the post-handover flow. Mirrors
+ * task:acceptAdminAsSafe: with SAFE_OWNER_KEY the two calls are executed through the Safe
+ * (threshold-1 Safes only), otherwise a single Transaction Builder batch is written to import in
+ * the Safe app. No role grants and no migration data: the Safe already holds every role.
+ */
+async function upgradeAsSafe(
+    hre: HardhatRuntimeEnvironment,
+    TMProxyContract: any,
+    TMFactory: any,
+    safeAddress: string,
+    oldImplementationAddress: string,
+) {
+    const { ethers } = hre;
+    const proxyAddress: string = await TMProxyContract.getAddress();
+    const newIplAddress = await deployImplementation(TMFactory);
+    const calls = [
+        {
+            name: `upgradeToAndCall(${newIplAddress}, 0x)`,
+            data: TMProxyContract.interface.encodeFunctionData("upgradeToAndCall", [newIplAddress, "0x"]),
+        },
+        { name: "incVersion()", data: TMProxyContract.interface.encodeFunctionData("incVersion") },
+    ];
+
+    const ownerKey = process.env.SAFE_OWNER_KEY?.trim();
+    if (ownerKey) {
+        const ownerSigner = new Wallet(ownerKey, ethers.provider);
+        // An EOA final admin (testnets) upgrades directly: SAFE_OWNER_KEY is then its own key.
+        const sendsDirectly = ownerSigner.address.toLowerCase() === safeAddress.toLowerCase();
+        console.log(chalk.green(`Upgrading as ${safeAddress}, sending as ${ownerSigner.address}`));
+        for (const { name, data } of calls) {
+            if (sendsDirectly) {
+                await (await ownerSigner.sendTransaction({ to: proxyAddress, data })).wait();
+            } else {
+                await execTransactionThroughSafe(hre, safeAddress, ownerSigner, proxyAddress, data);
+            }
+            console.log(chalk.green(`Executed ${name}`));
+        }
+        await reportUpgrade(ethers, TMProxyContract, oldImplementationAddress);
+        return;
     }
-    console.log("\n");
+
+    const path = writeSafeBatch(hre, {
+        safeAddress,
+        slug: "upgrade-tm",
+        name: "CoFHE - upgrade TaskManager",
+        description:
+            `Upgrade the TaskManager proxy ${proxyAddress} to implementation ${newIplAddress} and bump ` +
+            `its version. Generated by task:upgradeTM.`,
+        transactions: calls.map(({ data }) => ({ to: proxyAddress, data })),
+    });
+    console.log(chalk.bold.blue("\nWrote a Safe Transaction Builder batch:"));
+    console.log(`  ${path}`);
+    console.log(
+        chalk.dim("Import it under Apps -> Transaction Builder in the Safe app, review, sign, execute."),
+    );
+    console.log(chalk.bold.blue("\nThe transactions it contains:"));
+    for (const { name, data } of calls) {
+        console.log(`  ${name}:`);
+        console.log(`    to:    ${proxyAddress}`);
+        console.log(`    value: 0`);
+        console.log(`    data:  ${data}`);
+    }
+    console.log(
+        chalk.yellow(`\nAfter execution, check getVersion() and the implementation slot on ${proxyAddress}.`),
+    );
+}
+
+async function upgradeTM(
+    hre: HardhatRuntimeEnvironment,
+    TMProxyContract: any,
+    TMFactory: any,
+    signer: any,
+    adminDelay: number,
+) {
+    const { ethers } = hre;
+    const currentDefaultAdmin = await getDefaultAdmin(TMProxyContract, ethers.ZeroAddress);
+    console.log(chalk.green("TMProxyContract default admin:", currentDefaultAdmin ?? "none (pre-roles implementation)"));
+    const oldImplementationAddress = await getImplementationAddress(ethers, TMProxyContract);
+    console.log(chalk.green("Old implementation address:", oldImplementationAddress));
+
+    // A pre-roles proxy has no AccessControl to query: its legacy owner upgrades directly and
+    // initializeV2 seeds the roles, so it always takes the signer path.
+    const upgraderRole = currentDefaultAdmin === null ? null : await TMProxyContract.UPGRADER_ROLE();
+    if (upgraderRole === null || (await TMProxyContract.hasRole(upgraderRole, signer.address))) {
+        await upgradeAsSigner(
+            ethers,
+            TMProxyContract,
+            TMFactory,
+            signer,
+            adminDelay,
+            currentDefaultAdmin,
+            oldImplementationAddress,
+        );
+        return;
+    }
+
+    // Post-handover: the signer only pays for the implementation deploy; the Safe upgrades.
+    const rawSafeAddress = process.env.SAFE_ADMIN_ADDRESS?.trim();
+    if (!rawSafeAddress) {
+        throw new Error(
+            `Refusing to upgrade: ${signer.address} does not hold UPGRADER_ROLE on the TaskManager and ` +
+                `SAFE_ADMIN_ADDRESS is not set. After the handover, set SAFE_ADMIN_ADDRESS to the Safe ` +
+                `that holds UPGRADER_ROLE (and SAFE_OWNER_KEY to execute through it), or run with a key ` +
+                `that holds UPGRADER_ROLE.`,
+        );
+    }
+    const safeAddress = ethers.getAddress(rawSafeAddress);
+    if (!(await TMProxyContract.hasRole(upgraderRole, safeAddress))) {
+        throw new Error(
+            `Refusing to upgrade: neither the signer ${signer.address} nor SAFE_ADMIN_ADDRESS ` +
+                `${safeAddress} holds UPGRADER_ROLE on the TaskManager.`,
+        );
+    }
+    await upgradeAsSafe(hre, TMProxyContract, TMFactory, safeAddress, oldImplementationAddress);
 }
 
 
@@ -160,13 +256,13 @@ task("task:upgradeTM")
     console.log(chalk.green(`Balance of account: ${signer.address}`, await ethers.provider.getBalance(signer.address)));
 
     const TMFactory = await ethers.getContractFactory("TaskManager");
-    const TMProxyContract = TMFactory.attach("0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9") as Contract;
+    const TMProxyContract = TMFactory.attach(await resolveTaskManager(hre)) as Contract;
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     
 
     await validateUpgrade(ethers, upgrades, TMProxyContract, TMFactory);
 
     if (!taskArguments.onlyvalidate) {
-        await upgradeTM(ethers, TMProxyContract, TMFactory, signer, resolveAdminDelay(hre));
+        await upgradeTM(hre, TMProxyContract, TMFactory, signer, resolveAdminDelay(hre));
     }
   });

@@ -4,7 +4,6 @@ pragma solidity >=0.8.25 <0.9.0;
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
-import {taskManagerAddress} from "./addresses/TaskManagerAddress.sol";
 import {LegacyOwnable} from "./LegacyOwnable.sol";
 import {PermissionedUpgradeable, ACP, SCOPE_GLOBAL, SCOPE_CONTRACT, SCOPE_HANDLES} from "./Permissioned.sol";
 
@@ -45,6 +44,9 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     /// @param sender   Sender address.
     error DirectAllowForbidden(address sender);
 
+    /// @notice Returned when the TaskManager address being set is zero.
+    error InvalidTaskManagerAddress();
+
     /// @notice         Returned when no share is pending at (handle, receiver).
     /// @param handle   Handle.
     /// @param receiver Address attempting to claim the share.
@@ -76,6 +78,11 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     /// @param newAddress       New address (zero = unset).
     event ShareRegistryUpdated(address oldAddress, address newAddress);
 
+    /// @notice                 Emitted when the TaskManager address is updated.
+    /// @param oldAddress       Previous address.
+    /// @param newAddress       New address.
+    event TaskManagerUpdated(address oldAddress, address newAddress);
+
     /// @custom:storage-location erc7201:cofhe.storage.ACL
     struct ACLStorage {
         mapping(uint256 handle => bool isGlobal) globalHandles;
@@ -85,6 +92,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
         // ACP infrastructure addresses served to SDKs (appended fields — do not reorder)
         address defaultRevokerContract;
         address shareRegistry;
+        address taskManager;
     }
 
     /// @notice Name of the contract.
@@ -99,9 +107,6 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     /// @notice Patch version of the contract.
     uint256 private constant PATCH_VERSION = 0;
 
-    /// @notice TaskManagerAddress address.
-    address private constant TASK_MANAGER_ADDRESS = taskManagerAddress;
-
     /// @dev keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACL")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ACL_SLOT = keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACL")) - 1)) & ~bytes32(uint256(0xff));
 
@@ -115,13 +120,15 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     }
 
     /**
-     * @notice              Initializes the contract.
-     * @param initialAdmin  Initial admin address.
-     * @param initialDelay  Initial delay for the default admin transfer.
+     * @notice                     Initializes the contract.
+     * @param initialAdmin         Initial admin address.
+     * @param initialDelay         Initial delay for the default admin transfer.
+     * @param initialTaskManager   The TaskManager allowed to drive this ACL.
      */
-    function initialize(address initialAdmin, uint48 initialDelay) public initializer {
+    function initialize(address initialAdmin, uint48 initialDelay, address initialTaskManager) public initializer {
         __AccessControlDefaultAdminRules_init(initialDelay, initialAdmin);
         __PermissionedUpgradeable_init();
+        _setTaskManager(initialTaskManager);
     }
 
     /// @dev Upgrade-only re-initializer for proxies migrating from the Ownable implementation.
@@ -151,7 +158,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param requester     Address of the account giving the permissions.
      */
     function allow(uint256 handle, address account, address requester) public virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
@@ -170,7 +177,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param requester     Address of the account giving the permissions.
      */
     function allowGlobal(uint256 handle, address requester) public virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
@@ -188,7 +195,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param handlesList   List of handles.
      */
     function allowForDecryption(uint256[] memory handlesList, address requester) public virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
@@ -215,11 +222,11 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param requester     Address of the requester.
      */
     function allowTransient(uint256 handle, address account, address requester) public virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
-        if (!isAllowed(handle, requester) && requester != TASK_MANAGER_ADDRESS) {
+        if (!isAllowed(handle, requester) && requester != _taskManager()) {
             revert SenderNotAllowed(requester);
         }
 
@@ -238,13 +245,13 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param requester     Address of the requester.
      */
     function batchAllowTransient(uint256[] memory handles, address account, address requester) public virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
         // The Task Manager is exempt from the isAllowed() requirement (same as in
         // allowTransient()), so hoist the comparison and skip the lookup entirely.
-        bool requesterIsTaskManager = requester == TASK_MANAGER_ADDRESS;
+        bool requesterIsTaskManager = requester == _taskManager();
         uint256 len = handles.length;
 
         for (uint256 k = 0; k < len; k++) {
@@ -301,7 +308,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @notice              Grants `receiver` transient access to `handle` and records `sharer` as the
      *                      party handing it over, for the duration of this transaction.
      * @dev                 The caller must be the Task Manager contract.
-     * @dev                 Stricter than allowTransient(): there is no TASK_MANAGER_ADDRESS bypass.
+     * @dev                 Stricter than allowTransient(): there is no TaskManager bypass.
      *                      Nothing shares on the Task Manager's own behalf, so the sharer must
      *                      genuinely hold the handle.
      * @param handle        Handle.
@@ -309,7 +316,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param receiver      Address the handle is being handed to.
      */
     function shareCtHash(uint256 handle, address sharer, address receiver) public virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
@@ -335,7 +342,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param receiver          Address claiming the share.
      */
     function receiveCtHash(uint256 handle, address expectedSharer, address receiver) public virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
@@ -369,7 +376,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @param delegateeContract Delegatee contract.
      */
     function delegateAccount(address delegatee, address delegateeContract) public virtual {
-         if (msg.sender != TASK_MANAGER_ADDRESS) {
+         if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
         if (delegateeContract == msg.sender) {
@@ -427,7 +434,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      * @return taskManagerAddress  Address of the TaskManager.
      */
     function getTaskManagerAddress() public view virtual returns (address) {
-        return TASK_MANAGER_ADDRESS;
+        return _taskManager();
     }
 
     /**
@@ -477,7 +484,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      *      Account Abstraction when bundling several UserOps calling the TaskManagerCoprocessor.
      */
     function cleanTransientStorage() external virtual {
-        if (msg.sender != TASK_MANAGER_ADDRESS) {
+        if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
 
@@ -567,6 +574,29 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
         ACLStorage storage $ = _getACLStorage();
         emit ShareRegistryUpdated($.shareRegistry, newAddress);
         $.shareRegistry = newAddress;
+    }
+
+    /// @notice             Sets the TaskManager allowed to drive this ACL.
+    /// @dev                Any proxy upgraded to this implementation from one that recorded no
+    ///                     TaskManager (pre-roles proxies migrated through initializeV2 included)
+    ///                     rejects every TaskManager call until this is set; upgrade with
+    ///                     upgradeToAndCall(impl, setTaskManager(tm)) to keep it atomic.
+    /// @param newAddress   The new TaskManager address.
+    function setTaskManager(address newAddress) external virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setTaskManager(newAddress);
+    }
+
+    function _setTaskManager(address newAddress) private {
+        if (newAddress == address(0)) {
+            revert InvalidTaskManagerAddress();
+        }
+        ACLStorage storage $ = _getACLStorage();
+        emit TaskManagerUpdated($.taskManager, newAddress);
+        $.taskManager = newAddress;
+    }
+
+    function _taskManager() private view returns (address) {
+        return _getACLStorage().taskManager;
     }
 
     /// @notice ACP access check — the scope table.

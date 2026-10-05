@@ -5,11 +5,14 @@ import { TransactionReceipt } from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
+// Canonical CreateX address - the same on every chain (https://github.com/pcaversaccio/createx)
+export const CREATEX_ADDRESS = "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed";
+
 const proxyTransactionDetails = {
   gasPrice: 100000000000n,
   gasLimit: 3_000_000n,
   signerAddress: "0xeD456e05CaAb11d66C4c797dD6c1D6f9A7F352b5",
-  address: "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed"
+  address: CREATEX_ADDRESS
 };
 
 export const isAlreadyDeployed = async function (hre: HardhatRuntimeEnvironment, contractExpectedAddress: string): Promise<boolean> {

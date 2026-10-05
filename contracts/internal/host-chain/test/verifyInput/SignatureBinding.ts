@@ -19,7 +19,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import { Wallet } from "ethers";
 
-import { deployOnChainFixture, TASK_MANAGER_ADDRESS } from "../onChain/OnChain.fixture";
+import { deployOnChainFixture } from "../onChain/OnChain.fixture";
 
 const { ethers } = hre;
 
@@ -70,9 +70,9 @@ describe("TaskManager batchVerifyInputs signature field binding", function () {
   }
 
   before(async function () {
-    await deployOnChainFixture();
+    const fixture = await deployOnChainFixture();
     [owner, caller, user, attacker] = await ethers.getSigners();
-    taskManager = await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS);
+    taskManager = fixture.taskManager;
     await taskManager.connect(owner).setVerifierSigner(VERIFIER.address);
 
     signedTuple = {

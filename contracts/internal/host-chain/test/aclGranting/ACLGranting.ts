@@ -28,7 +28,6 @@ import { deployDecryptResultFixture } from "../decryptResult/DecryptResult.fixtu
 
 const { ethers } = hre;
 
-const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 const EUINT64_TFHE = 5;
 const SECURITY_ZONE = 0;
 const SEED = 0xacen;
@@ -66,7 +65,7 @@ describe("ACL granting", function () {
     [, , holder, receiver, stranger] = await ethers.getSigners();
 
     const Caller = await ethers.getContractFactory("RandomTaskCaller");
-    const caller = await Caller.connect(holder).deploy();
+    const caller = await Caller.connect(holder).deploy(await taskManager.getAddress());
     await caller.waitForDeployment();
     await (
       await caller.connect(holder).createThenAllowReturned(EUINT64_TFHE, SEED, SECURITY_ZONE, holder.address)
@@ -132,7 +131,7 @@ describe("ACL granting", function () {
     it("rejects a direct allowTransient that names the TaskManager as the requester", async function () {
       // allowTransient waives the ownership check when requester == TASK_MANAGER_ADDRESS. Forging
       // that requester from outside must not reach the waiver.
-      await expect(acl.connect(stranger).allowTransient(UNOWNED, stranger.address, TASK_MANAGER_ADDRESS))
+      await expect(acl.connect(stranger).allowTransient(UNOWNED, stranger.address, await taskManager.getAddress()))
         .to.be.revertedWithCustomError(acl, "DirectAllowForbidden")
         .withArgs(stranger.address);
 

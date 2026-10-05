@@ -55,6 +55,40 @@ function resolveAdminDelay() {
   return delay;
 }
 
+// Chains where a deployment must not end with an EOA holding DEFAULT_ADMIN.
+const MAINNET_CHAIN_IDS = new Set([1, 42161]);
+
+// The address of the intentionally public DEPLOYER_PRIVATE_KEY in .env.example. The local stack
+// copies that file verbatim, so the key stays; a mainnet network must never sign with it.
+const EXAMPLE_DEPLOYER_ADDRESS = "0x4e6206fC78674E5eFf48Dcd0166060f95a832c60";
+
+/**
+ * Resolves the address that ends up holding DEFAULT_ADMIN and every operational role once the
+ * deployment settles - on mainnet, the Gnosis Safe. Returns null when unset, which is refused
+ * on mainnet chain IDs: without it the deployer EOA would remain the registry's admin. On those
+ * chains the address must also have code - a Safe never deployed there, or a typo, would otherwise
+ * be handed an admin transfer nobody can accept.
+ * Mirrors the host-chain deploy's resolveFinalAdmin.
+ */
+async function resolveFinalAdmin(): Promise<string | null> {
+  const raw = process.env.SAFE_ADMIN_ADDRESS?.trim();
+  const chainId = (hre.network.config as any)?.chainId;
+  if (raw) {
+    const address = hre.ethers.getAddress(raw);
+    if (MAINNET_CHAIN_IDS.has(chainId) && (await hre.ethers.provider.getCode(address)) === "0x") {
+      throw new Error(`SAFE_ADMIN_ADDRESS ${address} has no code on chain ${chainId}; deploy the Safe there first`);
+    }
+    return address;
+  }
+  if (MAINNET_CHAIN_IDS.has(chainId)) {
+    throw new Error(
+      `SAFE_ADMIN_ADDRESS must be set on chain ${chainId}. Refusing to leave the deployer EOA ` +
+        `as DEFAULT_ADMIN of the mainnet registry - set it to the Safe that takes over.`,
+    );
+  }
+  return null;
+}
+
 /**
  * Resolves the initial poster. `DEFAULT_POSTER_ADDRESS` is derivable from the committed dev
  * keystore, so falling back to it on a public network would silently hand commitment-posting
@@ -77,8 +111,17 @@ function resolvePosterAddress() {
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
+  const chainId = (hre.network.config as any)?.chainId;
+  if (MAINNET_CHAIN_IDS.has(chainId) && deployer.address.toLowerCase() === EXAMPLE_DEPLOYER_ADDRESS.toLowerCase()) {
+    throw new Error(
+      `DEPLOYER_PRIVATE_KEY is the public example key from .env.example; refusing to deploy on chain ${chainId}`,
+    );
+  }
   const posterAddress = resolvePosterAddress();
   const adminDelay = resolveAdminDelay();
+  // Resolved before anything deploys, so a missing Safe address fails the run while it is
+  // still a no-op instead of after the proxy exists.
+  const finalAdmin = await resolveFinalAdmin();
   console.log("Deploying CommitmentRegistry with account:", deployer.address);
 
   const { proxy: registry, address: proxyAddress } = await deployUUPSProxy(
@@ -97,6 +140,22 @@ async function main() {
   const tx = await registry.setVersionStatus(INITIAL_VERSION, 1); // 1 = Active
   await tx.wait();
   console.log("Version", INITIAL_VERSION, "activated");
+
+  if (finalAdmin) {
+    // Hand over to the final admin: grant it every operational role and begin the two-step
+    // DEFAULT_ADMIN transfer. It completes when the Safe calls acceptDefaultAdminTransfer()
+    // after the admin delay - via scripts/acceptAdminAsSafe.ts. The deployer keeps its roles
+    // until scripts/renounceDeployerRoles.ts runs after the handover, so a failed acceptance
+    // never leaves the registry unmanageable.
+    await grantAllRoles(registry, deployer, finalAdmin);
+    const handoverTx = await registry.beginDefaultAdminTransfer(finalAdmin);
+    await handoverTx.wait();
+    console.log(`Granted all roles to ${finalAdmin} and began the default-admin transfer.`);
+    console.log(
+      `After the admin delay (${adminDelay}s), run scripts/acceptAdminAsSafe.ts to accept as ` +
+        `the Safe, then scripts/renounceDeployerRoles.ts to strip the deployer.`,
+    );
+  }
 
   // Output the address in a parseable format for the deploy script
   console.log(`COMMITMENT_REGISTRY_ADDRESS=${proxyAddress}`);

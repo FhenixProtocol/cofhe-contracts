@@ -1,5 +1,5 @@
 {
-  "filter_paths": "node_modules|contracts/tests|contracts/detereministic-tm",
+  "filter_paths": "node_modules|contracts/tests",
   "exclude_informational": true,
   "exclude_optimization": true,
   "exclude_dependencies": true,

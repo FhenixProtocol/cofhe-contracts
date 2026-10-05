@@ -11,3 +11,8 @@ contracts/internal/registry-chain/cache/
 contracts/internal/registry-chain/types/
 contracts/internal/registry-chain/.openzeppelin/
 contracts/internal/registry-chain/.env
+
+# Safe Transaction Builder batches written by the admin-handover tasks (per-run operational
+# artifacts, not repo content).
+contracts/internal/host-chain/safe-batches/
+contracts/internal/registry-chain/safe-batches/

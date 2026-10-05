@@ -2,11 +2,17 @@ import { expect } from "chai";
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
-import { getDefaultAdmin, grantAllRoles, requireDefaultAdminIsSignerOrUnset } from "../../utils/roles";
+import {
+  getDefaultAdmin,
+  grantAllRoles,
+  grantRolesByName,
+  MAINTENANCE_ROLES,
+  requireDefaultAdminIsSignerOrUnset,
+  resolveRolesByName,
+} from "../../utils/roles";
 
 const { ethers } = hre;
 
-const TASK_MANAGER_ADDRESS = "0xeA30c4B8b44078Bbf8a6ef5b9f1eC1626C7848D9";
 
 /**
  * Every `*_ROLE` constant the contract declares, other than DEFAULT_ADMIN_ROLE.
@@ -37,9 +43,9 @@ describe("Role-based access control", function () {
   let plaintextsStorage: any;
 
   before(async function () {
-    await deployOnChainFixture();
+    const fixture = await deployOnChainFixture();
     [owner, other] = await ethers.getSigners();
-    taskManager = await ethers.getContractAt("TaskManager", TASK_MANAGER_ADDRESS);
+    taskManager = fixture.taskManager;
     acl = await ethers.getContractAt("ACL", await taskManager.acl());
     plaintextsStorage = await ethers.getContractAt(
       "PlaintextsStorage",
@@ -193,7 +199,7 @@ describe("Role-based access control", function () {
   // The dangerous state is not the already-migrated proxy above - it is the window a real migration
   // opens. A proxy coming off the Ownable implementation has `_initialized == 1`, so
   // `reinitializer(2)` passes, and a zero AccessControl namespace, so the inherited `_grantRole`
-  // guard does not fire either. Reproduce that state exactly: bootstrap on DeterministicTM, then
+  // guard does not fire either. Reproduce that state exactly: bootstrap on the pre-roles Ownable stub, then
   // `upgradeToAndCall(TaskManager, "0x")` - the non-atomic upgrade the deploy scripts avoid but
   // that a Safe or a manual `cast send` would produce.
   describe("initializeV2 during a non-atomic migration", function () {
@@ -203,14 +209,14 @@ describe("Role-based access control", function () {
     beforeEach(async function () {
       [, , legacyOwner] = await ethers.getSigners();
 
-      const DeterministicTM = await ethers.getContractFactory("DeterministicTM");
-      const legacyImpl = await DeterministicTM.deploy();
+      const PreRolesStub = await ethers.getContractFactory("PreRolesTaskManagerStub");
+      const legacyImpl = await PreRolesStub.deploy();
       await legacyImpl.waitForDeployment();
 
       const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
       const proxy = await ERC1967Proxy.deploy(
         await legacyImpl.getAddress(),
-        DeterministicTM.interface.encodeFunctionData("initialize", [legacyOwner.address]),
+        PreRolesStub.interface.encodeFunctionData("initialize", [legacyOwner.address]),
       );
       await proxy.waitForDeployment();
 
@@ -219,7 +225,7 @@ describe("Role-based access control", function () {
       await newImpl.waitForDeployment();
 
       // Deliberately no migration calldata - this is the gap being tested.
-      const legacyProxy = DeterministicTM.attach(await proxy.getAddress()) as any;
+      const legacyProxy = PreRolesStub.attach(await proxy.getAddress()) as any;
       await legacyProxy.connect(legacyOwner).upgradeToAndCall(await newImpl.getAddress(), "0x");
 
       migrating = TaskManager.attach(await proxy.getAddress());
@@ -244,7 +250,7 @@ describe("Role-based access control", function () {
       expect(await migrating.defaultAdmin()).to.equal(legacyOwner.address);
     });
 
-    // The bootstrap stub's layout stops at slot 3, so TaskManager's signer slots read as zero -
+    // A pre-roles proxy never wrote TaskManager's signer slots, so they read as zero -
     // which is the verification-*disabled* sentinel. initializeV2 must reseed them, otherwise a
     // migrated-but-not-yet-configured proxy accepts unsigned inputs and unsigned decrypt results.
     // Pinning it here means a future layout shift fails CI rather than a testnet.
@@ -387,6 +393,63 @@ describe("Role-based access control", function () {
       await grantAllRoles(contract, owner, undefined, false);
       expect(await contract.hasRole(await contract.UPGRADER_ROLE(), owner.address)).to.equal(true);
       expect(await contract.hasRole(await contract.PAUSER_ROLE(), owner.address)).to.equal(true);
+    });
+  });
+  // The maintenance wallet exists to keep day-to-day pausing and security-zone changes off the
+  // Safe. What makes that safe is the *absence* of the admin-equivalent roles, so that is what
+  // these assert - granting the two is the easy half.
+  describe("maintenance wallet roles", function () {
+    // A fresh address each time: the shared fixture is set up once for the whole file, so reusing
+    // `other` would let an earlier describe's grants decide the result here.
+    const maintenance = ethers.Wallet.createRandom().address;
+
+    const ADMIN_EQUIVALENT_ROLES = [
+      "UPGRADER_ROLE",
+      "CONFIG_MANAGER_ROLE",
+      "VERIFIER_SIGNER_MANAGER_ROLE",
+      "DECRYPT_SIGNER_MANAGER_ROLE",
+    ];
+
+    it("grants exactly the narrow operational roles", async function () {
+      await grantRolesByName(taskManager, owner, maintenance, MAINTENANCE_ROLES, false);
+
+      for (const roleName of MAINTENANCE_ROLES) {
+        expect(
+          await taskManager.hasRole(await taskManager[roleName](), maintenance),
+          `${roleName} should be held`,
+        ).to.equal(true);
+      }
+      for (const roleName of [...ADMIN_EQUIVALENT_ROLES, "ACCESS_LIST_MANAGER_ROLE"]) {
+        expect(
+          await taskManager.hasRole(await taskManager[roleName](), maintenance),
+          `${roleName} must NOT be held by the maintenance wallet`,
+        ).to.equal(false);
+      }
+      expect(await taskManager.hasRole(await taskManager.DEFAULT_ADMIN_ROLE(), maintenance)).to.equal(
+        false,
+      );
+    });
+
+    it("is idempotent", async function () {
+      await grantRolesByName(taskManager, owner, maintenance, MAINTENANCE_ROLES, false);
+      await grantRolesByName(taskManager, owner, maintenance, MAINTENANCE_ROLES, false);
+
+      for (const roleName of MAINTENANCE_ROLES) {
+        expect(await taskManager.hasRole(await taskManager[roleName](), maintenance)).to.equal(true);
+      }
+    });
+
+    it("covers only roles TaskManager actually declares", async function () {
+      for (const roleName of MAINTENANCE_ROLES) {
+        expect(declaredRoleNames(taskManager), `${roleName} is not on the ABI`).to.include(roleName);
+      }
+    });
+
+    it("refuses a role the ABI does not declare", async function () {
+      // Guards against a renamed constant silently dropping a role from the grant.
+      await expect(resolveRolesByName(taskManager, ["NOT_A_REAL_ROLE"])).to.be.rejectedWith(
+        /is not declared on this contract's ABI/,
+      );
     });
   });
 });
