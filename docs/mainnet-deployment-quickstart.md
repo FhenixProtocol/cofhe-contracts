@@ -112,16 +112,20 @@ admin on each contract, so a failed acceptance can never leave a contract unmana
 
 ## Go-live
 
-Step 2 leaves intake closed. Once you have verified the configuration, a `PAUSER_ROLE` holder —
-the Safe, or `MAINTENANCE_ADDRESS` — calls:
-
-```
-enable()      // selector 0xa3907d71
-```
-
-Verify the following before flipping it: `verifierSigner` and `decryptResultSigner` are the real
+Step 2 leaves intake closed with the access list on, so `enable()` alone still rejects every
+task. Verify the following first: `verifierSigner` and `decryptResultSigner` are the real
 production addresses (not `address(1)`, the fail-closed sentinel), `acl()` and
-`plaintextsStorage()` are set, and `ACL.shareRegistry()` is set.
+`plaintextsStorage()` are set, `ACL.shareRegistry()` is set, and `accessListEnabled()` is true.
+
+Then an `ACCESS_LIST_MANAGER_ROLE` holder (the Safe) adds the contracts allowed to create tasks,
+and a `PAUSER_ROLE` holder — the Safe, or `MAINTENANCE_ADDRESS` — opens intake:
+
+```
+addToAccessList(accounts)   // selector 0xdd33c9c4
+enable()                    // selector 0xa3907d71
+```
+
+Check: `isEnabled()` is true and `accessList(account)` is true for each added account.
 
 ## Verify sources
 
