@@ -191,6 +191,8 @@ Output: `ignition/deployments/chain-<chainId>/artifacts/TaskManager#TaskManager.
 
 Check: the log says `Registered TaskManager <address> as id 1 in the address book` and the artifact's `address` is that address.
 
+If the run fails after that line, rerun the same command: it upgrades the registered TaskManager and finishes the maintenance grant and the admin handover.
+
 ### Step 4 — Accept the admin transfers as the Safe
 
 ```bash
@@ -334,9 +336,10 @@ Final state after step 5, before go-live (the deployer holds nothing anywhere):
 ## Upgrades
 
 - `npx hardhat task:upgradeTM --network <net> --key <admin key>` — upgrades the TaskManager in place after validating the storage layout (`--onlyvalidate true` checks only).
-- `hardhat deploy` again — upgrades the registered TaskManager in place and keeps its ACL and PlaintextsStorage; the setup (signers, intake) is not rerun. `FULL_REDEPLOY=1 npx hardhat deploy --network <net>` also deploys fresh ACL, ACPShareRegistry and PlaintextsStorage and reruns the setup: ACL permissions and stored plaintexts are not carried over, and the signers and intake state are overwritten from the environment.
+- `npx hardhat task:upgradeACL --network <net> --key <admin key>` / `task:upgradePlaintextsStorage` — upgrade the registered TaskManager's ACL or PlaintextsStorage, setting the TaskManager in the same `upgradeToAndCall` after validating the storage layout (`--onlyvalidate true` checks only).
+- `hardhat deploy` again — upgrades the registered TaskManager in place and keeps its ACL and PlaintextsStorage; the setup (signers, intake) is not rerun. It also finishes a maintenance grant or admin handover that an earlier run did not complete. `FULL_REDEPLOY=1 npx hardhat deploy --network <net>` also deploys fresh ACL, ACPShareRegistry and PlaintextsStorage and reruns the setup: ACL permissions and stored plaintexts are not carried over, and the signers and intake state are overwritten from the environment.
 
-After the handover only the Safe holds `UPGRADER_ROLE`, so `task:upgradeTM` deploys the implementation with any funded key and hands the upgrade itself to the Safe:
+After the handover only the Safe holds `UPGRADER_ROLE`, so `task:upgradeTM`, `task:upgradeACL` and `task:upgradePlaintextsStorage` deploy the implementation with any funded key and hand the upgrade itself to the Safe:
 
 ### Step 1 — Validate the storage layout
 
@@ -355,3 +358,16 @@ npx hardhat task:upgradeTM --network <net> --key <any funded key>
 With `SAFE_ADMIN_ADDRESS` set: with `SAFE_OWNER_KEY` it executes `upgradeToAndCall` and `incVersion` through the Safe; otherwise it writes `safe-batches/<net>-upgrade-tm-<unix>.json` to import under Apps -> Transaction Builder in the Safe app, then sign and execute.
 
 Check: `getVersion()` went up by one and the implementation slot points at the printed new address.
+
+### Step 3 — Upgrade the ACL or PlaintextsStorage (when they changed)
+
+```bash
+npx hardhat task:upgradeACL --network <net> --key <any funded key> --onlyvalidate true
+npx hardhat task:upgradeACL --network <net> --key <any funded key>
+npx hardhat task:upgradePlaintextsStorage --network <net> --key <any funded key> --onlyvalidate true
+npx hardhat task:upgradePlaintextsStorage --network <net> --key <any funded key>
+```
+
+Same Safe flow as step 2: one `upgradeToAndCall(impl, setTaskManager(tm))`, executed through the Safe with `SAFE_OWNER_KEY`, otherwise written to `safe-batches/<net>-upgrade-acl-<unix>.json` / `safe-batches/<net>-upgrade-plaintexts-storage-<unix>.json`.
+
+Check: `getTaskManagerAddress()` is the registered TaskManager and the implementation slot points at the printed new address.

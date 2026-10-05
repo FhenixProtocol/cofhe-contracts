@@ -6,6 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { getDefaultAdmin, resolveAdminDelay } from "../utils/roles";
 import { resolveTaskManager } from "../utils/addressBook";
+import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 
 /**
  * A TaskManager satellite proxy: resolved through the registered TaskManager rather than passed in,
@@ -69,22 +70,18 @@ async function upgradeSatellite(
 
     // `_authorizeUpgrade` needs only UPGRADER_ROLE, but `setTaskManager` needs DEFAULT_ADMIN_ROLE.
     // Running it inside `upgradeToAndCall` keeps the whole thing atomic, so a signer without
-    // DEFAULT_ADMIN_ROLE would only burn gas on a revert. Refuse up front with a clear message.
+    // DEFAULT_ADMIN_ROLE would only burn gas on a revert. After the handover that admin is the
+    // Safe, which then sends the upgrade itself.
     if (
       currentDefaultAdmin !== null &&
       currentDefaultAdmin.toLowerCase() !== adminSigner.address.toLowerCase()
     ) {
-      throw new Error(
-        `Refusing to upgrade ${satellite.name}: default admin is ${currentDefaultAdmin}, but the ` +
-          `signer is ${adminSigner.address}. setTaskManager runs in the upgrade transaction and ` +
-          `needs DEFAULT_ADMIN_ROLE, so the transaction would revert. Run this from the default admin.`,
-      );
+      const safeAddress = await requireSafeCanUpgrade(ethers, satellite, ProxyContract, currentDefaultAdmin, adminSigner);
+      await upgradeAsSafe(hre, satellite, ProxyContract, Factory, taskManagerAddress, safeAddress, oldImplementationAddress);
+      return;
     }
 
-    const newIplDeployment = await Factory.deploy();
-    await newIplDeployment.waitForDeployment();
-    const newIplAddress = await newIplDeployment.getAddress();
-    console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
+    const newIplAddress = await deployImplementation(Factory);
 
     // A proxy upgraded to this implementation has no TaskManager recorded and rejects every
     // TaskManager call until setTaskManager runs. Run it in the upgrade transaction, so the proxy
@@ -109,7 +106,26 @@ async function upgradeSatellite(
         console.log(chalk.green(`Successfully upgraded ${satellite.name} contract (setTaskManager in the same transaction)`));
     }
 
-    const recordedTaskManager: string = await connectedImplementation.getTaskManagerAddress();
+    await reportUpgrade(ethers, satellite, ProxyContract, taskManagerAddress, oldImplementationAddress);
+}
+
+/** Deploys the new implementation. Any funded key may do this; only the upgrade itself needs a role. */
+async function deployImplementation(Factory: any): Promise<string> {
+    const newIplDeployment = await Factory.deploy();
+    await newIplDeployment.waitForDeployment();
+    const newIplAddress = await newIplDeployment.getAddress();
+    console.log(chalk.green("Before upgrade, new implementation address:", newIplAddress));
+    return newIplAddress;
+}
+
+async function reportUpgrade(
+    ethers: any,
+    satellite: Satellite,
+    ProxyContract: any,
+    taskManagerAddress: string,
+    oldImplementationAddress: string,
+) {
+    const recordedTaskManager: string = await ProxyContract.getTaskManagerAddress();
     console.log(chalk.green("TaskManager recorded on the proxy:", recordedTaskManager));
     if (recordedTaskManager.toLowerCase() !== taskManagerAddress.toLowerCase()) {
         throw new Error(
@@ -117,7 +133,7 @@ async function upgradeSatellite(
         );
     }
 
-    const newImplementationAddress = await getImplementationAddress(ethers, connectedImplementation);
+    const newImplementationAddress = await getImplementationAddress(ethers, ProxyContract);
     console.log(chalk.green("New implementation address:", newImplementationAddress));
     if (oldImplementationAddress === newImplementationAddress) {
         console.log(chalk.red("WARNING: Implementation address did not change!"));
@@ -125,6 +141,98 @@ async function upgradeSatellite(
         console.log(chalk.green("Implementation address changed successfully!"));
     }
     console.log("\n");
+}
+
+/**
+ * Returns SAFE_ADMIN_ADDRESS when it can run the upgrade: it must be the default admin (for
+ * `setTaskManager`) and hold UPGRADER_ROLE (for `_authorizeUpgrade`). Throws otherwise.
+ */
+async function requireSafeCanUpgrade(
+    ethers: any,
+    satellite: Satellite,
+    ProxyContract: any,
+    currentDefaultAdmin: string,
+    signer: any,
+): Promise<string> {
+    const rawSafeAddress = process.env.SAFE_ADMIN_ADDRESS?.trim();
+    if (!rawSafeAddress || ethers.getAddress(rawSafeAddress) !== ethers.getAddress(currentDefaultAdmin)) {
+        throw new Error(
+          `Refusing to upgrade ${satellite.name}: default admin is ${currentDefaultAdmin}, but the ` +
+            `signer is ${signer.address} and SAFE_ADMIN_ADDRESS is ${rawSafeAddress || "unset"}. ` +
+            `setTaskManager runs in the upgrade transaction and needs DEFAULT_ADMIN_ROLE. Run this ` +
+            `from the default admin, or set SAFE_ADMIN_ADDRESS to it.`,
+        );
+    }
+    const safeAddress = ethers.getAddress(rawSafeAddress);
+    if (!(await ProxyContract.hasRole(await ProxyContract.UPGRADER_ROLE(), safeAddress))) {
+        throw new Error(`Refusing to upgrade ${satellite.name}: ${safeAddress} does not hold UPGRADER_ROLE.`);
+    }
+    return safeAddress;
+}
+
+/**
+ * Upgrades as the Safe - the post-handover flow, mirroring task:upgradeTM: with SAFE_OWNER_KEY
+ * the upgrade is executed through the Safe (threshold-1 Safes only), otherwise a Transaction
+ * Builder batch is written to import in the Safe app. Either way it is the same single
+ * `upgradeToAndCall(impl, setTaskManager(tm))`, so the proxy is never left without a TaskManager.
+ */
+async function upgradeAsSafe(
+    hre: any,
+    satellite: Satellite,
+    ProxyContract: any,
+    Factory: any,
+    taskManagerAddress: string,
+    safeAddress: string,
+    oldImplementationAddress: string,
+) {
+    const { ethers } = hre;
+    const proxyAddress: string = await ProxyContract.getAddress();
+    const newIplAddress = await deployImplementation(Factory);
+    const setTaskManagerData = Factory.interface.encodeFunctionData("setTaskManager", [taskManagerAddress]);
+    const data = ProxyContract.interface.encodeFunctionData("upgradeToAndCall", [newIplAddress, setTaskManagerData]);
+
+    const ownerKey = process.env.SAFE_OWNER_KEY?.trim();
+    if (ownerKey) {
+        const ownerSigner = new Wallet(ownerKey, ethers.provider);
+        // An EOA final admin (testnets) upgrades directly: SAFE_OWNER_KEY is then its own key.
+        const sendsDirectly = ownerSigner.address.toLowerCase() === safeAddress.toLowerCase();
+        console.log(chalk.green(`Upgrading ${satellite.name} as ${safeAddress}, sending as ${ownerSigner.address}`));
+        if (sendsDirectly) {
+            await (await ownerSigner.sendTransaction({ to: proxyAddress, data })).wait();
+        } else {
+            await execTransactionThroughSafe(hre, safeAddress, ownerSigner, proxyAddress, data);
+        }
+        console.log(chalk.green(`Successfully upgraded ${satellite.name} contract (setTaskManager in the same transaction)`));
+        await reportUpgrade(ethers, satellite, ProxyContract, taskManagerAddress, oldImplementationAddress);
+        return;
+    }
+
+    const slug = satellite.name === "ACL" ? "upgrade-acl" : "upgrade-plaintexts-storage";
+    const path = writeSafeBatch(hre, {
+        safeAddress,
+        slug,
+        name: `CoFHE - upgrade ${satellite.name}`,
+        description:
+            `Upgrade the ${satellite.name} proxy ${proxyAddress} to implementation ${newIplAddress} and ` +
+            `set its TaskManager to ${taskManagerAddress} in the same call. Generated by task:upgrade${satellite.name}.`,
+        transactions: [{ to: proxyAddress, data }],
+    });
+    console.log(chalk.bold.blue("\nWrote a Safe Transaction Builder batch:"));
+    console.log(`  ${path}`);
+    console.log(
+        chalk.dim("Import it under Apps -> Transaction Builder in the Safe app, review, sign, execute."),
+    );
+    console.log(chalk.bold.blue("\nThe transaction it contains:"));
+    console.log(`  upgradeToAndCall(${newIplAddress}, setTaskManager(${taskManagerAddress})):`);
+    console.log(`    to:    ${proxyAddress}`);
+    console.log(`    value: 0`);
+    console.log(`    data:  ${data}`);
+    console.log(
+        chalk.yellow(
+          `\nAfter execution, check getTaskManagerAddress() == ${taskManagerAddress} and the ` +
+            `implementation slot on ${proxyAddress}.`,
+        ),
+    );
 }
 
 function registerUpgradeTask(taskName: string, satellite: Satellite) {
