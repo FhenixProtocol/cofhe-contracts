@@ -137,6 +137,42 @@ describe("hardhat deploy against the address book", function () {
     expect(pendingAdmin).to.equal(safe.address);
   });
 
+  it("finishes the maintenance grant and the handover on a re-run after the TaskManager is registered", async function () {
+    this.timeout(300_000);
+    await ethers.provider.send("hardhat_reset", []);
+    const [deployer, , safe, maintenance] = await ethers.getSigners();
+    // A first run without SAFE_ADMIN_ADDRESS / MAINTENANCE_ADDRESS leaves the state a run that
+    // failed right after setTm leaves: TaskManager registered, deployer still admin, no grants.
+    setDeployEnv(deployer.address);
+    const book = await installAddressBook(deployer);
+    await hre.run("deploy", { reset: true });
+
+    setDeployEnv(deployer.address, safe.address);
+    process.env.MAINTENANCE_ADDRESS = maintenance.address;
+    await hre.run("deploy", { reset: true });
+
+    const taskManager = await ethers.getContractAt("TaskManager", await resolveTaskManager(hre));
+    const acl = await ethers.getContractAt("ACL", await taskManager.acl());
+    const plaintextsStorage = await ethers.getContractAt("PlaintextsStorage", await taskManager.plaintextsStorage());
+    const shareRegistry = await ethers.getContractAt("ACPShareRegistry", await acl.shareRegistry());
+    expect(await taskManager.hasRole(await taskManager.PAUSER_ROLE(), maintenance.address)).to.equal(true);
+    const schedules: bigint[] = [];
+    for (const contract of [taskManager, acl, plaintextsStorage]) {
+      const [pendingAdmin, schedule] = await contract.pendingDefaultAdmin();
+      expect(pendingAdmin).to.equal(safe.address);
+      schedules.push(schedule);
+    }
+    expect(await shareRegistry.hasRole(await shareRegistry.DEFAULT_ADMIN_ROLE(), safe.address)).to.equal(true);
+    expect(await book.pendingOwner()).to.equal(safe.address);
+
+    // A further re-run must not restart the pending transfers.
+    await hre.run("deploy", { reset: true });
+    for (const [i, contract] of [taskManager, acl, plaintextsStorage].entries()) {
+      const [, schedule] = await contract.pendingDefaultAdmin();
+      expect(schedule).to.equal(schedules[i]);
+    }
+  });
+
   it("aborts before deploying anything when the book fails for a reason other than TaskManagerNotSet", async function () {
     this.timeout(300_000);
     await ethers.provider.send("hardhat_reset", []);

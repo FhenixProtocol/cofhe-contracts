@@ -510,12 +510,27 @@ function resolveMaintenanceAddress(ethers: any): string | null {
  * (ACPShareRegistry) have no transfer mechanism and DEFAULT_ADMIN_ROLE is granted directly.
  * The deployer keeps its own roles until `task:renounceDeployerRoles` runs after the handover,
  * so a failed acceptance never leaves a contract unmanageable.
+ *
+ * Idempotent, so a re-run after a run that failed midway finishes the job: a contract already
+ * pending to, or accepted by, `finalAdmin` is skipped, which also keeps `beginDefaultAdminTransfer`
+ * from restarting the admin delay.
  */
 async function handOverToFinalAdmin(
   contracts: { name: string; contract: any; admin: any; twoStep: boolean }[],
   finalAdmin: string,
 ) {
+  const isFinalAdmin = (account: string) => account.toLowerCase() === finalAdmin.toLowerCase();
   for (const { name, contract, admin, twoStep } of contracts) {
+    if (twoStep) {
+      const [pendingAdmin] = await contract.pendingDefaultAdmin();
+      if (isFinalAdmin(pendingAdmin) || isFinalAdmin(await contract.defaultAdmin())) {
+        console.log(chalk.dim(`${name}: already handed over to ${finalAdmin}`));
+        continue;
+      }
+    } else if (await contract.hasRole(await contract.DEFAULT_ADMIN_ROLE(), finalAdmin)) {
+      console.log(chalk.dim(`${name}: already handed over to ${finalAdmin}`));
+      continue;
+    }
     await grantAllRoles(contract, admin, finalAdmin);
     if (twoStep) {
       const tx = await contract.connect(admin).beginDefaultAdminTransfer(finalAdmin);
@@ -691,6 +706,19 @@ const func: DeployFunction = async function () {
     const currentPlaintextsStorage = await TMProxyContract.plaintextsStorage();
     if (process.env.FULL_REDEPLOY?.trim() !== "1") {
       console.log(chalk.green(`Keeping ACL ${currentAcl} and PlaintextsStorage ${currentPlaintextsStorage}`));
+      // A fresh deploy registers the TaskManager before the maintenance grant and the handover,
+      // so a run that failed in between lands here on the re-run. Both steps are idempotent:
+      // finish them, or confirm they are already done.
+      await finishHandover({
+        taskManager: TMProxyContract,
+        satellites: finalAdmin ? await currentSatellites(TMProxyContract) : null,
+        addressBook,
+        bookOwnerIsAdmin,
+        adminSigner,
+        adminDelay,
+        maintenanceAddress,
+        finalAdmin,
+      });
       console.log(
         chalk.green("Upgrade complete. Set FULL_REDEPLOY=1 to redeploy the satellites and rerun TaskManagerSetup."),
       );
@@ -728,39 +756,102 @@ const func: DeployFunction = async function () {
     console.log(chalk.green(`Registered TaskManager ${TMProxyAddress} as id ${id} in the address book`));
   }
 
+  await finishHandover({
+    taskManager: TMProxyContract,
+    satellites: { acl: aclContract, shareRegistry: shareRegistryContract, plaintextsStorage: ptStorageContract },
+    addressBook,
+    bookOwnerIsAdmin,
+    adminSigner,
+    adminDelay,
+    maintenanceAddress,
+    finalAdmin,
+  });
+};
+
+type Satellites = { acl: any; shareRegistry: any; plaintextsStorage: any };
+
+/**
+ * The satellites a registered TaskManager drives. A zero address means its setup never finished,
+ * so there is nothing whole to hand over - fail rather than hand over part of the deployment.
+ */
+async function currentSatellites(taskManager: any): Promise<Satellites> {
+  const aclAddress: string = await taskManager.acl();
+  const ptStorageAddress: string = await taskManager.plaintextsStorage();
+  const acl: any = aclAddress === ethers.ZeroAddress ? null : await ethers.getContractAt("ACL", aclAddress);
+  const shareRegistryAddress: string = acl ? await acl.shareRegistry() : ethers.ZeroAddress;
+  if (!acl || ptStorageAddress === ethers.ZeroAddress || shareRegistryAddress === ethers.ZeroAddress) {
+    throw new Error(
+      `TaskManager ${await taskManager.getAddress()} has acl=${aclAddress}, plaintextsStorage=${ptStorageAddress}, ` +
+        `shareRegistry=${shareRegistryAddress}: its setup never finished, so it cannot be handed over. ` +
+        `Rerun with FULL_REDEPLOY=1.`,
+    );
+  }
+  return {
+    acl,
+    shareRegistry: await ethers.getContractAt("ACPShareRegistry", shareRegistryAddress),
+    plaintextsStorage: await ethers.getContractAt("PlaintextsStorage", ptStorageAddress),
+  };
+}
+
+/**
+ * The last steps of every deploy: grant the maintenance wallet its roles, then start the handover
+ * to `finalAdmin`. Idempotent, so a re-run after a run that failed midway completes them.
+ */
+async function finishHandover(params: {
+  taskManager: any;
+  /** Required when `finalAdmin` is set. */
+  satellites: Satellites | null;
+  addressBook: any;
+  bookOwnerIsAdmin: boolean;
+  adminSigner: any;
+  adminDelay: number;
+  maintenanceAddress: string | null;
+  finalAdmin: string | null;
+}) {
+  const { taskManager, satellites, addressBook, bookOwnerIsAdmin, adminSigner, adminDelay, maintenanceAddress, finalAdmin } =
+    params;
+
   // Before the handover, while the deployer unambiguously still holds DEFAULT_ADMIN_ROLE:
   // beginDefaultAdminTransfer only schedules, but granting from the Safe afterwards would need a
   // Safe transaction for what is a one-line grant here.
   if (maintenanceAddress) {
     console.log(chalk.bold.blue("---------------------Maintenance wallet---------------------"));
-    await grantRolesByName(TMProxyContract, adminSigner, maintenanceAddress, MAINTENANCE_ROLES);
+    await grantRolesByName(taskManager, adminSigner, maintenanceAddress, MAINTENANCE_ROLES);
     console.log("");
   }
 
-  if (finalAdmin) {
-    console.log(chalk.bold.blue("----------------------Admin handover-------------------------"));
-    await handOverToFinalAdmin(
-      [
-        { name: "TaskManager", contract: TMProxyContract, admin: adminSigner, twoStep: true },
-        { name: "ACL", contract: aclContract, admin: adminSigner, twoStep: true },
-        { name: "ACPShareRegistry", contract: shareRegistryContract, admin: adminSigner, twoStep: false },
-        { name: "PlaintextsStorage", contract: ptStorageContract, admin: adminSigner, twoStep: true },
-      ],
-      finalAdmin,
-    );
-    if (bookOwnerIsAdmin) {
+  if (!finalAdmin) {
+    return;
+  }
+  if (!satellites) {
+    throw new Error("finishHandover needs the satellites to hand over when SAFE_ADMIN_ADDRESS is set");
+  }
+  console.log(chalk.bold.blue("----------------------Admin handover-------------------------"));
+  await handOverToFinalAdmin(
+    [
+      { name: "TaskManager", contract: taskManager, admin: adminSigner, twoStep: true },
+      { name: "ACL", contract: satellites.acl, admin: adminSigner, twoStep: true },
+      { name: "ACPShareRegistry", contract: satellites.shareRegistry, admin: adminSigner, twoStep: false },
+      { name: "PlaintextsStorage", contract: satellites.plaintextsStorage, admin: adminSigner, twoStep: true },
+    ],
+    finalAdmin,
+  );
+  if (bookOwnerIsAdmin) {
+    if ((await addressBook.pendingOwner()).toLowerCase() === finalAdmin.toLowerCase()) {
+      console.log(chalk.dim(`CoFHEAddressBook: ${finalAdmin} is already the pending owner`));
+    } else {
       const tx = await addressBook.connect(adminSigner).transferOwnership(finalAdmin);
       await tx.wait();
       console.log(chalk.green(`CoFHEAddressBook: nominated ${finalAdmin} as owner (accepted by task:acceptAdminAsSafe)`));
     }
-    console.log(
-      chalk.yellow(
-        `Handover started. After the admin delay (${adminDelay}s), run task:acceptAdminAsSafe ` +
-          `to accept as ${finalAdmin}, then task:renounceDeployerRoles to strip the deployer.`,
-      ),
-    );
   }
-};
+  console.log(
+    chalk.yellow(
+      `Handover started. After the admin delay (${adminDelay}s), run task:acceptAdminAsSafe ` +
+        `to accept as ${finalAdmin}, then task:renounceDeployerRoles to strip the deployer.`,
+    ),
+  );
+}
 
 export default func;
 func.id = "deploy_all";
