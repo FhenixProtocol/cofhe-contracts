@@ -72,7 +72,7 @@
           "label": "plaintextsStorage",
           "offset": 0,
           "slot": "5",
-          "type": "t_contract(PlaintextsStorage)33368",
+          "type": "t_contract(PlaintextsStorage)33107",
           "contract": "TaskManager",
           "src": "contracts/TaskManager.sol:345"
         },
@@ -130,7 +130,7 @@
           "label": "contract ACL",
           "numberOfBytes": "20"
         },
-        "t_contract(PlaintextsStorage)33368": {
+        "t_contract(PlaintextsStorage)33107": {
           "label": "contract PlaintextsStorage",
           "numberOfBytes": "20"
         },
@@ -468,7 +468,7 @@
           "label": "plaintextResults",
           "offset": 0,
           "slot": "0",
-          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)33169_storage)",
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)32908_storage)",
           "contract": "PlaintextsStorage",
           "src": "contracts/PlaintextsStorage.sol:23"
         },
@@ -490,11 +490,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_mapping(t_uint256,t_struct(PlaintextResult)33169_storage)": {
+        "t_mapping(t_uint256,t_struct(PlaintextResult)32908_storage)": {
           "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
           "numberOfBytes": "32"
         },
-        "t_struct(PlaintextResult)33169_storage": {
+        "t_struct(PlaintextResult)32908_storage": {
           "label": "struct PlaintextsStorage.PlaintextResult",
           "members": [
             {
@@ -660,11 +660,11 @@
         "t_uint256": {
           "label": "uint256"
         },
-        "t_mapping(t_bytes32,t_struct(ShareHead)31509_storage)": {
-          "label": "mapping(bytes32 => struct ACPShareRegistry.ShareHead)"
+        "t_mapping(t_bytes32,t_struct(ShareHeader)31509_storage)": {
+          "label": "mapping(bytes32 => struct ACPShareRegistry.ShareHeader)"
         },
-        "t_struct(ShareHead)31509_storage": {
-          "label": "struct ACPShareRegistry.ShareHead",
+        "t_struct(ShareHeader)31509_storage": {
+          "label": "struct ACPShareRegistry.ShareHeader",
           "members": [
             {
               "label": "issuer",
@@ -695,10 +695,10 @@
         "t_uint64": {
           "label": "uint64"
         },
-        "t_mapping(t_bytes32,t_struct(ACP)32826_storage)": {
+        "t_mapping(t_bytes32,t_struct(ACP)32565_storage)": {
           "label": "mapping(bytes32 => struct ACP)"
         },
-        "t_struct(ACP)32826_storage": {
+        "t_struct(ACP)32565_storage": {
           "label": "struct ACP",
           "members": [
             {
@@ -789,8 +789,8 @@
           },
           {
             "contract": "ACPShareRegistry",
-            "label": "heads",
-            "type": "t_mapping(t_bytes32,t_struct(ShareHead)31509_storage)",
+            "label": "headers",
+            "type": "t_mapping(t_bytes32,t_struct(ShareHeader)31509_storage)",
             "src": "contracts/ACPShareRegistry.sol:69"
           }
         ],
@@ -799,13 +799,13 @@
             "contract": "ACPShareRegistry",
             "label": "shareIdsFor",
             "type": "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)",
-            "src": "contracts/ACPShareRegistry.sol:81"
+            "src": "contracts/ACPShareRegistry.sol:82"
           },
           {
             "contract": "ACPShareRegistry",
             "label": "shares",
-            "type": "t_mapping(t_bytes32,t_struct(ACP)32826_storage)",
-            "src": "contracts/ACPShareRegistry.sol:83"
+            "type": "t_mapping(t_bytes32,t_struct(ACP)32565_storage)",
+            "src": "contracts/ACPShareRegistry.sol:84"
           }
         ],
         "erc7201:openzeppelin.storage.AccessControl": [

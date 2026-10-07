@@ -89,21 +89,21 @@ describe("ACPShareRegistry", function () {
   });
 
   describe("share", function () {
-    it("stores the head and emits the full ACP and the metadata", async function () {
+    it("stores the header and emits the full ACP and the metadata", async function () {
       const acp = sampleAcp();
       const shareId = shareIdOf(acp);
       expect(await registry.connect(issuer).share.staticCall(acp, METADATA)).to.equal(shareId);
 
       const receipt = await (await registry.connect(issuer).share(acp, METADATA)).wait();
-      const head = await registry.getShare(shareId);
-      expect(head.issuer).to.equal(issuer.address);
-      expect(head.expiration).to.equal(acp.expiration);
-      expect(head.recipient).to.equal(recipient.address);
-      expect(head.blockNumber).to.equal(receipt.blockNumber);
-      expect(head.revokerContract).to.equal(ethers.ZeroAddress);
-      expect(head.revokerData).to.equal(0n);
+      const header = await registry.getShare(shareId);
+      expect(header.issuer).to.equal(issuer.address);
+      expect(header.expiration).to.equal(acp.expiration);
+      expect(header.recipient).to.equal(recipient.address);
+      expect(header.blockNumber).to.equal(receipt.blockNumber);
+      expect(header.revokerContract).to.equal(ethers.ZeroAddress);
+      expect(header.revokerData).to.equal(0n);
 
-      const event = await sharedEvent(shareId, head.blockNumber);
+      const event = await sharedEvent(shareId, header.blockNumber);
       expect(event.args.recipient).to.equal(recipient.address);
       expect(event.args.issuer).to.equal(issuer.address);
       expect(event.args.shareId).to.equal(shareId);
@@ -114,16 +114,16 @@ describe("ACPShareRegistry", function () {
     it("accepts a share without metadata", async function () {
       const acp = sampleAcp();
       await registry.connect(issuer).share(acp, "0x");
-      const head = await registry.getShare(shareIdOf(acp));
-      expect((await sharedEvent(shareIdOf(acp), head.blockNumber)).args.metadata).to.equal("0x");
+      const header = await registry.getShare(shareIdOf(acp));
+      expect((await sharedEvent(shareIdOf(acp), header.blockNumber)).args.metadata).to.equal("0x");
     });
 
-    it("keeps the revoker in the head", async function () {
+    it("keeps the revoker in the header", async function () {
       const acp = sampleAcp({ revokerContract: stranger.address, revokerData: 7n });
       await registry.connect(issuer).share(acp, "0x");
-      const head = await registry.getShare(shareIdOf(acp));
-      expect(head.revokerContract).to.equal(stranger.address);
-      expect(head.revokerData).to.equal(7n);
+      const header = await registry.getShare(shareIdOf(acp));
+      expect(header.revokerContract).to.equal(stranger.address);
+      expect(header.revokerData).to.equal(7n);
     });
 
     it("rejects a share posted by anyone but its issuer", async function () {
@@ -159,24 +159,24 @@ describe("ACPShareRegistry", function () {
   });
 
   describe("sharesFor", function () {
-    it("returns ids and heads of the live shares, index for index", async function () {
+    it("returns ids and headers of the live shares, index for index", async function () {
       const first = sampleAcp();
       const second = sampleAcp({ handles: [ethers.id("other")] });
       await registry.connect(issuer).share(first, METADATA);
       await registry.connect(issuer).share(second, "0x");
 
-      const [ids, heads] = await registry.sharesFor(recipient.address);
+      const [ids, headers] = await registry.sharesFor(recipient.address);
       expect(ids).to.deep.equal([shareIdOf(first), shareIdOf(second)]);
-      expect(heads.map((h: any) => h.issuer)).to.deep.equal([issuer.address, issuer.address]);
+      expect(headers.map((h: any) => h.issuer)).to.deep.equal([issuer.address, issuer.address]);
       for (const [i, id] of ids.entries()) {
-        expect(heads[i]).to.deep.equal(await registry.getShare(id));
+        expect(headers[i]).to.deep.equal(await registry.getShare(id));
       }
     });
 
     it("returns two empty arrays for a recipient without shares", async function () {
-      const [ids, heads] = await registry.sharesFor(stranger.address);
+      const [ids, headers] = await registry.sharesFor(stranger.address);
       expect(ids).to.have.length(0);
-      expect(heads).to.have.length(0);
+      expect(headers).to.have.length(0);
     });
 
     it("filters expired and revoked shares", async function () {
@@ -194,9 +194,9 @@ describe("ACPShareRegistry", function () {
       await revoker.connect(issuer).revokeSingle(1n);
       await time.increase(200);
 
-      const [ids, heads] = await registry.sharesFor(recipient.address);
+      const [ids, headers] = await registry.sharesFor(recipient.address);
       expect(ids).to.deep.equal([shareIdOf(live)]);
-      expect(heads).to.have.length(1);
+      expect(headers).to.have.length(1);
       expect(await registry.isShareValid(shareIdOf(live))).to.equal(true);
       expect(await registry.isShareValid(shareIdOf(expiring))).to.equal(false);
       expect(await registry.isShareValid(shareIdOf(revoked))).to.equal(false);
@@ -242,9 +242,9 @@ describe("ACPShareRegistry", function () {
       await registry.connect(recipient).removeShare(shareId);
 
       await registry.connect(issuer).share(acp, "0x0302");
-      const head = await registry.getShare(shareId);
-      expect(head.blockNumber).to.be.greaterThan(firstBlock);
-      expect((await sharedEvent(shareId, head.blockNumber)).args.metadata).to.equal("0x0302");
+      const header = await registry.getShare(shareId);
+      expect(header.blockNumber).to.be.greaterThan(firstBlock);
+      expect((await sharedEvent(shareId, header.blockNumber)).args.metadata).to.equal("0x0302");
     });
   });
 

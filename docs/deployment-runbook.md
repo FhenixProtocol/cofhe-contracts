@@ -375,7 +375,7 @@ Check: `getTaskManagerAddress()` is the registered TaskManager and the implement
 
 ### Step 4 — Upgrade the ACPShareRegistry (pointer-based registry)
 
-The pointer-based registry keeps only a share head in storage; the full ACP and its metadata travel in the `Shared` event. It upgrades the first version in place.
+The pointer-based registry keeps only a share header in storage; the full ACP and its metadata travel in the `Shared` event. It upgrades the first version in place.
 
 ```bash
 npx hardhat task:upgradeShareRegistry --network <net> --key <any funded key> --onlyvalidate true
@@ -389,4 +389,4 @@ npx hardhat task:upgradeShareRegistry --network <net> --key <any funded key>
 
 Check: the implementation slot points at the printed new address, and `sharesFor(<any recipient>)` returns two arrays.
 
-Release order: upgrade the registry on every network first, then publish the SDK that reads the pointer-based registry (`share(acp, metadata)`, `sharesFor` returning heads), then update the apps that share. Between the upgrade and the SDK release, apps on the previous SDK cannot post or list shares.
+Release order: upgrade the registry on every network first, then publish the SDK that reads the pointer-based registry (`share(acp, metadata)`, `sharesFor` returning headers), then update the apps that share. Between the upgrade and the SDK release, apps on the previous SDK cannot post or list shares.

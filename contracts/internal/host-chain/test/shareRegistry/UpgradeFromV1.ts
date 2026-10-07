@@ -82,8 +82,8 @@ describe("ACPShareRegistry: in-place upgrade from v1", function () {
 
     await (await upgraded.connect(issuer).share(acp, "0x03")).wait();
     expect([...(await upgraded.sharesFor(alice.address))[0]]).to.deep.equal([id]);
-    const head = await upgraded.getShare(id);
-    const [log] = await upgraded.queryFilter(upgraded.filters.Shared(undefined, undefined, id), head.blockNumber, head.blockNumber);
+    const header = await upgraded.getShare(id);
+    const [log] = await upgraded.queryFilter(upgraded.filters.Shared(undefined, undefined, id), header.blockNumber, header.blockNumber);
     expect(log.args.metadata).to.equal("0x03");
   });
 });
