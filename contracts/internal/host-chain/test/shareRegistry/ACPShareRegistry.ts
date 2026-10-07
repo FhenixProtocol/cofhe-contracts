@@ -246,6 +246,30 @@ describe("ACPShareRegistry", function () {
       expect(header.blockNumber).to.be.greaterThan(firstBlock);
       expect((await sharedEvent(shareId, header.blockNumber)).args.metadata).to.equal("0x0302");
     });
+
+    it("removed and posted again in one block: the block holds both events, the last is the share", async function () {
+      const acp = sampleAcp();
+      const shareId = shareIdOf(acp);
+      await ethers.provider.send("evm_setAutomine", [false]);
+      try {
+        await registry.connect(issuer).share(acp, METADATA);
+        await registry.connect(recipient).removeShare(shareId);
+        await registry.connect(issuer).share(acp, "0x0302");
+        await ethers.provider.send("evm_mine", []);
+      } finally {
+        await ethers.provider.send("evm_setAutomine", [true]);
+      }
+
+      const header = await registry.getShare(shareId);
+      const logs = await registry.queryFilter(
+        registry.filters.Shared(undefined, undefined, shareId),
+        header.blockNumber,
+        header.blockNumber,
+      );
+      expect(logs.map((l: any) => l.args.metadata)).to.deep.equal([METADATA, "0x0302"]);
+      expect(logs[1].index).to.be.greaterThan(logs[0].index);
+      expect(await registry.isShareValid(shareId)).to.equal(true);
+    });
   });
 
   describe("gas", function () {
