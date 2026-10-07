@@ -48,7 +48,7 @@
           "label": "acl",
           "offset": 0,
           "slot": "3",
-          "type": "t_contract(ACL)10282",
+          "type": "t_contract(ACL)31468",
           "contract": "TaskManager",
           "src": "contracts/TaskManager.sol:338"
         },
@@ -72,7 +72,7 @@
           "label": "plaintextsStorage",
           "offset": 0,
           "slot": "5",
-          "type": "t_contract(PlaintextsStorage)10924",
+          "type": "t_contract(PlaintextsStorage)33368",
           "contract": "TaskManager",
           "src": "contracts/TaskManager.sol:345"
         },
@@ -126,11 +126,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_contract(ACL)10282": {
+        "t_contract(ACL)31468": {
           "label": "contract ACL",
           "numberOfBytes": "20"
         },
-        "t_contract(PlaintextsStorage)10924": {
+        "t_contract(PlaintextsStorage)33368": {
           "label": "contract PlaintextsStorage",
           "numberOfBytes": "20"
         },
@@ -153,13 +153,13 @@
         "t_uint48": {
           "label": "uint48"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)701_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
         "t_bytes32": {
           "label": "bytes32"
         },
-        "t_struct(RoleData)701_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -235,7 +235,7 @@
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)701_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
@@ -292,10 +292,10 @@
         "t_uint48": {
           "label": "uint48"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)701_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
-        "t_struct(RoleData)701_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -441,7 +441,7 @@
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)701_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
@@ -468,7 +468,7 @@
           "label": "plaintextResults",
           "offset": 0,
           "slot": "0",
-          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)10725_storage)",
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)33169_storage)",
           "contract": "PlaintextsStorage",
           "src": "contracts/PlaintextsStorage.sol:23"
         },
@@ -490,11 +490,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_mapping(t_uint256,t_struct(PlaintextResult)10725_storage)": {
+        "t_mapping(t_uint256,t_struct(PlaintextResult)33169_storage)": {
           "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
           "numberOfBytes": "32"
         },
-        "t_struct(PlaintextResult)10725_storage": {
+        "t_struct(PlaintextResult)33169_storage": {
           "label": "struct PlaintextsStorage.PlaintextResult",
           "members": [
             {
@@ -519,13 +519,13 @@
         "t_uint48": {
           "label": "uint48"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)701_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
         "t_bytes32": {
           "label": "bytes32"
         },
-        "t_struct(RoleData)701_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -596,7 +596,7 @@
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)701_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
@@ -620,22 +620,22 @@
       "solcVersion": "0.8.25",
       "storage": [],
       "types": {
-        "t_mapping(t_address,t_struct(Bytes32Set)29616_storage)": {
+        "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)": {
           "label": "mapping(address => struct EnumerableSet.Bytes32Set)"
         },
         "t_address": {
           "label": "address"
         },
-        "t_struct(Bytes32Set)29616_storage": {
+        "t_struct(Bytes32Set)29809_storage": {
           "label": "struct EnumerableSet.Bytes32Set",
           "members": [
             {
               "label": "_inner",
-              "type": "t_struct(Set)29422_storage"
+              "type": "t_struct(Set)29615_storage"
             }
           ]
         },
-        "t_struct(Set)29422_storage": {
+        "t_struct(Set)29615_storage": {
           "label": "struct EnumerableSet.Set",
           "members": [
             {
@@ -660,10 +660,45 @@
         "t_uint256": {
           "label": "uint256"
         },
-        "t_mapping(t_bytes32,t_struct(ACP)31972_storage)": {
+        "t_mapping(t_bytes32,t_struct(ShareHead)31509_storage)": {
+          "label": "mapping(bytes32 => struct ACPShareRegistry.ShareHead)"
+        },
+        "t_struct(ShareHead)31509_storage": {
+          "label": "struct ACPShareRegistry.ShareHead",
+          "members": [
+            {
+              "label": "issuer",
+              "type": "t_address"
+            },
+            {
+              "label": "expiration",
+              "type": "t_uint64"
+            },
+            {
+              "label": "recipient",
+              "type": "t_address"
+            },
+            {
+              "label": "blockNumber",
+              "type": "t_uint64"
+            },
+            {
+              "label": "revokerContract",
+              "type": "t_address"
+            },
+            {
+              "label": "revokerData",
+              "type": "t_uint256"
+            }
+          ]
+        },
+        "t_uint64": {
+          "label": "uint64"
+        },
+        "t_mapping(t_bytes32,t_struct(ACP)32826_storage)": {
           "label": "mapping(bytes32 => struct ACP)"
         },
-        "t_struct(ACP)31972_storage": {
+        "t_struct(ACP)32826_storage": {
           "label": "struct ACP",
           "members": [
             {
@@ -712,9 +747,6 @@
             }
           ]
         },
-        "t_uint64": {
-          "label": "uint64"
-        },
         "t_uint8": {
           "label": "uint8"
         },
@@ -724,10 +756,10 @@
         "t_bytes_storage": {
           "label": "bytes"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)20713_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
-        "t_struct(RoleData)20713_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -748,25 +780,39 @@
         }
       },
       "namespaces": {
+        "erc7201:cofhe.storage.ACPShareRegistry.v2": [
+          {
+            "contract": "ACPShareRegistry",
+            "label": "shareIdsFor",
+            "type": "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)",
+            "src": "contracts/ACPShareRegistry.sol:67"
+          },
+          {
+            "contract": "ACPShareRegistry",
+            "label": "heads",
+            "type": "t_mapping(t_bytes32,t_struct(ShareHead)31509_storage)",
+            "src": "contracts/ACPShareRegistry.sol:69"
+          }
+        ],
         "erc7201:cofhe.storage.ACPShareRegistry": [
           {
             "contract": "ACPShareRegistry",
             "label": "shareIdsFor",
-            "type": "t_mapping(t_address,t_struct(Bytes32Set)29616_storage)",
-            "src": "contracts/ACPShareRegistry.sol:42"
+            "type": "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)",
+            "src": "contracts/ACPShareRegistry.sol:81"
           },
           {
             "contract": "ACPShareRegistry",
             "label": "shares",
-            "type": "t_mapping(t_bytes32,t_struct(ACP)31972_storage)",
-            "src": "contracts/ACPShareRegistry.sol:44"
+            "type": "t_mapping(t_bytes32,t_struct(ACP)32826_storage)",
+            "src": "contracts/ACPShareRegistry.sol:83"
           }
         ],
         "erc7201:openzeppelin.storage.AccessControl": [
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)20713_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
