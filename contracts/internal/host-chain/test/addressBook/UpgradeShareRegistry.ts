@@ -57,7 +57,8 @@ async function expectRejection(promise: Promise<unknown>, pattern: RegExp): Prom
 
 /**
  * A network deployed before the pointer-based registry: the ACL serves a first-version
- * ACPShareRegistry holding shares, and the Safe holds its roles after the handover.
+ * ACPShareRegistry holding shares, and the Safe holds its roles after the handover. The upgrade
+ * keeps the proxy and abandons those shares.
  */
 describe("task:upgradeShareRegistry after the handover", function () {
   const saved: Record<string, string | undefined> = {};
@@ -149,14 +150,14 @@ describe("task:upgradeShareRegistry after the handover", function () {
     expect(await implementationOf(registryAddress)).to.equal(before);
   });
 
-  it("writes one Safe batch when SAFE_OWNER_KEY is unset: the upgrade with the first page, then one call per page", async function () {
+  it("writes one Safe batch when SAFE_OWNER_KEY is unset, changing nothing on chain", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
     const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "upgrade-share-registry-")), "batch.json");
     process.env.SAFE_OWNER_KEY = "";
     process.env.SAFE_BATCH_OUT = outPath;
     try {
-      await hre.run("task:upgradeShareRegistry", { pagesize: 1 });
+      await hre.run("task:upgradeShareRegistry");
     } finally {
       process.env.SAFE_OWNER_KEY = finalAdmin.privateKey;
       process.env.SAFE_BATCH_OUT = "";
@@ -164,15 +165,11 @@ describe("task:upgradeShareRegistry after the handover", function () {
 
     const V2 = await ethers.getContractFactory("ACPShareRegistry");
     const batch = JSON.parse(fs.readFileSync(outPath, "utf8"));
-    expect(batch.transactions).to.have.length(2);
-    expect(batch.transactions.map((t: any) => t.to)).to.deep.equal([registryAddress, registryAddress]);
-    const [newImplementation, firstPage] = V2.interface.decodeFunctionData("upgradeToAndCall", batch.transactions[0].data);
+    expect(batch.transactions).to.have.length(1);
+    expect(batch.transactions[0].to).to.equal(registryAddress);
+    const [newImplementation, call] = V2.interface.decodeFunctionData("upgradeToAndCall", batch.transactions[0].data);
     expect(await ethers.provider.getCode(newImplementation)).to.not.equal("0x");
-    const pagesSent = [
-      V2.interface.decodeFunctionData("migrateV1Shares", firstPage)[0],
-      V2.interface.decodeFunctionData("migrateV1Shares", batch.transactions[1].data)[0],
-    ].map((page: string[]) => [...page]);
-    expect(pagesSent.flat()).to.have.members([alice.address, bob.address]);
+    expect(call).to.equal("0x");
     expect(await implementationOf(registryAddress)).to.equal(before);
   });
 
@@ -186,23 +183,17 @@ describe("task:upgradeShareRegistry after the handover", function () {
     }
   });
 
-  it("upgrades in place as the Safe and migrates the live v1 shares, keeping the address", async function () {
+  it("upgrades in place as the Safe, keeping the address and abandoning the v1 shares", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
     await hre.run("task:upgradeShareRegistry");
     expect(await implementationOf(registryAddress)).to.not.equal(before);
 
     const registry: any = await ethers.getContractAt("ACPShareRegistry", registryAddress);
-    expect([...(await registry.sharesFor(alice.address))[0]]).to.deep.equal([liveIds.alice]);
-    expect([...(await registry.sharesFor(bob.address))[0]]).to.have.members([liveIds.bob, liveIds.bobExpiring]);
-    const head = await registry.getShare(liveIds.alice);
-    const logs = await registry.queryFilter(
-      registry.filters.Shared(undefined, undefined, liveIds.alice),
-      head.blockNumber,
-      head.blockNumber,
-    );
-    expect(logs).to.have.length(1);
-    expect(logs[0].args.metadata).to.equal("0x");
+    expect((await registry.sharesFor(alice.address))[0]).to.have.length(0);
+    expect((await registry.sharesFor(bob.address))[0]).to.have.length(0);
+    expect(await registry.isShareValid(liveIds.alice)).to.equal(false);
+    expect(await registry.hasRole(await registry.UPGRADER_ROLE(), finalAdmin.address)).to.equal(true);
   });
 
   it("re-runs as a no-op once upgraded", async function () {
@@ -210,7 +201,5 @@ describe("task:upgradeShareRegistry after the handover", function () {
     const before = await implementationOf(registryAddress);
     await hre.run("task:upgradeShareRegistry");
     expect(await implementationOf(registryAddress)).to.equal(before);
-    const registry: any = await ethers.getContractAt("ACPShareRegistry", registryAddress);
-    expect((await registry.sharesFor(alice.address))[0]).to.have.length(1);
   });
 });
