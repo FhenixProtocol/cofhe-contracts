@@ -67,21 +67,6 @@ async function v1Recipients(ethers: any, registry: string, fromBlock: number): P
   return [...recipients];
 }
 
-/** Of `recipients`, those the first version still lists live shares for (`sharesFor` filters expiry and revocation). */
-async function withLiveV1Shares(ethers: any, registry: string, recipients: string[]): Promise<string[]> {
-  const V1 = await ethers.getContractFactory("ACPShareRegistryV1");
-  const v1 = V1.attach(registry);
-  const live: string[] = [];
-  for (const recipient of recipients) {
-    const shares = await v1.sharesFor(recipient);
-    if (shares.length > 0) {
-      live.push(recipient);
-      console.log(chalk.dim(`  ${recipient}: ${shares.length} live v1 share(s)`));
-    }
-  }
-  return live;
-}
-
 function pages<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
@@ -233,9 +218,9 @@ task("task:upgradeShareRegistry", "Upgrade the ACL's ACPShareRegistry in place a
       recipients = await v1Recipients(ethers, proxy, fromBlock);
       console.log(chalk.green(`${recipients.length} recipient(s) of v1 shares`));
     }
-    // Before the upgrade the first version can say who still has live shares; after it, migrate
-    // every candidate (a recipient without v1 shares costs one empty iteration).
-    if (!alreadyUpgraded) recipients = await withLiveV1Shares(ethers, proxy, recipients);
+    // Every recipient goes in: migrateV1Shares decides per share (dropping only expired ones) and
+    // is a no-op for a recipient whose shares are gone. Filtering here with the first version's
+    // sharesFor would apply its revoker check, and skip a share whose revoker happens to revert.
     console.log(chalk.green(`${recipients.length} recipient(s) to migrate`));
 
     const { safe } = await resolveSender(ethers, registry, signer);

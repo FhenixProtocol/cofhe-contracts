@@ -92,8 +92,8 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     ///         `keccak256(abi.encode(acp))`.
     event Shared(address indexed recipient, address indexed issuer, bytes32 indexed shareId, ACP acp, bytes metadata);
     event ShareRemoved(address indexed recipient, address indexed issuer, bytes32 indexed shareId);
-    /// @notice `migrateV1Shares` moved a recipient's first-version shares: `migrated` live ones
-    ///         re-posted (each with its own `Shared` event), `dropped` expired or revoked ones discarded.
+    /// @notice `migrateV1Shares` moved a recipient's first-version shares: `migrated` unexpired ones
+    ///         re-posted (each with its own `Shared` event), `dropped` expired ones discarded.
     event V1SharesMigrated(address indexed recipient, uint256 migrated, uint256 dropped);
 
     error NotIssuer();
@@ -168,11 +168,15 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     /**
      * @notice One-time move of first-version shares into this layout, a page of recipients at a
      *         time (the first version kept no list of recipients; the upgrade task collects them
-     *         from its `Shared` events). Each live share is re-posted as if new: its `Shared` event
-     *         carries the full payload and empty metadata, and its head points at this block, so
-     *         readers cannot tell it from a share posted now. Expired and revoked shares are
-     *         dropped. Every share it reads is deleted from the first-version storage, so a repeated
-     *         call is a no-op. Run inside `upgradeToAndCall`, or after it, by the admin or upgrader.
+     *         from its `Shared` events). Each unexpired share is re-posted as if new: its `Shared`
+     *         event carries the full payload and empty metadata, and its head points at this block,
+     *         so readers cannot tell it from a share posted now. Expired shares are dropped. Every
+     *         share it reads is deleted from the first-version storage, so a repeated call is a
+     *         no-op. Run inside `upgradeToAndCall`, or after it, by the admin or upgrader.
+     * @dev    Revocation is not checked here: the head keeps the revoker, and `sharesFor` /
+     *         `isShareValid` ask it on every read, as the first version did. Deciding it here would
+     *         call the revoker before a deletion that cannot be undone, so a revoker that reverts
+     *         (or runs out of the gas a large page leaves it) would drop a live share for good.
      */
     function migrateV1Shares(address[] calldata recipients) external {
         if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender) && !hasRole(UPGRADER_ROLE, msg.sender)) {
@@ -189,7 +193,7 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
                 ids.remove(shareId);
                 delete v1.shares[shareId];
                 if (
-                    _isValid(acp.issuer, acp.expiration, acp.revokerContract, acp.revokerData) &&
+                    acp.expiration >= block.timestamp &&
                     _storeHead(shareId, acp.issuer, acp.expiration, acp.recipient, acp.revokerContract, acp.revokerData)
                 ) {
                     emit Shared(acp.recipient, acp.issuer, shareId, acp, "");

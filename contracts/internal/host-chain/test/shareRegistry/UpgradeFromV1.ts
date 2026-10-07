@@ -82,7 +82,7 @@ describe("ACPShareRegistry: in-place upgrade from v1", function () {
     await upgrades.validateUpgrade(await registry.getAddress(), V2, { kind: "uups" });
   });
 
-  it("re-posts the live v1 shares inside upgradeToAndCall, dropping expired and revoked ones", async function () {
+  it("re-posts the unexpired v1 shares inside upgradeToAndCall, dropping expired ones", async function () {
     const { registry, shares, V2 } = await v1WithShares();
     const upgraded: any = await upgrades.upgradeProxy(await registry.getAddress(), V2, {
       kind: "uups",
@@ -93,8 +93,12 @@ describe("ACPShareRegistry: in-place upgrade from v1", function () {
 
     const [aliceIds, aliceHeads] = await upgraded.sharesFor(alice.address);
     expect([...aliceIds]).to.have.members([shareIdOf(shares.alice1), shareIdOf(shares.alice2)]);
+    // the revoked share is migrated (its head keeps the revoker) and hidden by the read-time check
     const [bobIds] = await upgraded.sharesFor(bob.address);
     expect([...bobIds]).to.deep.equal([shareIdOf(shares.bobLive)]);
+    expect((await upgraded.getShare(shareIdOf(shares.bobRevoked))).issuer).to.equal(issuer.address);
+    expect(await upgraded.isShareValid(shareIdOf(shares.bobRevoked))).to.equal(false);
+    expect((await upgraded.getShare(shareIdOf(shares.bobExpiring))).issuer).to.equal(ethers.ZeroAddress);
     expect(await upgraded.isShareValid(shareIdOf(shares.bobExpiring))).to.equal(false);
     expect(await upgraded.isShareValid(shareIdOf(shares.bobRemoved))).to.equal(false);
 
@@ -121,7 +125,7 @@ describe("ACPShareRegistry: in-place upgrade from v1", function () {
     const counts = await upgraded.queryFilter(upgraded.filters.V1SharesMigrated(), upgradeBlock, upgradeBlock);
     expect(counts.map((l: any) => [l.args.recipient, l.args.migrated, l.args.dropped])).to.deep.equal([
       [alice.address, 2n, 0n],
-      [bob.address, 1n, 2n],
+      [bob.address, 2n, 1n],
     ]);
   });
 
@@ -152,8 +156,28 @@ describe("ACPShareRegistry: in-place upgrade from v1", function () {
 
     await expect(upgraded.connect(admin).migrateV1Shares([bob.address]))
       .to.emit(upgraded, "V1SharesMigrated")
-      .withArgs(bob.address, 1n, 2n);
+      .withArgs(bob.address, 2n, 1n);
     expect([...(await upgraded.sharesFor(bob.address))[0]]).to.deep.equal([shareIdOf(shares.bobLive)]);
+  });
+
+  it("keeps a share whose revoker reverts during the migration, and lists it once the revoker answers", async function () {
+    const { registry, V2 } = await v1WithShares();
+    const revoker: any = await (await ethers.getContractFactory("SwitchableRevoker")).deploy();
+    const acp = acpFor(alice, "alice-flaky-revoker", { revokerContract: await revoker.getAddress(), revokerData: 7n });
+    await (await registry.connect(issuer).share(acp)).wait();
+    await (await revoker.setReverting(true)).wait();
+
+    const upgraded: any = await upgrades.upgradeProxy(await registry.getAddress(), V2, {
+      kind: "uups",
+      call: { fn: "migrateV1Shares", args: [[alice.address]] },
+    });
+    const id = shareIdOf(acp);
+    expect((await upgraded.getShare(id)).issuer).to.equal(issuer.address);
+    expect(await upgraded.isShareValid(id)).to.equal(false); // fails closed while the revoker reverts
+
+    await (await revoker.setReverting(false)).wait();
+    expect(await upgraded.isShareValid(id)).to.equal(true);
+    expect([...(await upgraded.sharesFor(alice.address))[0]]).to.include(id);
   });
 
   it("lets a migrated share be removed and posted again with labels", async function () {

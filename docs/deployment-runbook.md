@@ -383,8 +383,8 @@ npx hardhat task:upgradeShareRegistry --network <net> --key <any funded key>
 ```
 
 - The proxy comes from the registered TaskManager: `acl()` → `shareRegistry()`. The layout is checked against the first version (`ACPShareRegistryV1`), whose namespace stays reserved.
-- The task collects the recipients of first-version shares from the registry's `Shared` events (from its deploy block, or `--fromblock <n>`; `--recipients 0x..,0x..` skips the scan) and keeps those the first version still lists live shares for.
-- Calls: `upgradeToAndCall(impl, migrateV1Shares(first page))`, then one `migrateV1Shares(page)` per further page (`--pagesize`, default 10 recipients). Each live share is re-posted with an empty metadata blob and reads like a new one; expired and revoked shares are dropped; first-version storage is emptied as it goes, so a repeated call is a no-op.
+- The task collects the recipients of first-version shares from the registry's `Shared` events (from its deploy block, or `--fromblock <n>`; `--recipients 0x..,0x..` skips the scan) and migrates all of them.
+- Calls: `upgradeToAndCall(impl, migrateV1Shares(first page))`, then one `migrateV1Shares(page)` per further page (`--pagesize`, default 10 recipients). Each unexpired share is re-posted with an empty metadata blob and reads like a new one (a revoked one stays hidden by the read-time revoker check, as before); expired shares are dropped; first-version storage is emptied as it goes, so a repeated call is a no-op.
 - As in step 2: sent directly when the signer holds `UPGRADER_ROLE`; otherwise through the Safe at `SAFE_ADMIN_ADDRESS` with `SAFE_OWNER_KEY`, or written to `safe-batches/<net>-upgrade-share-registry-<unix>.json` as one batch.
 - A run on a proxy that already has the pointer-based implementation sends only the migration calls (resume after an interrupted batch).
 
