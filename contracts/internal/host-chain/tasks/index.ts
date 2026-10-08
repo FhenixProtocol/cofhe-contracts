@@ -7,3 +7,4 @@ export * from "./checkContractSize";
 export * from "./registerTaskManager";
 export * from "./upgradeSatellites";
 export * from "./setSignersAsSafe";
+export * from "./denyList";

@@ -33,6 +33,7 @@ error InvalidAddress();
 error OnlyOwnerAllowed(address caller);
 error CofheIsUnavailable();
 error NotOnAccessList(address caller);
+error OnDenyList(address caller);
 
 
 // Operation-specific errors
@@ -169,7 +170,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // Treat those four as admin-equivalent: they belong on the same governance as
     // DEFAULT_ADMIN_ROLE, not on an operational hot key. Only PAUSER_ROLE,
     // SECURITY_ZONE_MANAGER_ROLE and ACCESS_LIST_MANAGER_ROLE are genuinely narrow - their worst
-    // case is availability (halting intake, or gating it to an allowlist), not disclosure.
+    // case is availability (halting intake, or gating it to an allow or deny list), not disclosure.
     // ---------------------------------------------------------------------------------------
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -275,6 +276,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     event AccessListEnabledSet(bool enabled);
     event AccessGranted(address indexed account);
     event AccessRevoked(address indexed account);
+    event DenyListSet(address indexed account, bool denied);
     event ACLContractChanged(address indexed oldACL, address indexed newACL);
     event PlaintextsStorageChanged(address indexed oldStorage, address indexed newStorage);
     event SecurityZonesChanged(int32 oldMin, int32 oldMax, int32 newMin, int32 newMax);
@@ -363,6 +365,9 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     bool public accessListEnabled;
     mapping(address account => bool isAllowed) public accessList;
 
+    // Callers blocked from task intake while the access list is disabled. Ignored when it is enabled.
+    mapping(address account => bool isDenied) public denyList;
+
     modifier onlyIfEnabled() {
         if (!isEnabled) {
             revert CofheIsUnavailable();
@@ -370,13 +375,21 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         _;
     }
 
-    // Gates task intake to allowlisted callers when the access list is enabled.
-    // Short-circuits when disabled, so the mapping is only read while the list is active.
+    // Gates task intake to allowlisted callers when the access list is enabled,
+    // otherwise blocks deny-listed callers.
     modifier onlyAccessListed() {
-        if (accessListEnabled && !accessList[msg.sender]) {
-            revert NotOnAccessList(msg.sender);
-        }
+        _checkAccessList();
         _;
+    }
+
+    function _checkAccessList() private view {
+        if (accessListEnabled) {
+            if (!accessList[msg.sender]) {
+                revert NotOnAccessList(msg.sender);
+            }
+        } else if (denyList[msg.sender]) {
+            revert OnDenyList(msg.sender);
+        }
     }
 
     function enable() external onlyRole(PAUSER_ROLE) {
@@ -416,6 +429,16 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
             }
             accessList[accounts[i]] = false;
             emit AccessRevoked(accounts[i]);
+        }
+    }
+
+    function setDenyList(address[] calldata accounts, bool denied) external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            if (accounts[i] == address(0)) {
+                revert InvalidAddress();
+            }
+            denyList[accounts[i]] = denied;
+            emit DenyListSet(accounts[i], denied);
         }
     }
 

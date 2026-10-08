@@ -10,7 +10,7 @@
           "slot": "0",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:196"
+          "src": "contracts/TaskManager.sol:197"
         },
         {
           "label": "securityZoneMax",
@@ -18,7 +18,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:328"
+          "src": "contracts/TaskManager.sol:330"
         },
         {
           "label": "securityZoneMin",
@@ -26,7 +26,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:329"
+          "src": "contracts/TaskManager.sol:331"
         },
         {
           "label": "randomCounter",
@@ -34,7 +34,7 @@
           "slot": "1",
           "type": "t_uint256",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:332"
+          "src": "contracts/TaskManager.sol:334"
         },
         {
           "label": "_aggregator",
@@ -42,15 +42,15 @@
           "slot": "2",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:335"
+          "src": "contracts/TaskManager.sol:337"
         },
         {
           "label": "acl",
           "offset": 0,
           "slot": "3",
-          "type": "t_contract(ACL)10282",
+          "type": "t_contract(ACL)31468",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:338"
+          "src": "contracts/TaskManager.sol:340"
         },
         {
           "label": "verifierSigner",
@@ -58,7 +58,7 @@
           "slot": "4",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:340"
+          "src": "contracts/TaskManager.sol:342"
         },
         {
           "label": "version",
@@ -66,15 +66,15 @@
           "slot": "4",
           "type": "t_uint8",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:342"
+          "src": "contracts/TaskManager.sol:344"
         },
         {
           "label": "plaintextsStorage",
           "offset": 0,
           "slot": "5",
-          "type": "t_contract(PlaintextsStorage)10924",
+          "type": "t_contract(PlaintextsStorage)33001",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:345"
+          "src": "contracts/TaskManager.sol:347"
         },
         {
           "label": "_aggregators",
@@ -82,7 +82,7 @@
           "slot": "6",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:350"
+          "src": "contracts/TaskManager.sol:352"
         },
         {
           "label": "isEnabled",
@@ -90,7 +90,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:355"
+          "src": "contracts/TaskManager.sol:357"
         },
         {
           "label": "decryptResultSigner",
@@ -98,7 +98,7 @@
           "slot": "7",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:359"
+          "src": "contracts/TaskManager.sol:361"
         },
         {
           "label": "accessListEnabled",
@@ -106,7 +106,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:363"
+          "src": "contracts/TaskManager.sol:365"
         },
         {
           "label": "accessList",
@@ -114,7 +114,15 @@
           "slot": "8",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:364"
+          "src": "contracts/TaskManager.sol:366"
+        },
+        {
+          "label": "denyList",
+          "offset": 0,
+          "slot": "9",
+          "type": "t_mapping(t_address,t_bool)",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:369"
         }
       ],
       "types": {
@@ -126,11 +134,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_contract(ACL)10282": {
+        "t_contract(ACL)31468": {
           "label": "contract ACL",
           "numberOfBytes": "20"
         },
-        "t_contract(PlaintextsStorage)10924": {
+        "t_contract(PlaintextsStorage)33001": {
           "label": "contract PlaintextsStorage",
           "numberOfBytes": "20"
         },
@@ -153,13 +161,13 @@
         "t_uint48": {
           "label": "uint48"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)701_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
         "t_bytes32": {
           "label": "bytes32"
         },
-        "t_struct(RoleData)701_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -182,7 +190,7 @@
             "contract": "TaskManager",
             "label": "_owner",
             "type": "t_address",
-            "src": "contracts/TaskManager.sol:188"
+            "src": "contracts/TaskManager.sol:189"
           }
         ],
         "erc7201:openzeppelin.storage.Ownable2Step": [
@@ -190,7 +198,7 @@
             "contract": "TaskManager",
             "label": "_pendingOwner",
             "type": "t_address",
-            "src": "contracts/TaskManager.sol:193"
+            "src": "contracts/TaskManager.sol:194"
           }
         ],
         "erc7201:openzeppelin.storage.AccessControlDefaultAdminRules": [
@@ -235,7 +243,7 @@
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)701_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
@@ -292,10 +300,10 @@
         "t_uint48": {
           "label": "uint48"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)701_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
-        "t_struct(RoleData)701_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -441,7 +449,7 @@
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)701_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
@@ -468,7 +476,7 @@
           "label": "plaintextResults",
           "offset": 0,
           "slot": "0",
-          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)10725_storage)",
+          "type": "t_mapping(t_uint256,t_struct(PlaintextResult)32802_storage)",
           "contract": "PlaintextsStorage",
           "src": "contracts/PlaintextsStorage.sol:23"
         },
@@ -490,11 +498,11 @@
           "label": "bool",
           "numberOfBytes": "1"
         },
-        "t_mapping(t_uint256,t_struct(PlaintextResult)10725_storage)": {
+        "t_mapping(t_uint256,t_struct(PlaintextResult)32802_storage)": {
           "label": "mapping(uint256 => struct PlaintextsStorage.PlaintextResult)",
           "numberOfBytes": "32"
         },
-        "t_struct(PlaintextResult)10725_storage": {
+        "t_struct(PlaintextResult)32802_storage": {
           "label": "struct PlaintextsStorage.PlaintextResult",
           "members": [
             {
@@ -519,13 +527,13 @@
         "t_uint48": {
           "label": "uint48"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)701_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
         "t_bytes32": {
           "label": "bytes32"
         },
-        "t_struct(RoleData)701_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -596,7 +604,7 @@
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)701_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
@@ -620,22 +628,22 @@
       "solcVersion": "0.8.25",
       "storage": [],
       "types": {
-        "t_mapping(t_address,t_struct(Bytes32Set)29616_storage)": {
+        "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)": {
           "label": "mapping(address => struct EnumerableSet.Bytes32Set)"
         },
         "t_address": {
           "label": "address"
         },
-        "t_struct(Bytes32Set)29616_storage": {
+        "t_struct(Bytes32Set)29809_storage": {
           "label": "struct EnumerableSet.Bytes32Set",
           "members": [
             {
               "label": "_inner",
-              "type": "t_struct(Set)29422_storage"
+              "type": "t_struct(Set)29615_storage"
             }
           ]
         },
-        "t_struct(Set)29422_storage": {
+        "t_struct(Set)29615_storage": {
           "label": "struct EnumerableSet.Set",
           "members": [
             {
@@ -660,10 +668,10 @@
         "t_uint256": {
           "label": "uint256"
         },
-        "t_mapping(t_bytes32,t_struct(ACP)31972_storage)": {
+        "t_mapping(t_bytes32,t_struct(ACP)32459_storage)": {
           "label": "mapping(bytes32 => struct ACP)"
         },
-        "t_struct(ACP)31972_storage": {
+        "t_struct(ACP)32459_storage": {
           "label": "struct ACP",
           "members": [
             {
@@ -724,10 +732,10 @@
         "t_bytes_storage": {
           "label": "bytes"
         },
-        "t_mapping(t_bytes32,t_struct(RoleData)20713_storage)": {
+        "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)": {
           "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
         },
-        "t_struct(RoleData)20713_storage": {
+        "t_struct(RoleData)20906_storage": {
           "label": "struct AccessControlUpgradeable.RoleData",
           "members": [
             {
@@ -752,13 +760,13 @@
           {
             "contract": "ACPShareRegistry",
             "label": "shareIdsFor",
-            "type": "t_mapping(t_address,t_struct(Bytes32Set)29616_storage)",
+            "type": "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)",
             "src": "contracts/ACPShareRegistry.sol:42"
           },
           {
             "contract": "ACPShareRegistry",
             "label": "shares",
-            "type": "t_mapping(t_bytes32,t_struct(ACP)31972_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(ACP)32459_storage)",
             "src": "contracts/ACPShareRegistry.sol:44"
           }
         ],
@@ -766,7 +774,7 @@
           {
             "contract": "AccessControlUpgradeable",
             "label": "_roles",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)20713_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)20906_storage)",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           }
         ],
