@@ -141,7 +141,7 @@ async function updateDenyList(
 
   for (const account of pending) {
     if ((await taskManager.denyList(account)) === remove) {
-      throw new Error(`${account}: the transaction executed but denyList is still ${!remove}.`);
+      throw new Error(`${account}: the transaction executed but denyList is still ${remove}.`);
     }
     console.log(chalk.green(`${account}: ${remove ? "removed from" : "added to"} the deny list`));
   }
