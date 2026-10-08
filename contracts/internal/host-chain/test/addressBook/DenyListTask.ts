@@ -49,7 +49,7 @@ async function expectRejection(promise: Promise<unknown>, pattern: RegExp): Prom
   expect(message).to.match(pattern);
 }
 
-describe("task:addToDenyList / task:removeFromDenyList", function () {
+describe("task:addToDenyList / task:removeFromDenyList (and *AsSafe)", function () {
   const saved: Record<string, string | undefined> = {};
   let taskManager: any;
   let finalAdmin: any;
@@ -103,6 +103,19 @@ describe("task:addToDenyList / task:removeFromDenyList", function () {
     await expectRejection(hre.run("task:addToDenyList", { accounts: "0x1234" }), /invalid address/);
   });
 
+  it("goes through the Safe with *AsSafe even when the signer holds the role", async function () {
+    const a = ethers.Wallet.createRandom().address;
+    const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "deny-list-")), "batch.json");
+    process.env.SAFE_OWNER_KEY = "";
+    try {
+      await hre.run("task:addToDenyListAsSafe", { accounts: a, out: outPath });
+    } finally {
+      process.env.SAFE_OWNER_KEY = finalAdmin.privateKey;
+    }
+    expect(JSON.parse(fs.readFileSync(outPath, "utf8")).transactions).to.have.length(1);
+    expect(await taskManager.denyList(a)).to.equal(false);
+  });
+
   describe("after the handover", function () {
     before(async function () {
       this.timeout(300_000);
@@ -112,11 +125,16 @@ describe("task:addToDenyList / task:removeFromDenyList", function () {
       await hre.run("task:renounceDeployerRoles");
     });
 
-    it("sends through the final admin when the signer no longer holds the role", async function () {
+    it("refuses the signer-only tasks and points at *AsSafe", async function () {
       const a = ethers.Wallet.createRandom().address;
-      await hre.run("task:addToDenyList", { accounts: a });
+      await expectRejection(hre.run("task:addToDenyList", { accounts: a }), /task:addToDenyListAsSafe/);
+    });
+
+    it("adds and removes as the final admin", async function () {
+      const a = ethers.Wallet.createRandom().address;
+      await hre.run("task:addToDenyListAsSafe", { accounts: a });
       expect(await taskManager.denyList(a)).to.equal(true);
-      await hre.run("task:removeFromDenyList", { accounts: a });
+      await hre.run("task:removeFromDenyListAsSafe", { accounts: a });
       expect(await taskManager.denyList(a)).to.equal(false);
     });
 
@@ -126,7 +144,7 @@ describe("task:addToDenyList / task:removeFromDenyList", function () {
       const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "deny-list-")), "batch.json");
       process.env.SAFE_OWNER_KEY = "";
       try {
-        await hre.run("task:addToDenyList", { accounts: `${a},${b}`, out: outPath });
+        await hre.run("task:addToDenyListAsSafe", { accounts: `${a},${b}`, out: outPath });
       } finally {
         process.env.SAFE_OWNER_KEY = finalAdmin.privateKey;
       }
@@ -139,11 +157,11 @@ describe("task:addToDenyList / task:removeFromDenyList", function () {
       expect(await taskManager.denyList(b)).to.equal(false);
     });
 
-    it("refuses when neither the signer nor SAFE_ADMIN_ADDRESS holds the role", async function () {
+    it("refuses when SAFE_ADMIN_ADDRESS does not hold the role", async function () {
       const a = ethers.Wallet.createRandom().address;
       process.env.SAFE_ADMIN_ADDRESS = ethers.Wallet.createRandom().address;
       try {
-        await expectRejection(hre.run("task:addToDenyList", { accounts: a }), /ACCESS_LIST_MANAGER_ROLE/);
+        await expectRejection(hre.run("task:addToDenyListAsSafe", { accounts: a }), /ACCESS_LIST_MANAGER_ROLE/);
       } finally {
         process.env.SAFE_ADMIN_ADDRESS = finalAdmin.address;
       }
