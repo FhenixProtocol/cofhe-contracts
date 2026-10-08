@@ -152,7 +152,7 @@ describe("task:addToDenyList / task:removeFromDenyList (and *AsSafe)", function 
       const batch = JSON.parse(fs.readFileSync(outPath, "utf8"));
       expect(batch.transactions).to.have.length(1);
       expect(batch.transactions[0].to).to.equal(await taskManager.getAddress());
-      expect(batch.transactions[0].data).to.equal(taskManager.interface.encodeFunctionData("addToDenyList", [[a, b]]));
+      expect(batch.transactions[0].data).to.equal(taskManager.interface.encodeFunctionData("setDenyList", [[a, b], true]));
       expect(await taskManager.denyList(a)).to.equal(false);
       expect(await taskManager.denyList(b)).to.equal(false);
     });

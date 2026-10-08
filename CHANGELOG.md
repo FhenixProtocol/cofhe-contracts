@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Added
-- **TaskManager deny list** — `addToDenyList` / `removeFromDenyList` (`ACCESS_LIST_MANAGER_ROLE`) block callers from task intake while the access list is disabled; ignored when it is enabled. Ships with a TaskManager upgrade (`task:upgradeTM`); no migration.
+- **TaskManager deny list** — `setDenyList(accounts, denied)` (`ACCESS_LIST_MANAGER_ROLE`) blocks callers from task intake while the access list is disabled; ignored when it is enabled. Ships with a TaskManager upgrade (`task:upgradeTM`); no migration.
 - **`task:addToDenyList` / `task:removeFromDenyList --accounts <a,b>`** manage the deny list as a signer holding `ACCESS_LIST_MANAGER_ROLE`; the `…AsSafe` variants go through the Safe at `SAFE_ADMIN_ADDRESS` with `SAFE_OWNER_KEY`, otherwise write a Safe batch. Re-run to verify.
 - **`task:setVerifierSignerAsSafe`, `task:setDecryptResultSignerAsSafe` and `task:setSignersAsSafe`** set the TaskManager's signers once the Safe holds the signer-manager roles: through the Safe with `SAFE_OWNER_KEY`, otherwise as a Transaction Builder batch. Refuse address(0) and the Safe itself; re-run to verify. Use them at go-live when the deploy ran with placeholder signers.
 - **`task:upgradeTM` works after the handover.** When the signer lacks `UPGRADER_ROLE` it deploys the implementation and hands `upgradeToAndCall` + `incVersion` to the Safe at `SAFE_ADMIN_ADDRESS`: executed through it with `SAFE_OWNER_KEY`, otherwise written as a Safe-app batch under `safe-batches/`.

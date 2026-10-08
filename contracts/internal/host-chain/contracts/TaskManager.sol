@@ -276,8 +276,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     event AccessListEnabledSet(bool enabled);
     event AccessGranted(address indexed account);
     event AccessRevoked(address indexed account);
-    event DenyListAdded(address indexed account);
-    event DenyListRemoved(address indexed account);
+    event DenyListSet(address indexed account, bool denied);
     event ACLContractChanged(address indexed oldACL, address indexed newACL);
     event PlaintextsStorageChanged(address indexed oldStorage, address indexed newStorage);
     event SecurityZonesChanged(int32 oldMin, int32 oldMax, int32 newMin, int32 newMax);
@@ -379,6 +378,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     // Gates task intake to allowlisted callers when the access list is enabled,
     // otherwise blocks deny-listed callers.
     modifier onlyAccessListed() {
+        _checkAccessList();
+        _;
+    }
+
+    function _checkAccessList() private view {
         if (accessListEnabled) {
             if (!accessList[msg.sender]) {
                 revert NotOnAccessList(msg.sender);
@@ -386,7 +390,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         } else if (denyList[msg.sender]) {
             revert OnDenyList(msg.sender);
         }
-        _;
     }
 
     function enable() external onlyRole(PAUSER_ROLE) {
@@ -429,23 +432,13 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         }
     }
 
-    function addToDenyList(address[] calldata accounts) external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
+    function setDenyList(address[] calldata accounts, bool denied) external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
         for (uint256 i = 0; i < accounts.length; i++) {
             if (accounts[i] == address(0)) {
                 revert InvalidAddress();
             }
-            denyList[accounts[i]] = true;
-            emit DenyListAdded(accounts[i]);
-        }
-    }
-
-    function removeFromDenyList(address[] calldata accounts) external onlyRole(ACCESS_LIST_MANAGER_ROLE) {
-        for (uint256 i = 0; i < accounts.length; i++) {
-            if (accounts[i] == address(0)) {
-                revert InvalidAddress();
-            }
-            denyList[accounts[i]] = false;
-            emit DenyListRemoved(accounts[i]);
+            denyList[accounts[i]] = denied;
+            emit DenyListSet(accounts[i], denied);
         }
     }
 

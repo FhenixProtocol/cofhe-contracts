@@ -18,7 +18,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:331"
+          "src": "contracts/TaskManager.sol:330"
         },
         {
           "label": "securityZoneMin",
@@ -26,7 +26,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:332"
+          "src": "contracts/TaskManager.sol:331"
         },
         {
           "label": "randomCounter",
@@ -34,7 +34,7 @@
           "slot": "1",
           "type": "t_uint256",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:335"
+          "src": "contracts/TaskManager.sol:334"
         },
         {
           "label": "_aggregator",
@@ -42,7 +42,7 @@
           "slot": "2",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:338"
+          "src": "contracts/TaskManager.sol:337"
         },
         {
           "label": "acl",
@@ -50,7 +50,7 @@
           "slot": "3",
           "type": "t_contract(ACL)31468",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:341"
+          "src": "contracts/TaskManager.sol:340"
         },
         {
           "label": "verifierSigner",
@@ -58,7 +58,7 @@
           "slot": "4",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:343"
+          "src": "contracts/TaskManager.sol:342"
         },
         {
           "label": "version",
@@ -66,7 +66,7 @@
           "slot": "4",
           "type": "t_uint8",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:345"
+          "src": "contracts/TaskManager.sol:344"
         },
         {
           "label": "plaintextsStorage",
@@ -74,7 +74,7 @@
           "slot": "5",
           "type": "t_contract(PlaintextsStorage)33001",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:348"
+          "src": "contracts/TaskManager.sol:347"
         },
         {
           "label": "_aggregators",
@@ -82,7 +82,7 @@
           "slot": "6",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:353"
+          "src": "contracts/TaskManager.sol:352"
         },
         {
           "label": "isEnabled",
@@ -90,7 +90,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:358"
+          "src": "contracts/TaskManager.sol:357"
         },
         {
           "label": "decryptResultSigner",
@@ -98,7 +98,7 @@
           "slot": "7",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:362"
+          "src": "contracts/TaskManager.sol:361"
         },
         {
           "label": "accessListEnabled",
@@ -106,7 +106,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:366"
+          "src": "contracts/TaskManager.sol:365"
         },
         {
           "label": "accessList",
@@ -114,7 +114,7 @@
           "slot": "8",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:367"
+          "src": "contracts/TaskManager.sol:366"
         },
         {
           "label": "denyList",
@@ -122,7 +122,7 @@
           "slot": "9",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:370"
+          "src": "contracts/TaskManager.sol:369"
         }
       ],
       "types": {
