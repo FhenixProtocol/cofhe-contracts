@@ -91,7 +91,7 @@ pnpm acceptAdminAsSafe:arbitrumOne
 pnpm renounceDeployerRoles:arbitrumOne
 ```
 
-The deploy activates the initial commitment version (must match `COMMITMENT_VERSION` in fhe-engine), grants the Safe every role and begins the default-admin transfer.
+The deploy activates `COMMITMENT_VERSION` from `.env` (required; set it to the version mainnet's fhe-engine posts under), grants the Safe every role and begins the default-admin transfer.
 
 ## Post-deployment checklist (per chain)
 
