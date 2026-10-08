@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **`task:upgradeShareRegistry`** upgrades the ACL's ACPShareRegistry in place (same address): it validates the layout against the first version and sends `upgradeToAndCall` directly, through the Safe with `SAFE_OWNER_KEY`, or as a Transaction Builder batch. `--onlyvalidate true` checks only; a run on an upgraded proxy does nothing.
 - **`task:setVerifierSignerAsSafe`, `task:setDecryptResultSignerAsSafe` and `task:setSignersAsSafe`** set the TaskManager's signers once the Safe holds the signer-manager roles: through the Safe with `SAFE_OWNER_KEY`, otherwise as a Transaction Builder batch. Refuse address(0) and the Safe itself; re-run to verify. Use them at go-live when the deploy ran with placeholder signers.
 - **`task:upgradeTM` works after the handover.** When the signer lacks `UPGRADER_ROLE` it deploys the implementation and hands `upgradeToAndCall` + `incVersion` to the Safe at `SAFE_ADMIN_ADDRESS`: executed through it with `SAFE_OWNER_KEY`, otherwise written as a Safe-app batch under `safe-batches/`.
 - **`task:upgradeACL` and `task:upgradePlaintextsStorage`** upgrade the satellites in place, running `setTaskManager` inside `upgradeToAndCall`. After the handover the Safe at `SAFE_ADMIN_ADDRESS` sends the upgrade, as in `task:upgradeTM`; `--onlyvalidate true` checks the layout only.
@@ -17,6 +18,10 @@
 - **`task:acceptAdminAsSafe` accepts directly when `SAFE_OWNER_KEY` is the final admin's own key**, so a testnet handover can target an EOA. Mainnet flow unchanged.
 - **`KEY` is renamed `DEPLOYER_PRIVATE_KEY`** in the host-chain and registry-chain `.env` files and CI. Rename it in your `.env` before running any deploy or task.
 - **FHE.sol resolves the TaskManager through `CoFHEAddressBook`**, an upgradeable book at one canonical address, replacing the deterministic TaskManager proxy. Run `task:deployAddressBook` before `hardhat deploy`; replace the removed `TASK_MANAGER_ADDRESS` with `ICoFHEAddressBook.getTm(1)`.
+- **BREAKING — pointer-based `ACPShareRegistry`, upgraded in place.** `share(acp, metadata)` emits the full ACP and an opaque metadata blob in `Shared` (now `shareId` indexed) and stores only the share header: issuer, expiration, recipient, revoker and the block of that event. `sharesFor` returns `(shareIds, headers)` and `getShare` a header; `removeShare` and `isShareValid` are unchanged. A share costs 186k–265k gas for 1–100 ctHashes, against 317k–2,564k (Arbitrum Sepolia). Storage moves to a new ERC-7201 namespace; the first version's stays reserved, and its shares are abandoned (not migrated). Upgrade with `task:upgradeShareRegistry`, then release the SDK that reads the new ABI, then update the apps that share.
+
+### Added
+- **The npm package ships the ACP contracts** — `ACPShareRegistry.sol`, `ACPTimestampRevoker.sol` and `Permissioned.sol`, under `internal/host-chain/contracts/`, so the SDK mocks can use them instead of copies. `@openzeppelin/contracts-upgradeable` becomes a dependency (they import it).
 
 ### Fixed
 - **Local `task:deployAddressBook` makes the book owner the admin `hardhat deploy` picks** (`TM_ADMIN_ADDRESS`, else the `AGGREGATOR_KEY` wallet), so the local deploy no longer refuses the book. The local book address changes. No action needed.

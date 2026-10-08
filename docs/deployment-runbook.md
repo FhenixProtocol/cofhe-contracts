@@ -338,6 +338,7 @@ Final state after step 5, before go-live (the deployer holds nothing anywhere):
 
 - `npx hardhat task:upgradeTM --network <net> --key <admin key>` — upgrades the TaskManager in place after validating the storage layout (`--onlyvalidate true` checks only).
 - `npx hardhat task:upgradeACL --network <net> --key <admin key>` / `task:upgradePlaintextsStorage` — upgrade the registered TaskManager's ACL or PlaintextsStorage, setting the TaskManager in the same `upgradeToAndCall` after validating the storage layout (`--onlyvalidate true` checks only).
+- `npx hardhat task:upgradeShareRegistry --network <net> --key <any funded key>` — upgrades the ACL's ACPShareRegistry in place (same address, so the ACL and the SDK's lookup are unchanged); see step 4.
 - `hardhat deploy` again — upgrades the registered TaskManager in place and keeps its ACL and PlaintextsStorage; the setup (signers, intake) is not rerun. It also finishes a maintenance grant or admin handover that an earlier run did not complete. `FULL_REDEPLOY=1 npx hardhat deploy --network <net>` also deploys fresh ACL, ACPShareRegistry and PlaintextsStorage and reruns the setup: ACL permissions and stored plaintexts are not carried over, and the signers and intake state are overwritten from the environment.
 
 After the handover only the Safe holds `UPGRADER_ROLE`, so `task:upgradeTM`, `task:upgradeACL` and `task:upgradePlaintextsStorage` deploy the implementation with any funded key and hand the upgrade itself to the Safe:
@@ -372,3 +373,21 @@ npx hardhat task:upgradePlaintextsStorage --network <net> --key <any funded key>
 Same Safe flow as step 2: one `upgradeToAndCall(impl, setTaskManager(tm))`, executed through the Safe with `SAFE_OWNER_KEY`, otherwise written to `safe-batches/<net>-upgrade-acl-<unix>.json` / `safe-batches/<net>-upgrade-plaintexts-storage-<unix>.json`.
 
 Check: `getTaskManagerAddress()` is the registered TaskManager and the implementation slot points at the printed new address.
+
+### Step 4 — Upgrade the ACPShareRegistry (pointer-based registry)
+
+The pointer-based registry keeps only a share header in storage; the full ACP and its metadata travel in the `Shared` event. It upgrades the first version in place.
+
+```bash
+npx hardhat task:upgradeShareRegistry --network <net> --key <any funded key> --onlyvalidate true
+npx hardhat task:upgradeShareRegistry --network <net> --key <any funded key>
+```
+
+- The proxy comes from the registered TaskManager: `acl()` → `shareRegistry()`. The layout is checked against the first version (`ACPShareRegistryV1`), whose namespace stays reserved.
+- One call, `upgradeToAndCall(impl, 0x)`. As in step 2: sent directly when the signer holds `UPGRADER_ROLE`; otherwise through the Safe at `SAFE_ADMIN_ADDRESS` with `SAFE_OWNER_KEY`, or written to `safe-batches/<net>-upgrade-share-registry-<unix>.json`.
+- The first version's shares are abandoned: they stay in its storage and nothing reads them. Issuers who still want a share delivered post it again.
+- A run on a proxy that already has the pointer-based implementation does nothing.
+
+Check: the implementation slot points at the printed new address, and `sharesFor(<any recipient>)` returns two arrays.
+
+Release order: upgrade the registry on every network first, then publish the SDK that reads the pointer-based registry (`share(acp, metadata)`, `sharesFor` returning headers), then update the apps that share. Between the upgrade and the SDK release, apps on the previous SDK cannot post or list shares.
