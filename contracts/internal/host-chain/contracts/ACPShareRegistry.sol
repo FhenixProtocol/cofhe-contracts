@@ -14,7 +14,15 @@ import {ACP, IPermissionCustomIdValidator} from "./Permissioned.sol";
  * are indexed globally per recipient — a share is addressed to a person, and any
  * cofhesdk-enabled app may surface it.
  *
- * The registry stores the payload verbatim and stays deliberately dumb:
+ * Pointer-based: the full ACP and an optional metadata blob travel in the `Shared`
+ * event; storage keeps only the share header — the fields this contract checks
+ * (issuer, recipient, expiration, revoker) and the block of that event — plus the
+ * recipient's set of share ids. A reader takes the header from `sharesFor` / `getShare`
+ * and fetches the event with a `getLogs` over that one block, filtered by the
+ * share id topic. If that block holds several `Shared` events for the share id (it
+ * was removed and posted again within the block), the last one is the share.
+ *
+ * The registry stays deliberately dumb:
  *
  *  - The posted ACP carries `sealingKey = 0` and `recipientSignature = ""` — the
  *    recipient supplies both at import, exactly as in the off-chain flow.
@@ -22,10 +30,13 @@ import {ACP, IPermissionCustomIdValidator} from "./Permissioned.sol";
  *    before the recipient signs, and the SDK validates everything at import. The
  *    trust the registry adds is `msg.sender == acp.issuer` — a share listed under
  *    a recipient was genuinely posted by its claimed issuer.
+ *  - The metadata is opaque bytes, never interpreted here (the SDK defines the
+ *    format: labels saying where each ctHash of a SNAPSHOT share came from). It is
+ *    written once, with the share, and cannot be replaced.
  *  - `isShareValid` is the verification hook for other contracts: share exists,
  *    is unexpired, and is not revoked (per the share's own revoker contract).
  *
- * Nothing stored here is sensitive: every field is part of the cleartext share
+ * Nothing posted here is sensitive: every field is part of the cleartext share
  * payload by design. Posting on-chain does make the issuer→recipient sharing
  * relationship public. (A future variant may accept an encrypted payload as a
  * parallel entry type; this registry's cleartext entries would be unaffected.)
@@ -36,20 +47,52 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     /// @notice Role allowed to upgrade the implementation.
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
-    /// @custom:storage-location erc7201:cofhe.storage.ACPShareRegistry
+    /// @notice What storage keeps of a share: the fields `removeShare` and the validity
+    ///         check read, and where to find the rest.
+    /// @dev Packed into four slots; the two revoker slots stay zero for a share without
+    ///      a revoker.
+    struct ShareHeader {
+        address issuer;
+        uint64 expiration;
+        address recipient;
+        /// @dev Block of the `Shared` event that carries the full ACP and the metadata
+        ///      (the L2 block on Arbitrum). The last `Shared` event for the share id in that
+        ///      block, should it hold more than one.
+        uint64 blockNumber;
+        address revokerContract;
+        uint256 revokerData;
+    }
+
+    /// @custom:storage-location erc7201:cofhe.storage.ACPShareRegistry.v2
     struct ACPShareRegistryStorage {
+        /// @dev recipient => ids of shares addressed to them
+        mapping(address => EnumerableSet.Bytes32Set) shareIdsFor;
+        /// @dev share id => stored header
+        mapping(bytes32 => ShareHeader) headers;
+    }
+
+    /// @dev keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACPShareRegistry.v2")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ACP_SHARE_REGISTRY_SLOT =
+        keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACPShareRegistry.v2")) - 1)) & ~bytes32(uint256(0xff));
+
+    /// @notice The first version's storage, which kept every share whole. Abandoned by the
+    ///         in-place upgrade: nothing reads it, and its shares are not carried over. Declared
+    ///         only so the namespace stays reserved (the OpenZeppelin layout check requires it).
+    /// @custom:storage-location erc7201:cofhe.storage.ACPShareRegistry
+    struct ACPShareRegistryStorageV1 {
         /// @dev recipient => ids of shares addressed to them
         mapping(address => EnumerableSet.Bytes32Set) shareIdsFor;
         /// @dev share id => stored payload
         mapping(bytes32 => ACP) shares;
     }
 
-    /// @dev keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACPShareRegistry")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ACP_SHARE_REGISTRY_SLOT =
-        keccak256(abi.encode(uint256(keccak256("cofhe.storage.ACPShareRegistry")) - 1)) & ~bytes32(uint256(0xff));
-
-    event Shared(address indexed recipient, address indexed issuer, bytes32 shareId);
-    event ShareRemoved(address indexed recipient, address indexed issuer, bytes32 shareId);
+    /// @notice A share was posted. `acp` is the payload as posted; `metadata` is the opaque
+    ///         blob that came with it (empty when none). The share id is
+    ///         `keccak256(abi.encode(acp))`. A share removed and posted again in the same block
+    ///         emits this twice there with the same id; the later one (higher log index) is
+    ///         the share, and only its `metadata` can differ.
+    event Shared(address indexed recipient, address indexed issuer, bytes32 indexed shareId, ACP acp, bytes metadata);
+    event ShareRemoved(address indexed recipient, address indexed issuer, bytes32 indexed shareId);
 
     error NotIssuer();
     error NotIssuerOrRecipient();
@@ -75,9 +118,11 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
         _grantRole(UPGRADER_ROLE, initialAdmin);
     }
 
-    /// @notice Post a sharing ACP for its recipient to pick up.
-    /// @dev The share id is the hash of the payload — reposting an identical share reverts.
-    function share(ACP calldata acp) external returns (bytes32 shareId) {
+    /// @notice Post a sharing ACP for its recipient to pick up, with an optional metadata
+    ///         blob (`""` for none).
+    /// @dev The share id is the hash of the payload — reposting an identical share reverts,
+    ///      whatever its metadata.
+    function share(ACP calldata acp, bytes calldata metadata) external returns (bytes32 shareId) {
         if (msg.sender != acp.issuer) revert NotIssuer();
         if (acp.recipient == address(0)) revert RecipientMissing();
         if (acp.sealingKey != bytes32(0)) revert SealingKeyMustBeEmpty();
@@ -89,78 +134,92 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
         shareId = keccak256(abi.encode(acp));
         // the id commits to the recipient, so a duplicate can only be in this set
         if (!$.shareIdsFor[acp.recipient].add(shareId)) revert AlreadyShared();
-        $.shares[shareId] = acp;
+        $.headers[shareId] = ShareHeader({
+            issuer: acp.issuer,
+            expiration: acp.expiration,
+            recipient: acp.recipient,
+            blockNumber: uint64(_blockNumber()),
+            revokerContract: acp.revokerContract,
+            revokerData: acp.revokerData
+        });
 
-        emit Shared(acp.recipient, acp.issuer, shareId);
+        emit Shared(acp.recipient, acp.issuer, shareId, acp, metadata);
     }
 
     /// @notice Remove a share. The issuer may retract it; the recipient may dismiss it
-    ///         (e.g. after importing, or to decline).
+    ///         (e.g. after importing, or to decline). The `Shared` event stays in its block;
+    ///         readers go by the header, which is gone.
     function removeShare(bytes32 shareId) external {
         ACPShareRegistryStorage storage $ = _getStorage();
 
-        ACP storage acp = $.shares[shareId];
-        if (acp.issuer == address(0)) revert UnknownShare();
-        if (msg.sender != acp.issuer && msg.sender != acp.recipient) revert NotIssuerOrRecipient();
+        ShareHeader storage header = $.headers[shareId];
+        if (header.issuer == address(0)) revert UnknownShare();
+        if (msg.sender != header.issuer && msg.sender != header.recipient) revert NotIssuerOrRecipient();
 
-        address recipient = acp.recipient;
-        address issuer = acp.issuer;
+        address recipient = header.recipient;
+        address issuer = header.issuer;
 
-        // the id set and the payload map stay in sync — mirror share()'s add() handling
+        // the id set and the header map stay in sync — mirror share()'s add() handling
         if (!$.shareIdsFor[recipient].remove(shareId)) revert UnknownShare();
-        delete $.shares[shareId];
+        delete $.headers[shareId];
 
         emit ShareRemoved(recipient, issuer, shareId);
     }
 
-    /// @notice All importable shares addressed to `recipient`: unexpired and not revoked.
-    ///         Dead entries stay in storage until removed but are filtered here.
-    function sharesFor(address recipient) external view returns (ACP[] memory acps) {
+    /// @notice The importable shares addressed to `recipient` — unexpired and not revoked —
+    ///         as their ids and headers, index for index. Dead entries stay in storage until
+    ///         removed but are filtered here.
+    function sharesFor(
+        address recipient
+    ) external view returns (bytes32[] memory shareIds, ShareHeader[] memory headers) {
         ACPShareRegistryStorage storage $ = _getStorage();
         EnumerableSet.Bytes32Set storage ids = $.shareIdsFor[recipient];
         uint256 len = ids.length();
-        if (len == 0) return acps;
 
         // single pass: allocate for the maximum, fill with valid shares only
-        acps = new ACP[](len);
+        shareIds = new bytes32[](len);
+        headers = new ShareHeader[](len);
         uint256 live = 0;
         for (uint256 i = 0; i < len; i++) {
-            ACP storage acp = $.shares[ids.at(i)];
-            if (_isValid(acp)) {
-                acps[live] = acp;
+            bytes32 shareId = ids.at(i);
+            ShareHeader storage header = $.headers[shareId];
+            if (_isValid(header)) {
+                shareIds[live] = shareId;
+                headers[live] = header;
                 live++;
             }
         }
 
-        // truncate the memory array's length to the live count (shrink-only)
+        // truncate the memory arrays' length to the live count (shrink-only)
         if (live < len) {
             assembly {
-                mstore(acps, live)
+                mstore(shareIds, live)
+                mstore(headers, live)
             }
         }
     }
 
-    /// @notice A single share by id (zeroed struct if unknown/removed).
-    function getShare(bytes32 shareId) external view returns (ACP memory) {
-        return _getStorage().shares[shareId];
+    /// @notice The header of a single share (zeroed struct if unknown/removed).
+    function getShare(bytes32 shareId) external view returns (ShareHeader memory) {
+        return _getStorage().headers[shareId];
     }
 
     /// @notice Verification hook for contracts: the share exists, was posted by its
     ///         claimed issuer (guaranteed at posting), is unexpired, and is not
     ///         revoked per its own revoker contract.
     function isShareValid(bytes32 shareId) external view returns (bool) {
-        ACPShareRegistryStorage storage $ = _getStorage();
-        if ($.shares[shareId].issuer == address(0)) return false;
-        return _isValid($.shares[shareId]);
+        ShareHeader storage header = _getStorage().headers[shareId];
+        if (header.issuer == address(0)) return false;
+        return _isValid(header);
     }
 
     /// @dev Unexpired and not revoked. The revoker call mirrors `withPermission`'s
     ///      revocation clause; a reverting revoker fails closed (share invalid).
-    function _isValid(ACP storage acp) private view returns (bool) {
-        if (acp.expiration < block.timestamp) return false;
+    function _isValid(ShareHeader storage header) private view returns (bool) {
+        if (header.expiration < block.timestamp) return false;
 
-        if (acp.revokerData != 0 && acp.revokerContract != address(0)) {
-            try IPermissionCustomIdValidator(acp.revokerContract).disabled(acp.issuer, acp.revokerData) returns (
+        if (header.revokerData != 0 && header.revokerContract != address(0)) {
+            try IPermissionCustomIdValidator(header.revokerContract).disabled(header.issuer, header.revokerData) returns (
                 bool disabled
             ) {
                 if (disabled) return false;
@@ -170,6 +229,14 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
         }
 
         return true;
+    }
+
+    /// @dev The number a `getLogs` query takes for the current block. On Arbitrum `block.number`
+    ///      is an L1 block estimate and the L2 block comes from the ArbSys precompile; elsewhere
+    ///      nothing answers at that address and `block.number` is the block.
+    function _blockNumber() private view returns (uint256) {
+        (bool ok, bytes memory result) = address(100).staticcall(abi.encodeWithSignature("arbBlockNumber()"));
+        return ok && result.length == 32 ? abi.decode(result, (uint256)) : block.number;
     }
 
     /**
