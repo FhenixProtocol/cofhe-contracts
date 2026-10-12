@@ -56,12 +56,45 @@ async function expectRejection(promise: Promise<unknown>, pattern: RegExp): Prom
 }
 
 /**
+ * Deploys the stack and swaps in a first-version ACPShareRegistry, as deployed on the live
+ * networks, with `registryAdmin` holding its roles. Returns the registry proxy.
+ */
+async function deployWithV1Registry(deployer: any, registryAdmin: string): Promise<any> {
+  await installAddressBook(deployer);
+  await hre.run("deploy", { reset: true });
+
+  const V1 = await ethers.getContractFactory("ACPShareRegistryV1");
+  const v1: any = await upgrades.deployProxy(V1, [registryAdmin], { kind: "uups", initializer: "initialize" });
+  await v1.waitForDeployment();
+  const taskManager = await ethers.getContractAt("TaskManager", await resolveTaskManager(hre));
+  const acl = await ethers.getContractAt("ACL", await taskManager.acl());
+  await (await acl.setShareRegistry(await v1.getAddress())).wait();
+  return v1;
+}
+
+function saveEnv(): () => void {
+  const saved: Record<string, string | undefined> = {};
+  for (const key of ENV_KEYS) {
+    saved[key] = process.env[key];
+  }
+  return () => {
+    for (const key of ENV_KEYS) {
+      if (saved[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = saved[key];
+      }
+    }
+  };
+}
+
+/**
  * A network deployed before the pointer-based registry: the ACL serves a first-version
  * ACPShareRegistry holding shares, and the Safe holds its roles after the handover. The upgrade
  * keeps the proxy and abandons those shares.
  */
-describe("task:upgradeShareRegistry after the handover", function () {
-  const saved: Record<string, string | undefined> = {};
+describe("task:upgradeShareRegistryAsSafe after the handover", function () {
+  let restoreEnv: () => void;
   let finalAdmin: any;
   let registryAddress: string;
   let liveIds: Record<string, string>;
@@ -93,9 +126,7 @@ describe("task:upgradeShareRegistry after the handover", function () {
 
   before(async function () {
     this.timeout(300_000);
-    for (const key of ENV_KEYS) {
-      saved[key] = process.env[key];
-    }
+    restoreEnv = saveEnv();
     await ethers.provider.send("hardhat_reset", []);
     const signers = await ethers.getSigners();
     const [deployer, issuer] = signers;
@@ -104,20 +135,11 @@ describe("task:upgradeShareRegistry after the handover", function () {
     finalAdmin = ethers.Wallet.createRandom().connect(ethers.provider);
     setDeployEnv(deployer.address, finalAdmin.address, finalAdmin.privateKey);
 
-    await installAddressBook(deployer);
-    await hre.run("deploy", { reset: true });
-
-    // Swap in a first-version registry, as deployed on the live networks, holding shares; the
-    // deploy granted the Safe its roles on the registry it made, so grant them here too.
-    const V1 = await ethers.getContractFactory("ACPShareRegistryV1");
-    const v1: any = await upgrades.deployProxy(V1, [deployer.address], { kind: "uups", initializer: "initialize" });
-    await v1.waitForDeployment();
+    // The deploy granted the Safe its roles on the registry it made, so grant them here too.
+    const v1 = await deployWithV1Registry(deployer, deployer.address);
     registryAddress = await v1.getAddress();
     await (await v1.grantRole(await v1.DEFAULT_ADMIN_ROLE(), finalAdmin.address)).wait();
     await (await v1.grantRole(await v1.UPGRADER_ROLE(), finalAdmin.address)).wait();
-    const taskManager = await ethers.getContractAt("TaskManager", await resolveTaskManager(hre));
-    const acl = await ethers.getContractAt("ACL", await taskManager.acl());
-    await (await acl.setShareRegistry(registryAddress)).wait();
 
     const shares = {
       alice: acpFor(issuer.address, alice.address, "alice"),
@@ -134,19 +156,13 @@ describe("task:upgradeShareRegistry after the handover", function () {
   });
 
   after(function () {
-    for (const key of ENV_KEYS) {
-      if (saved[key] === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = saved[key];
-      }
-    }
+    restoreEnv();
   });
 
   it("validates only with --onlyvalidate, changing nothing", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistry", { onlyvalidate: true });
+    await hre.run("task:upgradeShareRegistryAsSafe", { onlyvalidate: true });
     expect(await implementationOf(registryAddress)).to.equal(before);
   });
 
@@ -155,12 +171,10 @@ describe("task:upgradeShareRegistry after the handover", function () {
     const before = await implementationOf(registryAddress);
     const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "upgrade-share-registry-")), "batch.json");
     process.env.SAFE_OWNER_KEY = "";
-    process.env.SAFE_BATCH_OUT = outPath;
     try {
-      await hre.run("task:upgradeShareRegistry");
+      await hre.run("task:upgradeShareRegistryAsSafe", { out: outPath });
     } finally {
       process.env.SAFE_OWNER_KEY = finalAdmin.privateKey;
-      process.env.SAFE_BATCH_OUT = "";
     }
 
     const V2 = await ethers.getContractFactory("ACPShareRegistry");
@@ -177,16 +191,33 @@ describe("task:upgradeShareRegistry after the handover", function () {
     this.timeout(300_000);
     process.env.SAFE_ADMIN_ADDRESS = ethers.Wallet.createRandom().address;
     try {
-      await expectRejection(hre.run("task:upgradeShareRegistry"), /does not hold UPGRADER_ROLE/);
+      await expectRejection(hre.run("task:upgradeShareRegistryAsSafe"), /does not hold UPGRADER_ROLE/);
     } finally {
       process.env.SAFE_ADMIN_ADDRESS = finalAdmin.address;
     }
   });
 
+  it("refuses when SAFE_ADMIN_ADDRESS is unset", async function () {
+    this.timeout(300_000);
+    process.env.SAFE_ADMIN_ADDRESS = "";
+    try {
+      await expectRejection(hre.run("task:upgradeShareRegistryAsSafe"), /SAFE_ADMIN_ADDRESS must be set/);
+    } finally {
+      process.env.SAFE_ADMIN_ADDRESS = finalAdmin.address;
+    }
+  });
+
+  it("task:upgradeShareRegistry refuses the signer and points to the Safe variant", async function () {
+    this.timeout(300_000);
+    const before = await implementationOf(registryAddress);
+    await expectRejection(hre.run("task:upgradeShareRegistry"), /lacks UPGRADER_ROLE.*task:upgradeShareRegistryAsSafe/);
+    expect(await implementationOf(registryAddress)).to.equal(before);
+  });
+
   it("upgrades in place as the Safe, keeping the address and abandoning the v1 shares", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistry");
+    await hre.run("task:upgradeShareRegistryAsSafe");
     expect(await implementationOf(registryAddress)).to.not.equal(before);
 
     const registry: any = await ethers.getContractAt("ACPShareRegistry", registryAddress);
@@ -199,7 +230,41 @@ describe("task:upgradeShareRegistry after the handover", function () {
   it("re-runs as a no-op once upgraded", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistry");
+    await hre.run("task:upgradeShareRegistryAsSafe");
     expect(await implementationOf(registryAddress)).to.equal(before);
+  });
+});
+
+/** Before the handover the task's signer holds UPGRADER_ROLE and sends the upgrade itself. */
+describe("task:upgradeShareRegistry as the upgrader", function () {
+  let restoreEnv: () => void;
+  let registryAddress: string;
+  let upgrader: any;
+
+  before(async function () {
+    this.timeout(300_000);
+    restoreEnv = saveEnv();
+    await ethers.provider.send("hardhat_reset", []);
+    const signers = await ethers.getSigners();
+    const deployer = signers[0];
+    // The task's default signer.
+    upgrader = signers[2];
+    setDeployEnv(deployer.address, "", "");
+
+    registryAddress = await (await deployWithV1Registry(deployer, upgrader.address)).getAddress();
+  });
+
+  after(function () {
+    restoreEnv();
+  });
+
+  it("upgrades in place as the signer, keeping the address and roles", async function () {
+    this.timeout(300_000);
+    const before = await implementationOf(registryAddress);
+    await hre.run("task:upgradeShareRegistry");
+    expect(await implementationOf(registryAddress)).to.not.equal(before);
+
+    const registry: any = await ethers.getContractAt("ACPShareRegistry", registryAddress);
+    expect(await registry.hasRole(await registry.UPGRADER_ROLE(), upgrader.address)).to.equal(true);
   });
 });
