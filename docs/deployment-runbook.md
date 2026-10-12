@@ -243,6 +243,7 @@ Registry chain, set in `contracts/internal/registry-chain/.env`:
 | `DEPLOYER_PRIVATE_KEY` | Deployer private key |
 | `POSTER_ADDRESS` | blockchain-poster wallet address |
 | `REGISTRY_ADMIN_DELAY` | Admin-transfer timelock in seconds |
+| `COMMITMENT_VERSION` | Version to activate; same value as the environment's producers (`0x` + 64 lowercase hex) |
 | `SAFE_ADMIN_ADDRESS` | The Gnosis Safe |
 | `COMMITMENT_REGISTRY_ADDRESS` | Printed by step 8; set it before steps 9 and 10 |
 | `ARBITRUM_ONE_RPC_URL` / `ETHERSCAN_API_KEY` / `SAFE_OWNER_KEY` | Optional, as above |

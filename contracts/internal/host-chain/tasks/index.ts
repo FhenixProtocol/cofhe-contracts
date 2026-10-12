@@ -8,3 +8,4 @@ export * from "./registerTaskManager";
 export * from "./upgradeSatellites";
 export * from "./setSignersAsSafe";
 export * from "./upgradeShareRegistry";
+export * from "./denyList";

@@ -4,9 +4,6 @@ import { deployUUPSProxy, grantAllRoles } from "../utils/deploy";
 // OZ Relayer signer address (deterministic from dev keystore)
 const DEFAULT_POSTER_ADDRESS = "0x53118C97bD4b7FdDb68244D788Ce7b2946ECd327";
 
-// Commitment version to activate (must match COMMITMENT_VERSION in fhe-engine)
-const INITIAL_VERSION = "0x0000000000000000000000000000000000000000000000000000000000000002";
-
 /** True when deploying to a local dev chain, where the committed dev defaults are acceptable. */
 function isLocalNetwork() {
   const name = hre.network.name;
@@ -15,6 +12,25 @@ function isLocalNetwork() {
     return true;
   }
   return Boolean(url && (url.includes("localhost") || url.includes("127.0.0.1")));
+}
+
+/**
+ * Resolves the commitment version to activate, from `COMMITMENT_VERSION`.
+ *
+ * The version is per-environment config shared with fhe-engine and slim-listener, so it has no
+ * default here: a registry that activates a different version than the producers post under
+ * reverts every batch with `VersionNotActive`. Canonical form only (`0x` + 64 lowercase hex
+ * digits), the exact `bytes32` key the registry stores.
+ */
+function resolveInitialVersion() {
+  const raw = process.env.COMMITMENT_VERSION;
+  if (raw === undefined || !/^0x[0-9a-f]{64}$/.test(raw)) {
+    throw new Error(
+      `COMMITMENT_VERSION must be 0x followed by 64 lowercase hex digits ` +
+        `(got ${raw === undefined ? "unset" : JSON.stringify(raw)}).`,
+    );
+  }
+  return raw;
 }
 
 /**
@@ -122,6 +138,7 @@ async function main() {
   // Resolved before anything deploys, so a missing Safe address fails the run while it is
   // still a no-op instead of after the proxy exists.
   const finalAdmin = await resolveFinalAdmin();
+  const initialVersion = resolveInitialVersion();
   console.log("Deploying CommitmentRegistry with account:", deployer.address);
 
   const { proxy: registry, address: proxyAddress } = await deployUUPSProxy(
@@ -137,9 +154,9 @@ async function main() {
   await grantAllRoles(registry, deployer);
 
   // Activate initial version
-  const tx = await registry.setVersionStatus(INITIAL_VERSION, 1); // 1 = Active
+  const tx = await registry.setVersionStatus(initialVersion, 1); // 1 = Active
   await tx.wait();
-  console.log("Version", INITIAL_VERSION, "activated");
+  console.log("Version", initialVersion, "activated");
 
   if (finalAdmin) {
     // Hand over to the final admin: grant it every operational role and begin the two-step

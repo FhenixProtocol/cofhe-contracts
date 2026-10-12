@@ -28,6 +28,7 @@ describe("TaskManager access list", function () {
   beforeEach(async function () {
     await taskManager.connect(owner).disableAccessList();
     await taskManager.connect(owner).removeFromAccessList([other.address]);
+    await taskManager.connect(owner).setDenyList([other.address], false);
   });
 
   it("is disabled by default and lets any caller create tasks", async function () {
@@ -113,5 +114,69 @@ describe("TaskManager access list", function () {
     expect(await taskManager.accessList(other.address)).to.equal(true);
     expect(await taskManager.accessList(third.address)).to.equal(true);
     await taskManager.connect(owner).removeFromAccessList([other.address, third.address]);
+  });
+
+  describe("deny list", function () {
+    it("blocks deny-listed callers on all three intake functions while the access list is disabled", async function () {
+      await taskManager.connect(owner).setDenyList([other.address], true);
+      expect(await taskManager.denyList(other.address)).to.equal(true);
+
+      await expect(taskManager.connect(other).createRandomTask(EUINT8, 1, SECURITY_ZONE))
+        .to.be.revertedWithCustomError(taskManager, "OnDenyList")
+        .withArgs(other.address);
+
+      await expect(taskManager.connect(other).createTask(EUINT8, 8 /* add */, [1n, 2n], []))
+        .to.be.revertedWithCustomError(taskManager, "OnDenyList")
+        .withArgs(other.address);
+
+      await expect(taskManager.connect(other).batchVerifyInputs(DUMMY_INPUTS, other.address, "0x"))
+        .to.be.revertedWithCustomError(taskManager, "OnDenyList")
+        .withArgs(other.address);
+    });
+
+    it("does not affect callers that are not deny-listed", async function () {
+      const [, , third] = await hre.ethers.getSigners();
+      await taskManager.connect(owner).setDenyList([third.address], true);
+      await expect(taskManager.connect(other).createRandomTask(EUINT8, 1, SECURITY_ZONE)).to.not.be.reverted;
+      await taskManager.connect(owner).setDenyList([third.address], false);
+    });
+
+    it("lets a caller through again after removal", async function () {
+      await taskManager.connect(owner).setDenyList([other.address], true);
+      await taskManager.connect(owner).setDenyList([other.address], false);
+      expect(await taskManager.denyList(other.address)).to.equal(false);
+      await expect(taskManager.connect(other).createRandomTask(EUINT8, 1, SECURITY_ZONE)).to.not.be.reverted;
+    });
+
+    it("is ignored while the access list is enabled", async function () {
+      await taskManager.connect(owner).setDenyList([other.address], true);
+      await taskManager.connect(owner).enableAccessList();
+      await taskManager.connect(owner).addToAccessList([other.address]);
+      await expect(taskManager.connect(other).createRandomTask(EUINT8, 1, SECURITY_ZONE)).to.not.be.reverted;
+    });
+
+    it("restricts setDenyList to the ACCESS_LIST_MANAGER_ROLE", async function () {
+      const role = await taskManager.ACCESS_LIST_MANAGER_ROLE();
+      await expect(taskManager.connect(other).setDenyList([other.address], true))
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(other.address, role);
+      await expect(taskManager.connect(other).setDenyList([other.address], false))
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(other.address, role);
+    });
+
+    it("rejects the zero address when adding or removing", async function () {
+      await expect(taskManager.connect(owner).setDenyList([hre.ethers.ZeroAddress], true))
+        .to.be.revertedWithCustomError(taskManager, "InvalidAddress");
+      await expect(taskManager.connect(owner).setDenyList([hre.ethers.ZeroAddress], false))
+        .to.be.revertedWithCustomError(taskManager, "InvalidAddress");
+    });
+
+    it("emits events on membership changes", async function () {
+      await expect(taskManager.connect(owner).setDenyList([other.address], true))
+        .to.emit(taskManager, "DenyListSet").withArgs(other.address, true);
+      await expect(taskManager.connect(owner).setDenyList([other.address], false))
+        .to.emit(taskManager, "DenyListSet").withArgs(other.address, false);
+    });
   });
 });

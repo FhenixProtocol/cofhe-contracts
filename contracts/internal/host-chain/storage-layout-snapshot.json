@@ -10,7 +10,7 @@
           "slot": "0",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:196"
+          "src": "contracts/TaskManager.sol:197"
         },
         {
           "label": "securityZoneMax",
@@ -18,7 +18,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:328"
+          "src": "contracts/TaskManager.sol:330"
         },
         {
           "label": "securityZoneMin",
@@ -26,7 +26,7 @@
           "slot": "0",
           "type": "t_int32",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:329"
+          "src": "contracts/TaskManager.sol:331"
         },
         {
           "label": "randomCounter",
@@ -34,7 +34,7 @@
           "slot": "1",
           "type": "t_uint256",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:332"
+          "src": "contracts/TaskManager.sol:334"
         },
         {
           "label": "_aggregator",
@@ -42,7 +42,7 @@
           "slot": "2",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:335"
+          "src": "contracts/TaskManager.sol:337"
         },
         {
           "label": "acl",
@@ -50,7 +50,7 @@
           "slot": "3",
           "type": "t_contract(ACL)31468",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:338"
+          "src": "contracts/TaskManager.sol:340"
         },
         {
           "label": "verifierSigner",
@@ -58,7 +58,7 @@
           "slot": "4",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:340"
+          "src": "contracts/TaskManager.sol:342"
         },
         {
           "label": "version",
@@ -66,7 +66,7 @@
           "slot": "4",
           "type": "t_uint8",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:342"
+          "src": "contracts/TaskManager.sol:344"
         },
         {
           "label": "plaintextsStorage",
@@ -74,7 +74,7 @@
           "slot": "5",
           "type": "t_contract(PlaintextsStorage)33107",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:345"
+          "src": "contracts/TaskManager.sol:347"
         },
         {
           "label": "_aggregators",
@@ -82,7 +82,7 @@
           "slot": "6",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:350"
+          "src": "contracts/TaskManager.sol:352"
         },
         {
           "label": "isEnabled",
@@ -90,7 +90,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:355"
+          "src": "contracts/TaskManager.sol:357"
         },
         {
           "label": "decryptResultSigner",
@@ -98,7 +98,7 @@
           "slot": "7",
           "type": "t_address",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:359"
+          "src": "contracts/TaskManager.sol:361"
         },
         {
           "label": "accessListEnabled",
@@ -106,7 +106,7 @@
           "slot": "7",
           "type": "t_bool",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:363"
+          "src": "contracts/TaskManager.sol:365"
         },
         {
           "label": "accessList",
@@ -114,7 +114,15 @@
           "slot": "8",
           "type": "t_mapping(t_address,t_bool)",
           "contract": "TaskManager",
-          "src": "contracts/TaskManager.sol:364"
+          "src": "contracts/TaskManager.sol:366"
+        },
+        {
+          "label": "denyList",
+          "offset": 0,
+          "slot": "9",
+          "type": "t_mapping(t_address,t_bool)",
+          "contract": "TaskManager",
+          "src": "contracts/TaskManager.sol:369"
         }
       ],
       "types": {
@@ -182,7 +190,7 @@
             "contract": "TaskManager",
             "label": "_owner",
             "type": "t_address",
-            "src": "contracts/TaskManager.sol:188"
+            "src": "contracts/TaskManager.sol:189"
           }
         ],
         "erc7201:openzeppelin.storage.Ownable2Step": [
@@ -190,7 +198,7 @@
             "contract": "TaskManager",
             "label": "_pendingOwner",
             "type": "t_address",
-            "src": "contracts/TaskManager.sol:193"
+            "src": "contracts/TaskManager.sol:194"
           }
         ],
         "erc7201:openzeppelin.storage.AccessControlDefaultAdminRules": [
@@ -785,13 +793,13 @@
             "contract": "ACPShareRegistry",
             "label": "shareIdsFor",
             "type": "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)",
-            "src": "contracts/ACPShareRegistry.sol:67"
+            "src": "contracts/ACPShareRegistry.sol:69"
           },
           {
             "contract": "ACPShareRegistry",
             "label": "headers",
             "type": "t_mapping(t_bytes32,t_struct(ShareHeader)31509_storage)",
-            "src": "contracts/ACPShareRegistry.sol:69"
+            "src": "contracts/ACPShareRegistry.sol:71"
           }
         ],
         "erc7201:cofhe.storage.ACPShareRegistry": [
@@ -799,13 +807,13 @@
             "contract": "ACPShareRegistry",
             "label": "shareIdsFor",
             "type": "t_mapping(t_address,t_struct(Bytes32Set)29809_storage)",
-            "src": "contracts/ACPShareRegistry.sol:82"
+            "src": "contracts/ACPShareRegistry.sol:84"
           },
           {
             "contract": "ACPShareRegistry",
             "label": "shares",
             "type": "t_mapping(t_bytes32,t_struct(ACP)32565_storage)",
-            "src": "contracts/ACPShareRegistry.sol:84"
+            "src": "contracts/ACPShareRegistry.sol:86"
           }
         ],
         "erc7201:openzeppelin.storage.AccessControl": [
