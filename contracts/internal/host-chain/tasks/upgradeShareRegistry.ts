@@ -83,7 +83,24 @@ async function resolveSender(ethers: any, registry: any, signer: any, viaSafe: b
 }
 
 /**
- * Sends `upgradeToAndCall(impl, 0x)`: as the signer, through the Safe with SAFE_OWNER_KEY, or as
+ * Waits until the RPC reports `address`'s nonce past `nonce`, i.e. the transaction that used it is
+ * accepted, so the next transaction from the same key is not numbered from a stale count.
+ */
+async function waitForNonce(ethers: any, address: string, nonce: number, timeoutMs = 30_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while ((await ethers.provider.getTransactionCount(address, "latest")) <= nonce) {
+    if (Date.now() > deadline) {
+      throw new Error(
+        `The RPC still reports ${address}'s nonce at ${nonce} after ${timeoutMs / 1000} s. ` +
+          `Nothing was upgraded - re-run the task.`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+}
+
+/**
+ * Sends `upgradeToAndCall(impl, 0x)`: as the signer (with `nonce`), through the Safe with SAFE_OWNER_KEY, or as
  * a Transaction Builder batch to import in the Safe app. True when it was sent from here.
  */
 async function sendUpgrade(
@@ -92,11 +109,12 @@ async function sendUpgrade(
   safe: string | null,
   proxy: string,
   data: string,
+  nonce: number,
   out?: string,
 ): Promise<boolean> {
   const { ethers } = hre;
   if (safe === null) {
-    await (await signer.sendTransaction({ to: proxy, data })).wait();
+    await (await signer.sendTransaction({ to: proxy, data, nonce })).wait();
     console.log(chalk.green("Upgraded ACPShareRegistry"));
     return true;
   }
@@ -189,10 +207,12 @@ async function upgradeShareRegistry(
   await implementation.waitForDeployment();
   const newImplementation = await implementation.getAddress();
   console.log(chalk.green("New implementation:", newImplementation));
+  const deployNonce = implementation.deploymentTransaction()!.nonce;
+  await waitForNonce(ethers, signer.address, deployNonce);
 
   // From the first version, its shares are abandoned, not migrated: they stay in its storage, unread.
   const data = Factory.interface.encodeFunctionData("upgradeToAndCall", [newImplementation, "0x"]);
-  if (await sendUpgrade(hre, signer, safe, proxy, data, taskArguments.out)) {
+  if (await sendUpgrade(hre, signer, safe, proxy, data, deployNonce + 1, taskArguments.out)) {
     const now = await implementationOf(ethers, proxy);
     console.log(chalk.green("Implementation now:", now));
     if (now === oldImplementation) console.log(chalk.red("WARNING: Implementation address did not change!"));

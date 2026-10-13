@@ -27,6 +27,7 @@
 - **The npm package ships the ACP contracts** — `ACPShareRegistry.sol`, `ACPTimestampRevoker.sol` and `Permissioned.sol`, under `internal/host-chain/contracts/`, so the SDK mocks can use them instead of copies. `@openzeppelin/contracts-upgradeable` becomes a dependency (they import it).
 
 ### Fixed
+- **`task:upgradeShareRegistry` no longer fails with "nonce too low" on load-balanced RPCs**: it waits until the RPC reports the implementation deploy's nonce, then sends the upgrade with the next one. No action needed.
 - **`task:upgradeShareRegistry(AsSafe)` upgrades a pointer-based registry to a newer build** instead of stopping at "already runs the pointer-based implementation"; only a proxy on exactly this build is a no-op. Re-run the upgrade.
 - **Local `task:deployAddressBook` makes the book owner the admin `hardhat deploy` picks** (`TM_ADMIN_ADDRESS`, else the `AGGREGATOR_KEY` wallet), so the local deploy no longer refuses the book. The local book address changes. No action needed.
 - **The Safe FHE variants no longer revert when no TaskManager is registered.** `FHE.getDecryptResultSafe`, `verifyDecryptResultSafe` and `verifyDecryptResultBatchSafe` return their defaults (`0`/`false`) when the book has no code or no TaskManager is set (`Common.tryTm`); the non-Safe functions still revert.
