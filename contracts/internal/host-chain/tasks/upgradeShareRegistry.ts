@@ -13,11 +13,38 @@ async function implementationOf(ethers: any, proxy: string): Promise<string> {
   return ethers.getAddress("0x" + (await ethers.provider.getStorage(proxy, IMPLEMENTATION_SLOT)).slice(-40));
 }
 
+const REGISTRY_SOURCE = "contracts/ACPShareRegistry.sol";
+const REGISTRY_NAME = "ACPShareRegistry";
+
 /**
- * Whether the proxy already runs the pointer-based implementation, told by `share(acp, metadata)`
- * in its function dispatcher (`PUSH4 <selector>`); the first version has only `share(acp)`. The
- * code itself never equals the artifact: UUPSUpgradeable keeps the implementation's own address
- * as an immutable.
+ * Whether the proxy's implementation is exactly this build of ACPShareRegistry. UUPSUpgradeable
+ * keeps the implementation's own address as an immutable, so those bytes are zeroed (as they are
+ * in the compiler output) before comparing.
+ */
+async function runsCurrentBuild(hre: HardhatRuntimeEnvironment, proxy: string): Promise<boolean> {
+  const buildInfo = await hre.artifacts.getBuildInfo(`${REGISTRY_SOURCE}:${REGISTRY_NAME}`);
+  if (!buildInfo) {
+    throw new Error(`No build info for ${REGISTRY_NAME}. Run \`pnpm compile\` first.`);
+  }
+  const deployed = buildInfo.output.contracts[REGISTRY_SOURCE][REGISTRY_NAME].evm.deployedBytecode;
+  const expected = deployed.object.toLowerCase().replace(/^0x/, "");
+  let code: string = (await hre.ethers.provider.getCode(await implementationOf(hre.ethers, proxy)))
+    .toLowerCase()
+    .slice(2);
+  if (code.length !== expected.length) {
+    return false;
+  }
+  for (const refs of Object.values(deployed.immutableReferences ?? {}) as { start: number; length: number }[][]) {
+    for (const { start, length } of refs) {
+      code = code.slice(0, start * 2) + "00".repeat(length) + code.slice((start + length) * 2);
+    }
+  }
+  return code === expected;
+}
+
+/**
+ * Whether the proxy runs a pointer-based implementation, told by `share(acp, metadata)` in its
+ * function dispatcher (`PUSH4 <selector>`); the first version has only `share(acp)`.
  */
 async function runsPointerImplementation(ethers: any, proxy: string, Factory: any): Promise<boolean> {
   const selector: string = Factory.interface.getFunction("share").selector;
@@ -103,10 +130,10 @@ async function sendUpgrade(
 }
 
 /**
- * Upgrades the ACL's ACPShareRegistry in place to the pointer-based implementation. The signer
- * deploys the implementation; the upgrade itself is sent by the signer, or with `viaSafe` by the
- * Safe at SAFE_ADMIN_ADDRESS. A proxy already on the pointer-based implementation is left alone,
- * so a re-run after a Safe batch executes verifies it.
+ * Upgrades the ACL's ACPShareRegistry in place to this build, from the first version or from an
+ * earlier pointer-based one. The signer deploys the implementation; the upgrade itself is sent by
+ * the signer, or with `viaSafe` by the Safe at SAFE_ADMIN_ADDRESS. A proxy already on this build is
+ * left alone, so a re-run after a Safe batch executes verifies it.
  */
 async function upgradeShareRegistry(
   hre: HardhatRuntimeEnvironment,
@@ -132,17 +159,20 @@ async function upgradeShareRegistry(
   console.log(chalk.green("ACPShareRegistry proxy:", proxy));
   console.log(chalk.green("Current implementation:", oldImplementation));
 
-  const Factory = await ethers.getContractFactory("ACPShareRegistry");
-  if (await runsPointerImplementation(ethers, proxy, Factory)) {
-    console.log(chalk.green("The proxy already runs the pointer-based implementation. Nothing to do."));
+  const Factory = await ethers.getContractFactory(REGISTRY_NAME);
+  if (await runsCurrentBuild(hre, proxy)) {
+    console.log(chalk.green("The proxy already runs this ACPShareRegistry build. Nothing to do."));
     return;
   }
 
-  // Import the layout the proxy runs now (the first version), then check this one against it.
-  const V1 = await ethers.getContractFactory("ACPShareRegistryV1");
-  await upgrades.forceImport(proxy, V1, { kind: "uups" });
+  // Import the layout the proxy runs now, then check this one against it.
+  const fromV1 = !(await runsPointerImplementation(ethers, proxy, Factory));
+  const Current = fromV1 ? await ethers.getContractFactory("ACPShareRegistryV1") : Factory;
+  await upgrades.forceImport(proxy, Current, { kind: "uups" });
   await upgrades.validateUpgrade(proxy, Factory, { kind: "uups" });
-  console.log(chalk.green("✅ Storage layout is compatible with the first version"));
+  console.log(
+    chalk.green(`✅ Storage layout is compatible with the ${fromV1 ? "first version" : "previous implementation"}`),
+  );
   if (taskArguments.onlyvalidate) return;
 
   const registry = Factory.attach(proxy) as Contract;
@@ -152,7 +182,7 @@ async function upgradeShareRegistry(
   const newImplementation = await implementation.getAddress();
   console.log(chalk.green("New implementation:", newImplementation));
 
-  // The first version's shares are abandoned, not migrated: they stay in its storage, unread.
+  // From the first version, its shares are abandoned, not migrated: they stay in its storage, unread.
   const data = Factory.interface.encodeFunctionData("upgradeToAndCall", [newImplementation, "0x"]);
   if (await sendUpgrade(hre, signer, safe, proxy, data, taskArguments.out)) {
     const now = await implementationOf(ethers, proxy);
@@ -161,7 +191,7 @@ async function upgradeShareRegistry(
   }
 }
 
-task("task:upgradeShareRegistry", "Upgrade the ACL's ACPShareRegistry in place to the pointer-based implementation")
+task("task:upgradeShareRegistry", "Upgrade the ACL's ACPShareRegistry in place to this build")
   .addParam("key", "Signer key holding UPGRADER_ROLE (default: the third configured account)", "")
   .addParam("onlyvalidate", "Only validate the storage layout", false, types.boolean)
   .setAction(async function (taskArguments: TaskArguments, hre) {

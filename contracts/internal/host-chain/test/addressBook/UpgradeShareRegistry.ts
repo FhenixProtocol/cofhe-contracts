@@ -268,3 +268,75 @@ describe("task:upgradeShareRegistry as the upgrader", function () {
     expect(await registry.hasRole(await registry.UPGRADER_ROLE(), upgrader.address)).to.equal(true);
   });
 });
+
+/**
+ * A network already on a pointer-based registry: the task upgrades it to this build and keeps its
+ * shares, and only a proxy on exactly this build is reported as done.
+ */
+describe("task:upgradeShareRegistry from an earlier pointer-based release", function () {
+  let restoreEnv: () => void;
+  let registryAddress: string;
+  let shareId: string;
+  let alice: any;
+
+  before(async function () {
+    this.timeout(300_000);
+    restoreEnv = saveEnv();
+    await ethers.provider.send("hardhat_reset", []);
+    const signers = await ethers.getSigners();
+    const [deployer, issuer] = signers;
+    // The task's default signer.
+    const upgrader = signers[2];
+    alice = signers[5];
+    setDeployEnv(deployer.address, "", "");
+
+    await installAddressBook(deployer);
+    await hre.run("deploy", { reset: true });
+    const Prev = await ethers.getContractFactory("ACPShareRegistryPointerPrev");
+    const prev: any = await upgrades.deployProxy(Prev, [upgrader.address], { kind: "uups", initializer: "initialize" });
+    await prev.waitForDeployment();
+    registryAddress = await prev.getAddress();
+    const taskManager = await ethers.getContractAt("TaskManager", await resolveTaskManager(hre));
+    const acl = await ethers.getContractAt("ACL", await taskManager.acl());
+    await (await acl.setShareRegistry(registryAddress)).wait();
+
+    const acp = {
+      issuer: issuer.address,
+      expiration: 4102444800n,
+      recipient: alice.address,
+      revokerData: 0n,
+      revokerContract: ethers.ZeroAddress,
+      scope: 2,
+      contracts: [],
+      handles: [ethers.id("alice")],
+      sealingKey: ethers.ZeroHash,
+      issuerSignature: "0x" + "11".repeat(65),
+      recipientSignature: "0x",
+    };
+    shareId = await prev.connect(issuer).share.staticCall(acp, "0x");
+    await (await prev.connect(issuer).share(acp, "0x")).wait();
+  });
+
+  after(function () {
+    restoreEnv();
+  });
+
+  it("upgrades to this build, keeping the address and the shares", async function () {
+    this.timeout(300_000);
+    const before = await implementationOf(registryAddress);
+    await hre.run("task:upgradeShareRegistry");
+    expect(await implementationOf(registryAddress)).to.not.equal(before);
+
+    const registry: any = await ethers.getContractAt("ACPShareRegistryPointerPrev", registryAddress);
+    await expectRejection(registry.previousRelease(), /revert|function selector/i);
+    expect(await registry.isShareValid(shareId)).to.equal(true);
+    expect((await registry.sharesFor(alice.address))[0]).to.deep.equal([shareId]);
+  });
+
+  it("re-runs as a no-op once on this build", async function () {
+    this.timeout(300_000);
+    const before = await implementationOf(registryAddress);
+    await hre.run("task:upgradeShareRegistry");
+    expect(await implementationOf(registryAddress)).to.equal(before);
+  });
+});
