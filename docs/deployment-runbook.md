@@ -384,7 +384,7 @@ npx hardhat task:upgradeShareRegistryAsSafe --network <net> --key <any funded ke
 ```
 
 - The proxy comes from the registered TaskManager: `acl()` → `shareRegistry()`. The layout is checked against the first version (`ACPShareRegistryV1`), whose namespace stays reserved.
-- One call, `upgradeToAndCall(impl, 0x)`, sent by the Safe at `SAFE_ADMIN_ADDRESS`: executed through it with `SAFE_OWNER_KEY`, otherwise written to `safe-batches/<net>-upgrade-share-registry-<unix>.json` (`--out <path>` overrides). The key only deploys the implementation. Before the handover, `task:upgradeShareRegistry --key <upgrader key>` sends the upgrade as the signer.
+- One call, `upgradeToAndCall(impl, 0x)`, sent by the Safe at `SAFE_ADMIN_ADDRESS`: executed through it with `SAFE_OWNER_KEY`, otherwise written to `safe-batches/<net>-upgrade-share-registry-<unix>.json` (`--out <path>` overrides). The key only deploys the implementation. Before the handover, `task:upgradeShareRegistry --key <upgrader key>` sends the upgrade as the signer. Both ask for confirmation before deploying anything; `--yes` skips the prompt.
 - The first version's shares are abandoned: they stay in its storage and nothing reads them. Issuers who still want a share delivered post it again.
 - A run on a proxy that already has the pointer-based implementation does nothing, so re-run after the Safe executes the batch to verify.
 

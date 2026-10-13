@@ -6,6 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { resolveTaskManager } from "../utils/addressBook";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
+import { confirm } from "../utils/confirm";
 
 const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
@@ -177,6 +178,13 @@ async function upgradeShareRegistry(
 
   const registry = Factory.attach(proxy) as Contract;
   const safe = await resolveSender(ethers, registry, signer, viaSafe);
+  const question =
+    `Upgrade ACPShareRegistry ${proxy} on ${hre.network.name}` +
+    `${safe === null ? ` as ${signer.address}` : ` through Safe ${safe}`}?`;
+  if (!(await confirm(question, taskArguments.yes))) {
+    console.log(chalk.yellow("Aborted - nothing was deployed or sent."));
+    return;
+  }
   const implementation = await Factory.connect(signer).deploy();
   await implementation.waitForDeployment();
   const newImplementation = await implementation.getAddress();
@@ -194,6 +202,7 @@ async function upgradeShareRegistry(
 task("task:upgradeShareRegistry", "Upgrade the ACL's ACPShareRegistry in place to this build")
   .addParam("key", "Signer key holding UPGRADER_ROLE (default: the third configured account)", "")
   .addParam("onlyvalidate", "Only validate the storage layout", false, types.boolean)
+  .addFlag("yes", "Skip the confirmation prompt")
   .setAction(async function (taskArguments: TaskArguments, hre) {
     await upgradeShareRegistry(hre, taskArguments, false);
   });
@@ -202,6 +211,7 @@ task("task:upgradeShareRegistryAsSafe", "Upgrade the ACL's ACPShareRegistry in p
   .addParam("key", "Any funded key, deploys the implementation (default: the third configured account)", "")
   .addParam("onlyvalidate", "Only validate the storage layout", false, types.boolean)
   .addOptionalParam("out", "Path for the Safe batch file, when one is written")
+  .addFlag("yes", "Skip the confirmation prompt")
   .setAction(async function (taskArguments: TaskArguments, hre) {
     await upgradeShareRegistry(hre, taskArguments, true);
   });

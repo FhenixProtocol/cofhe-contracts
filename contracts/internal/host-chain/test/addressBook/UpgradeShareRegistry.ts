@@ -172,7 +172,7 @@ describe("task:upgradeShareRegistryAsSafe after the handover", function () {
     const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "upgrade-share-registry-")), "batch.json");
     process.env.SAFE_OWNER_KEY = "";
     try {
-      await hre.run("task:upgradeShareRegistryAsSafe", { out: outPath });
+      await hre.run("task:upgradeShareRegistryAsSafe", { out: outPath, yes: true });
     } finally {
       process.env.SAFE_OWNER_KEY = finalAdmin.privateKey;
     }
@@ -214,10 +214,23 @@ describe("task:upgradeShareRegistryAsSafe after the handover", function () {
     expect(await implementationOf(registryAddress)).to.equal(before);
   });
 
+  it("refuses to upgrade without --yes when there is no terminal to confirm on", async function () {
+    this.timeout(300_000);
+    const before = await implementationOf(registryAddress);
+    const isTTY = process.stdin.isTTY;
+    (process.stdin as any).isTTY = false;
+    try {
+      await expectRejection(hre.run("task:upgradeShareRegistryAsSafe"), /pass --yes to proceed/);
+    } finally {
+      (process.stdin as any).isTTY = isTTY;
+    }
+    expect(await implementationOf(registryAddress)).to.equal(before);
+  });
+
   it("upgrades in place as the Safe, keeping the address and abandoning the v1 shares", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistryAsSafe");
+    await hre.run("task:upgradeShareRegistryAsSafe", { yes: true });
     expect(await implementationOf(registryAddress)).to.not.equal(before);
 
     const registry: any = await ethers.getContractAt("ACPShareRegistry", registryAddress);
@@ -230,7 +243,7 @@ describe("task:upgradeShareRegistryAsSafe after the handover", function () {
   it("re-runs as a no-op once upgraded", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistryAsSafe");
+    await hre.run("task:upgradeShareRegistryAsSafe", { yes: true });
     expect(await implementationOf(registryAddress)).to.equal(before);
   });
 });
@@ -261,7 +274,7 @@ describe("task:upgradeShareRegistry as the upgrader", function () {
   it("upgrades in place as the signer, keeping the address and roles", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistry");
+    await hre.run("task:upgradeShareRegistry", { yes: true });
     expect(await implementationOf(registryAddress)).to.not.equal(before);
 
     const registry: any = await ethers.getContractAt("ACPShareRegistry", registryAddress);
@@ -324,7 +337,7 @@ describe("task:upgradeShareRegistry from an earlier pointer-based release", func
   it("upgrades to this build, keeping the address and the shares", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistry");
+    await hre.run("task:upgradeShareRegistry", { yes: true });
     expect(await implementationOf(registryAddress)).to.not.equal(before);
 
     const registry: any = await ethers.getContractAt("ACPShareRegistryPointerPrev", registryAddress);
@@ -336,7 +349,7 @@ describe("task:upgradeShareRegistry from an earlier pointer-based release", func
   it("re-runs as a no-op once on this build", async function () {
     this.timeout(300_000);
     const before = await implementationOf(registryAddress);
-    await hre.run("task:upgradeShareRegistry");
+    await hre.run("task:upgradeShareRegistry", { yes: true });
     expect(await implementationOf(registryAddress)).to.equal(before);
   });
 });
