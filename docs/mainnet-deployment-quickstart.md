@@ -125,6 +125,16 @@ addToAccessList(accounts)   // selector 0xdd33c9c4
 enable()                    // selector 0xa3907d71
 ```
 
+`task:goLiveAsSafe` runs these checks and both calls as the Safe (through it with
+`SAFE_OWNER_KEY`, otherwise as one Transaction Builder batch); re-run to verify:
+
+```bash
+npx hardhat task:goLiveAsSafe --accounts <a,b,...> --network <net>
+```
+
+Emergency stop, as the maintenance wallet: `npx hardhat task:disableTaskManager --network <net>`
+sends `disable()` with `MAINTENANCE_KEY`, or prints the call for the Ledger without it.
+
 Check: `isEnabled()` is true and `accessList(account)` is true for each added account.
 
 ## Verify sources

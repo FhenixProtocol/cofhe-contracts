@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **`task:goLiveAsSafe --accounts <a,b>`** checks the go-live preconditions, then access-lists the callers and calls `enable()` through the Safe (batch without `SAFE_OWNER_KEY`). **`task:disableTaskManager`** is the maintenance wallet's emergency `disable()`; optional new `MAINTENANCE_KEY`.
 - **`task:upgradeShareRegistry`** upgrades the ACL's ACPShareRegistry in place (same address) as a signer holding `UPGRADER_ROLE`; **`task:upgradeShareRegistryAsSafe`** goes through the Safe at `SAFE_ADMIN_ADDRESS` with `SAFE_OWNER_KEY`, otherwise writes a Safe batch. Re-run to verify.
 - **TaskManager deny list** — `setDenyList(accounts, denied)` (`ACCESS_LIST_MANAGER_ROLE`) blocks callers from task intake while the access list is disabled; ignored when it is enabled. Ships with a TaskManager upgrade (`task:upgradeTM`); no migration.
 - **`task:addToDenyList` / `task:removeFromDenyList --accounts <a,b>`** manage the deny list as a signer holding `ACCESS_LIST_MANAGER_ROLE`; the `…AsSafe` variants go through the Safe at `SAFE_ADMIN_ADDRESS` with `SAFE_OWNER_KEY`, otherwise write a Safe batch. Re-run to verify.
