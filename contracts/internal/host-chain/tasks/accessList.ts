@@ -75,13 +75,13 @@ task("task:addToAccessList", "Add one or more contracts to the TaskManager's acc
     const role = await tm.ACCESS_LIST_MANAGER_ROLE();
     const [signer] = await ethers.getSigners();
 
-    if (await tm.hasRole(role, signer.address)) {
+    if (signer && (await tm.hasRole(role, signer.address))) {
       await (await tm.connect(signer).addToAccessList(pending)).wait();
     } else {
       const safeAddress = ethers.getAddress(requireEnv("SAFE_ADMIN_ADDRESS"));
       if (!(await tm.hasRole(role, safeAddress))) {
         throw new Error(
-          `Neither the signer (${signer.address}) nor SAFE_ADMIN_ADDRESS (${safeAddress}) holds ` +
+          `Neither the signer (${signer?.address ?? "none"}) nor SAFE_ADMIN_ADDRESS (${safeAddress}) holds ` +
             `ACCESS_LIST_MANAGER_ROLE on TaskManager ${tmAddress}. Run from the account that does.`,
         );
       }

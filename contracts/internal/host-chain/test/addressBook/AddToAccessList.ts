@@ -115,6 +115,24 @@ describe("task:addToAccessList", function () {
     expect(await taskManager.accessList(second)).to.equal(true);
   });
 
+  it("writes a Safe batch when no signer is configured", async function () {
+    await handRoleToSafe();
+    const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "access-list-")), "batch.json");
+    const getSigners = ethers.getSigners;
+    ethers.getSigners = async () => [];
+    try {
+      await hre.run("task:addToAccessList", { accounts: first, out: outPath });
+    } finally {
+      ethers.getSigners = getSigners;
+    }
+
+    const batch = JSON.parse(fs.readFileSync(outPath, "utf8"));
+    expect(batch.transactions[0].data).to.equal(
+      taskManager.interface.encodeFunctionData("addToAccessList", [[first]]),
+    );
+    expect(await taskManager.accessList(first)).to.equal(false);
+  });
+
   it("refuses when neither the signer nor the Safe holds the role", async function () {
     await handRoleToSafe();
     process.env.SAFE_ADMIN_ADDRESS = ethers.Wallet.createRandom().address;
