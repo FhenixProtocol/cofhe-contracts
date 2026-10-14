@@ -53,6 +53,9 @@ jobs:
       - name: Run Solhint
         run: pnpm lint:sol
 
+      - name: Run registry-chain Solhint
+        run: pnpm exec solhint '../registry-chain/contracts/**/*.sol'
+
   storage-layout:
     name: Storage Layout Check
     runs-on: ubuntu-latest
