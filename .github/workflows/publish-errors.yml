@@ -21,9 +21,14 @@ jobs:
           node-version: 20.x
           registry-url: 'https://registry.npmjs.org'
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.1
+          run_install: false
+
       - name: Install dependencies
         working-directory: contracts/internal/host-chain
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Extract errors and publish to NPM
         uses: roeezolantz/solidity-error-identifier-action@master
