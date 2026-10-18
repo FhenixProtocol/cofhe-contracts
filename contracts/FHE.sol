@@ -4101,6 +4101,13 @@ library FHE {
         Common.tm().addToAccessList(accounts);
     }
 
+    /// @notice Remove accounts from the TaskManager access list
+    /// @dev The calling contract must hold the TaskManager's ACCESS_LIST_MANAGER_ROLE
+    /// @param accounts The accounts to remove
+    function removeFromAccessList(address[] memory accounts) internal {
+        Common.tm().removeFromAccessList(accounts);
+    }
+
     /// @notice Returns true if the encrypted boolean is initialized and false otherwise
     /// @param value the encrypted boolean value to check
     /// @return true if initialized, false otherwise

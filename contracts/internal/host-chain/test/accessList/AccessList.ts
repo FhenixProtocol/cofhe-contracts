@@ -116,7 +116,7 @@ describe("TaskManager access list", function () {
     await taskManager.connect(owner).removeFromAccessList([other.address, third.address]);
   });
 
-  describe("FHE.addToAccessList", function () {
+  describe("FHE.addToAccessList / FHE.removeFromAccessList", function () {
     let manager: Contract;
 
     beforeEach(async function () {
@@ -125,18 +125,25 @@ describe("TaskManager access list", function () {
       await manager.waitForDeployment();
     });
 
-    it("lets a contract holding ACCESS_LIST_MANAGER_ROLE add accounts", async function () {
+    it("lets a contract holding ACCESS_LIST_MANAGER_ROLE add and remove accounts", async function () {
       const role = await taskManager.ACCESS_LIST_MANAGER_ROLE();
       await taskManager.connect(owner).grantRole(role, await manager.getAddress());
 
       await expect(manager.connect(other).addToAccessList([other.address]))
         .to.emit(taskManager, "AccessGranted").withArgs(other.address);
       expect(await taskManager.accessList(other.address)).to.equal(true);
+
+      await expect(manager.connect(other).removeFromAccessList([other.address]))
+        .to.emit(taskManager, "AccessRevoked").withArgs(other.address);
+      expect(await taskManager.accessList(other.address)).to.equal(false);
     });
 
     it("reverts for a contract without ACCESS_LIST_MANAGER_ROLE", async function () {
       const role = await taskManager.ACCESS_LIST_MANAGER_ROLE();
       await expect(manager.connect(owner).addToAccessList([other.address]))
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(await manager.getAddress(), role);
+      await expect(manager.connect(owner).removeFromAccessList([other.address]))
         .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
         .withArgs(await manager.getAddress(), role);
     });

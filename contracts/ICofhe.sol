@@ -82,6 +82,7 @@ interface ITaskManager {
     function verifyDecryptResultBatchSafe(uint256[] calldata ctHashes, uint256[] calldata results, bytes[] calldata signatures) external view returns (bool[] memory);
 
     function addToAccessList(address[] calldata accounts) external;
+    function removeFromAccessList(address[] calldata accounts) external;
 }
 
 library Utils {
