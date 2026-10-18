@@ -4092,6 +4092,15 @@ library FHE {
         return Impl.verifyDecryptResultBatchSafe(ctHashes, resultsUint, signatures);
     }
 
+    // ********** ACCESS LIST ************* //
+
+    /// @notice Add accounts to the TaskManager access list
+    /// @dev The calling contract must hold the TaskManager's ACCESS_LIST_MANAGER_ROLE
+    /// @param accounts The accounts to allow
+    function addToAccessList(address[] memory accounts) internal {
+        Common.tm().addToAccessList(accounts);
+    }
+
     /// @notice Returns true if the encrypted boolean is initialized and false otherwise
     /// @param value the encrypted boolean value to check
     /// @return true if initialized, false otherwise
