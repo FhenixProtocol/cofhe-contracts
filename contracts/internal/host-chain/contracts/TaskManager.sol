@@ -290,9 +290,18 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     /// @dev The single write path for the security zone bounds. Rejecting an inverted range here
     ///      is what stops `setSecurityZones(10, 5)` from looking like an ordinary admin change
     ///      while silently reverting every task intake that follows.
+    ///      Bounds must also fit in `int8`: task-handle metadata stores
+    ///      `uint8(int8(securityZone))`, so values outside [-128, 127] would alias
+    ///      (e.g. zone 0 and 256 serialize to the same byte). See #154.
     function _setSecurityZones(int32 newMin, int32 newMax) private {
         if (newMin > newMax) {
             revert InvalidSecurityZone(newMin, newMin, newMax);
+        }
+        if (newMin < type(int8).min || newMin > type(int8).max) {
+            revert InvalidSecurityZone(newMin, type(int8).min, type(int8).max);
+        }
+        if (newMax < type(int8).min || newMax > type(int8).max) {
+            revert InvalidSecurityZone(newMax, type(int8).min, type(int8).max);
         }
         emit SecurityZonesChanged(securityZoneMin, securityZoneMax, newMin, newMax);
         securityZoneMin = newMin;
