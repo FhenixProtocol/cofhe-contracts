@@ -116,6 +116,39 @@ describe("TaskManager access list", function () {
     await taskManager.connect(owner).removeFromAccessList([other.address, third.address]);
   });
 
+  describe("FHE.addToAccessList / FHE.removeFromAccessList", function () {
+    let manager: Contract;
+
+    beforeEach(async function () {
+      const Factory = await hre.ethers.getContractFactory("AccessListManagerTest");
+      manager = (await Factory.deploy()) as unknown as Contract;
+      await manager.waitForDeployment();
+    });
+
+    it("lets a contract holding ACCESS_LIST_MANAGER_ROLE add and remove accounts", async function () {
+      const role = await taskManager.ACCESS_LIST_MANAGER_ROLE();
+      await taskManager.connect(owner).grantRole(role, await manager.getAddress());
+
+      await expect(manager.connect(other).addToAccessList([other.address]))
+        .to.emit(taskManager, "AccessGranted").withArgs(other.address);
+      expect(await taskManager.accessList(other.address)).to.equal(true);
+
+      await expect(manager.connect(other).removeFromAccessList([other.address]))
+        .to.emit(taskManager, "AccessRevoked").withArgs(other.address);
+      expect(await taskManager.accessList(other.address)).to.equal(false);
+    });
+
+    it("reverts for a contract without ACCESS_LIST_MANAGER_ROLE", async function () {
+      const role = await taskManager.ACCESS_LIST_MANAGER_ROLE();
+      await expect(manager.connect(owner).addToAccessList([other.address]))
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(await manager.getAddress(), role);
+      await expect(manager.connect(owner).removeFromAccessList([other.address]))
+        .to.be.revertedWithCustomError(taskManager, "AccessControlUnauthorizedAccount")
+        .withArgs(await manager.getAddress(), role);
+    });
+  });
+
   describe("deny list", function () {
     it("blocks deny-listed callers on all three intake functions while the access list is disabled", async function () {
       await taskManager.connect(owner).setDenyList([other.address], true);
