@@ -102,6 +102,7 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
     error ShareExpired();
     error AlreadyShared();
     error UnknownShare();
+    error InvalidPage();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -199,6 +200,54 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
         }
     }
 
+    /// @notice A page of `sharesFor` — the same live (unexpired, unrevoked) shares as
+    ///         `sharesFor`, sliced by index. Iterates at most `limit` stored entries per
+    ///         call, so a spam-inflated inbox (issue #152) stays queryable page by page:
+    ///         take `nextOffset` from one call and pass it as the next call's `offset`
+    ///         until it equals the stored set's length. `limit == 0` reverts; sorting and
+    ///         membership are stable, so pages never overlap or skip while the set is
+    ///         unchanged.
+    /// @param recipient The share recipient whose inbox to read.
+    /// @param offset    Index into the recipient's stored share-id set to start from.
+    /// @param limit     Maximum number of stored entries to scan this page.
+    /// @return shareIds  Live share ids found on this page (may be empty).
+    /// @return headers   Headers matching `shareIds` index for index.
+    /// @return nextOffset Where the next page starts (offset + entries scanned; equals
+    ///                   the stored length when the scan is complete).
+    function sharesForPage(
+        address recipient,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (bytes32[] memory shareIds, ShareHeader[] memory headers, uint256 nextOffset) {
+        ACPShareRegistryStorage storage $ = _getStorage();
+        EnumerableSet.Bytes32Set storage ids = $.shareIdsFor[recipient];
+        uint256 len = ids.length();
+        if (limit == 0) revert InvalidPage();
+        if (offset >= len) return (new bytes32[](0), new ShareHeader[](0), len);
+
+        uint256 scan = len - offset < limit ? len - offset : limit;
+        shareIds = new bytes32[](scan);
+        headers = new ShareHeader[](scan);
+        uint256 live = 0;
+        for (uint256 i = 0; i < scan; i++) {
+            bytes32 shareId = ids.at(offset + i);
+            ShareHeader storage header = $.headers[shareId];
+            if (_isValid(header)) {
+                shareIds[live] = shareId;
+                headers[live] = header;
+                live++;
+            }
+        }
+
+        if (live < scan) {
+            assembly {
+                mstore(shareIds, live)
+                mstore(headers, live)
+            }
+        }
+        return (shareIds, headers, offset + scan);
+    }
+
     /// @notice The header of a single share (zeroed struct if unknown/removed).
     function getShare(bytes32 shareId) external view returns (ShareHeader memory) {
         return _getStorage().headers[shareId];
@@ -213,19 +262,27 @@ contract ACPShareRegistry is UUPSUpgradeable, AccessControlUpgradeable {
         return _isValid(header);
     }
 
+    /// @dev Gas forwarded to a share's revoker contract in `_isValid`. The registry only
+    ///      needs the boolean verdict, so a generous fixed allowance is plenty; capping
+    ///      keeps a malicious revoker from burning the caller's gas through EIP-150's
+    ///      63/64 forwarding (issue #151) and failing the whole `sharesFor` query.
+    uint256 private constant _REVOKER_GAS = 30_000;
+
     /// @dev Unexpired and not revoked. The revoker call mirrors `withPermission`'s
     ///      revocation clause; a reverting revoker fails closed (share invalid).
+    ///      The call forwards a bounded gas allowance (`_REVOKER_GAS`): a revoker that
+    ///      reverts or runs out of the allowance marks its share invalid without being
+    ///      able to exhaust the enclosing query (issue #151).
     function _isValid(ShareHeader storage header) private view returns (bool) {
         if (header.expiration < block.timestamp) return false;
 
         if (header.revokerData != 0 && header.revokerContract != address(0)) {
-            try IPermissionCustomIdValidator(header.revokerContract).disabled(header.issuer, header.revokerData) returns (
-                bool disabled
-            ) {
-                if (disabled) return false;
-            } catch {
-                return false;
-            }
+            (bool ok, bytes memory result) =
+                header.revokerContract.staticcall{gas: _REVOKER_GAS}(
+                    abi.encodeCall(IPermissionCustomIdValidator.disabled, (header.issuer, header.revokerData))
+                );
+            if (!ok || result.length != 32) return false;
+            if (abi.decode(result, (bool))) return false;
         }
 
         return true;
