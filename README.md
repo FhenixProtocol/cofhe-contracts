@@ -42,6 +42,23 @@ contract Example {
 }
 ```
 
+## Access control
+
+These functions grant or check permission to operate on an encrypted value `x`:
+
+| Function | Effect |
+| --- | --- |
+| `FHE.allow(x, account)` | Grants permission to `account` |
+| `FHE.allowThis(x)` | Grants permission to the current contract |
+| `FHE.allowSender(x)` | Grants permission to `msg.sender` |
+| `FHE.allowTransient(x, account)` | Grants `account` temporary permission, for the current transaction only |
+| `FHE.allowGlobal(x)` | Grants permission to all accounts |
+| `FHE.isAllowed(x, account)` | Returns `true` if `account` has permission |
+
+## Reading decrypted results
+
+`FHE.getDecryptResult(x)` returns the decrypted value of a previously decrypted ciphertext and reverts if it is not yet decrypted. `FHE.getDecryptResultSafe(x)` does not revert: it returns `(result, decrypted)`, where `decrypted` is a flag indicating whether the decryption has finished.
+
 ## License
 
 This project is licensed under MIT.
