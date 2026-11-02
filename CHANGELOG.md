@@ -30,6 +30,7 @@
 - **The npm package ships the ACP contracts** — `ACPShareRegistry.sol`, `ACPTimestampRevoker.sol` and `Permissioned.sol`, under `internal/host-chain/contracts/`, so the SDK mocks can use them instead of copies. `@openzeppelin/contracts-upgradeable` becomes a dependency (they import it).
 
 ### Fixed
+- **`TaskManager.createTask` rejects a `select` whose control is in a different security zone than its branches**, with `InvalidTypeOrSecurityZone("select")`. Only the two branches were compared, and the result takes the control's zone, so `select(ebool@zone0, euint8@zone1, euint8@zone1)` returned a zone-0 handle computed from zone-1 values. Binary ops already required matching zones. Ships with a TaskManager upgrade (`task:upgradeTM`); no storage change.
 - **`task:upgradeShareRegistry` no longer fails with "nonce too low" on load-balanced RPCs**: it waits until the RPC reports the implementation deploy's nonce, then sends the upgrade with the next one. No action needed.
 - **`task:upgradeShareRegistry(AsSafe)` upgrades a pointer-based registry to a newer build** instead of stopping at "already runs the pointer-based implementation"; only a proxy on exactly this build is a no-op. Re-run the upgrade.
 - **Local `task:deployAddressBook` makes the book owner the admin `hardhat deploy` picks** (`TM_ADMIN_ADDRESS`, else the `AGGREGATOR_KEY` wallet), so the local deploy no longer refuses the book. The local book address changes. No action needed.
