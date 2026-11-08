@@ -1,3 +1,4 @@
+import { getTaskManagerFactory } from "../taskManagerFactory";
 import { expect } from "chai";
 import * as fs from "fs";
 import * as os from "os";
@@ -13,7 +14,7 @@ const { ethers } = hre;
 const ENV_KEYS = ["SAFE_ADMIN_ADDRESS", "SAFE_OWNER_KEY", "SAFE_BATCH_OUT"] as const;
 
 async function deployTaskManager(admin: HardhatEthersSigner): Promise<any> {
-  const TaskManager = await ethers.getContractFactory("TaskManager");
+  const TaskManager = await getTaskManagerFactory();
   const impl = await TaskManager.deploy();
   await impl.waitForDeployment();
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");

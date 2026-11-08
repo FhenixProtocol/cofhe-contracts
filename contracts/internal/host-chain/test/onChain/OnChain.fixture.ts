@@ -1,3 +1,4 @@
+import { getTaskManagerFactory } from "../taskManagerFactory";
 import type { OnChain, OnChain2 } from "../../types";
 import hre from "hardhat";
 const { ethers } = hre;
@@ -25,7 +26,7 @@ export async function deployOnChainFixture(): Promise<{
   const addressBook = await installAddressBook(owner);
 
   // TaskManager: an ordinary proxy at whatever address it lands on, registered in the book.
-  const TaskManager = await ethers.getContractFactory("TaskManager");
+  const TaskManager = await getTaskManagerFactory();
   const taskManagerImpl = await TaskManager.deploy();
   await taskManagerImpl.waitForDeployment();
 

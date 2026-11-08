@@ -1,3 +1,4 @@
+import { getTaskManagerFactory } from "../taskManagerFactory";
 import hre from "hardhat";
 import { expect } from "chai";
 
@@ -19,7 +20,7 @@ describe("PubliclyAllowed Tests", function () {
 
     const addressBook = await installAddressBook(owner);
 
-    const TaskManager = await ethers.getContractFactory("TaskManager");
+    const TaskManager = await getTaskManagerFactory();
     const taskManagerImpl = await TaskManager.deploy();
     await taskManagerImpl.waitForDeployment();
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");

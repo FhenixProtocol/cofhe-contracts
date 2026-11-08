@@ -1,3 +1,4 @@
+import { getTaskManagerFactory } from "../taskManagerFactory";
 import hre from "hardhat";
 const { ethers } = hre;
 import { Wallet, BaseContract } from "ethers";
@@ -32,7 +33,7 @@ export async function deployDecryptResultFixture(): Promise<DecryptResultFixture
 
   const addressBook = await installAddressBook(owner);
 
-  const TaskManager = await ethers.getContractFactory("TaskManager");
+  const TaskManager = await getTaskManagerFactory();
   const taskManagerImpl = await TaskManager.deploy();
   await taskManagerImpl.waitForDeployment();
 
