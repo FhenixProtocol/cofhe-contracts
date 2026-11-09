@@ -8,12 +8,12 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {TaskManagerLib} from "./TaskManagerLib.sol";
+import {TaskManagerHelper} from "./TaskManagerHelper.sol";
 import {ITaskManager, FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
 
 
 /// @dev Declared in an interface that TaskManager inherits, so the ABI keeps every error,
-///      including the ones that now revert from TaskManagerLib.
+///      including the ones that now revert from HELPER.
 interface ITaskManagerErrors {
     error DecryptionResultNotReady(uint256 ctHash);
     // Input validation errors
@@ -201,7 +201,11 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
     bool private initialized;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    TaskManagerHelper private immutable HELPER;
+
+    constructor(TaskManagerHelper helper) {
+        HELPER = helper;
         _disableInitializers();
     }
 
@@ -462,7 +466,7 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
         }
 
         (uint256 ctHash, string memory operation) =
-            TaskManagerLib.prepareRandomTask(returnType, seed, securityZone, securityZoneMin, securityZoneMax);
+            HELPER.prepareRandomTask(returnType, seed, securityZone, securityZoneMin, securityZoneMax, msg.sender);
         acl.allowTransient(ctHash, msg.sender, address(this));
         emit TaskCreated(ctHash, operation, seed, uint256(uint32(securityZone)), uint256(uint160(msg.sender)));
         return ctHash;
@@ -479,8 +483,8 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
     }
 
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external onlyAccessListed returns (uint256) {
-        (uint256 ctHash, string memory operation, uint256[] memory inputs) = TaskManagerLib.prepareTask(
-            returnType, funcId, encryptedHashes, extraInputs, acl, securityZoneMin, securityZoneMax
+        (uint256 ctHash, string memory operation, uint256[] memory inputs) = HELPER.prepareTask(
+            returnType, funcId, encryptedHashes, extraInputs, acl, securityZoneMin, securityZoneMax, msg.sender
         );
 
         acl.allowTransient(ctHash, msg.sender, address(this));
@@ -582,7 +586,7 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
         bytes calldata signature,
         bool shouldRevert
     ) private view returns (bool) {
-        return TaskManagerLib.verifyDecryptResult(ctHash, result, signature, shouldRevert, decryptResultSigner);
+        return HELPER.verifyDecryptResult(ctHash, result, signature, shouldRevert, decryptResultSigner);
     }
 
     // slither-disable-next-line unused-return
@@ -624,7 +628,7 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
         // When signer is set to 0 address we skip this logic to be able to support debug use cases.
         // In debug use cases we assume that the verifier is not necessarily running.
         if (verifierSigner != address(0)) {
-            TaskManagerLib.verifyInputBatch(inputs, sender, msg.sender, signature, verifierSigner, securityZoneMin, securityZoneMax);
+            HELPER.verifyInputBatch(inputs, sender, msg.sender, signature, verifierSigner, securityZoneMin, securityZoneMax);
         }
 
         uint256[] memory appendedHashes = new uint256[](len);

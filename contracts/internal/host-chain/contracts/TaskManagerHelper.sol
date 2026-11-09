@@ -7,10 +7,10 @@ import {FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-c
 import {TMCommon, ITaskManagerErrors as E} from "./TaskManager.sol";
 
 /// @notice Stateless TaskManager logic, deployed once and linked, to keep TaskManager under the
-///         EIP-170 size limit. TaskManager reaches it by delegatecall, so `msg.sender` is still
+///         EIP-170 size limit. TaskManager reaches it by delegatecall, so `caller` is still
 ///         the TaskManager caller. A library cannot be upgraded: a change deploys a new library
 ///         and links the new TaskManager implementation to it.
-library TaskManagerLib {
+contract TaskManagerHelper {
     error ACLNotAllowed(uint256 handle, address account);
 
     /// @notice Validates a createTask call and computes its placeholder ct hash.
@@ -24,7 +24,8 @@ library TaskManagerLib {
         uint256[] memory extraInputs,
         ACL acl,
         int32 szMin,
-        int32 szMax
+        int32 szMax,
+        address caller
     ) external view returns (uint256 ctHash, string memory operation, uint256[] memory inputs) {
         if (funcId == FunctionId.random) {
             revert E.RandomFunctionNotSupported();
@@ -45,7 +46,7 @@ library TaskManagerLib {
             revert E.TooManyInputs(operation, inputsLength, 3);
         }
 
-        validateEncryptedInputs(encryptedHashes, funcId, operation, acl, szMin, szMax);
+        validateEncryptedInputs(encryptedHashes, funcId, operation, acl, szMin, szMax, caller);
         if (extraInputs.length > 0) {
             validateExtraInputs(extraInputs, funcId, operation, szMin, szMax);
         }
@@ -64,7 +65,8 @@ library TaskManagerLib {
         uint256 seed,
         int32 securityZone,
         int32 szMin,
-        int32 szMax
+        int32 szMax,
+        address caller
     ) external view returns (uint256 ctHash, string memory operation) {
         if (!isValidType(returnType)) {
             revert E.UnsupportedType(returnType);
@@ -76,7 +78,7 @@ library TaskManagerLib {
 
         uint256[] memory inputs = new uint256[](2);
         inputs[0] = seed;
-        inputs[1] = uint256(uint160(msg.sender));
+        inputs[1] = uint256(uint160(caller));
 
         ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, FunctionId.random);
         operation = Utils.functionIdToString(FunctionId.random);
@@ -276,7 +278,8 @@ library TaskManagerLib {
         string memory functionName,
         ACL acl,
         int32 szMin,
-        int32 szMax
+        int32 szMax,
+        address caller
     ) private view {
         if (encryptedHashes.length == 0) {
             if (!isPlaintextOperation(funcId)) {
@@ -305,7 +308,7 @@ library TaskManagerLib {
             revert E.InvalidSecurityZone(securityZone, szMin, szMax);
         }
         for (uint8 i = 0; i < encryptedHashes.length; i++) {
-            if (!acl.isAllowed(encryptedHashes[i], msg.sender)) revert ACLNotAllowed(encryptedHashes[i], msg.sender);
+            if (!acl.isAllowed(encryptedHashes[i], caller)) revert ACLNotAllowed(encryptedHashes[i], caller);
         }
         validateFunctionInputTypes(funcId, functionName, encryptedHashes);
     }
