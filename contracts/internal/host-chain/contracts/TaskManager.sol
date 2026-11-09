@@ -446,26 +446,12 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
         }
     }
 
-    function sendEventCreated(uint256 ctHash, string memory operation, uint256[] memory inputs) private onlyIfEnabled {
-        if (inputs.length == 1) {
-            emit TaskCreated(ctHash, operation, inputs[0], 0, 0);
-        } else if (inputs.length == 2) {
-            emit TaskCreated(ctHash, operation, inputs[0], inputs[1], 0);
-        } else {
-            emit TaskCreated(ctHash, operation, inputs[0], inputs[1], inputs[2]);
-        }
-    }
-
     function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external onlyIfEnabled onlyAccessListed returns (uint256) {
         if (seed == 0) {
             seed = _generateSeed(securityZone);
         }
 
-        (uint256 ctHash, string memory operation) =
-            TaskManagerLib.prepareRandomTask(returnType, seed, securityZone, securityZoneMin, securityZoneMax);
-        acl.allowTransient(ctHash, msg.sender, address(this));
-        emit TaskCreated(ctHash, operation, seed, uint256(uint32(securityZone)), uint256(uint160(msg.sender)));
-        return ctHash;
+        return TaskManagerLib.createRandomTask(returnType, seed, securityZone, acl, securityZoneMin, securityZoneMax);
     }
 
     function _generateSeed(int32 securityZone) internal returns (uint256 seed) {
@@ -479,14 +465,9 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
     }
 
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external onlyAccessListed returns (uint256) {
-        (uint256 ctHash, string memory operation, uint256[] memory inputs) = TaskManagerLib.prepareTask(
-            returnType, funcId, encryptedHashes, extraInputs, acl, securityZoneMin, securityZoneMax
+        return TaskManagerLib.createTask(
+            returnType, funcId, encryptedHashes, extraInputs, acl, securityZoneMin, securityZoneMax, isEnabled
         );
-
-        acl.allowTransient(ctHash, msg.sender, address(this));
-        sendEventCreated(ctHash, operation, inputs);
-
-        return ctHash;
     }
 
     /// @notice Publish a signed decrypt result to the chain

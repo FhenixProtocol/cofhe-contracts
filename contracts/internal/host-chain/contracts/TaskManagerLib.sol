@@ -4,7 +4,7 @@ pragma solidity >=0.8.25 <0.9.0;
 import {ACL} from "./ACL.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
-import {TMCommon, ITaskManagerErrors as E} from "./TaskManager.sol";
+import {TMCommon, TaskManager, ITaskManagerErrors as E} from "./TaskManager.sol";
 
 /// @notice Stateless TaskManager logic, deployed once and linked, to keep TaskManager under the
 ///         EIP-170 size limit. TaskManager reaches it by delegatecall, so `msg.sender` is still
@@ -13,19 +13,20 @@ import {TMCommon, ITaskManagerErrors as E} from "./TaskManager.sol";
 library TaskManagerLib {
     error ACLNotAllowed(uint256 handle, address account);
 
-    /// @notice Validates a createTask call and computes its placeholder ct hash.
-    /// @return ctHash The placeholder ct hash.
-    /// @return operation The function name for the TaskCreated event.
-    /// @return inputs The encrypted and extra inputs, in order.
-    function prepareTask(
+    /// @notice Validates a createTask call, grants the caller transient access and emits TaskCreated.
+    /// @dev Runs by delegatecall, so the event is logged under the TaskManager address and the ACL
+    ///      sees TaskManager as msg.sender. `enabled` is checked after validation, where
+    ///      TaskManager checked it before, so the revert order is unchanged.
+    function createTask(
         uint8 returnType,
         FunctionId funcId,
         uint256[] memory encryptedHashes,
         uint256[] memory extraInputs,
         ACL acl,
         int32 szMin,
-        int32 szMax
-    ) external view returns (uint256 ctHash, string memory operation, uint256[] memory inputs) {
+        int32 szMax,
+        bool enabled
+    ) external returns (uint256 ctHash) {
         if (funcId == FunctionId.random) {
             revert E.RandomFunctionNotSupported();
         }
@@ -38,7 +39,7 @@ library TaskManagerLib {
             revert E.UnsupportedType(returnType);
         }
 
-        operation = Utils.functionIdToString(funcId);
+        string memory operation = Utils.functionIdToString(funcId);
 
         uint256 inputsLength = encryptedHashes.length + extraInputs.length;
         if (inputsLength > 3) {
@@ -50,22 +51,35 @@ library TaskManagerLib {
             validateExtraInputs(extraInputs, funcId, operation, szMin, szMax);
         }
 
-        inputs = TMCommon.combineInputs(encryptedHashes, extraInputs);
+        uint256[] memory inputs = TMCommon.combineInputs(encryptedHashes, extraInputs);
 
         int32 securityZone = getSecurityZone(funcId, encryptedHashes, extraInputs);
         ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, funcId);
+
+        acl.allowTransient(ctHash, msg.sender, address(this));
+        if (!enabled) {
+            revert E.CofheIsUnavailable();
+        }
+        if (inputs.length == 1) {
+            emit TaskManager.TaskCreated(ctHash, operation, inputs[0], 0, 0);
+        } else if (inputs.length == 2) {
+            emit TaskManager.TaskCreated(ctHash, operation, inputs[0], inputs[1], 0);
+        } else {
+            emit TaskManager.TaskCreated(ctHash, operation, inputs[0], inputs[1], inputs[2]);
+        }
     }
 
-    /// @notice Validates a createRandomTask call and computes its placeholder ct hash.
+    /// @notice Validates a createRandomTask call, grants the caller transient access and emits TaskCreated.
     /// @dev The caller is part of the preimage, so the same seed from different callers yields
     ///      different handles.
-    function prepareRandomTask(
+    function createRandomTask(
         uint8 returnType,
         uint256 seed,
         int32 securityZone,
+        ACL acl,
         int32 szMin,
         int32 szMax
-    ) external view returns (uint256 ctHash, string memory operation) {
+    ) external returns (uint256 ctHash) {
         if (!isValidType(returnType)) {
             revert E.UnsupportedType(returnType);
         }
@@ -79,7 +93,8 @@ library TaskManagerLib {
         inputs[1] = uint256(uint160(msg.sender));
 
         ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, FunctionId.random);
-        operation = Utils.functionIdToString(FunctionId.random);
+        acl.allowTransient(ctHash, msg.sender, address(this));
+        emit TaskManager.TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), inputs[1]);
     }
 
     /// @notice Verifies a decrypt result signature.
