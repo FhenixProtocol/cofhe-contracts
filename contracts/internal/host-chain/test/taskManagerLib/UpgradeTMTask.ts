@@ -26,6 +26,16 @@ const ENV_KEYS = [
   "FULL_REDEPLOY",
 ] as const;
 
+async function expectRejection(promise: Promise<unknown>, pattern: RegExp): Promise<void> {
+  let message = "";
+  try {
+    await promise;
+  } catch (error: any) {
+    message = String(error?.message ?? error);
+  }
+  expect(message).to.match(pattern);
+}
+
 async function libraryAddress(): Promise<string> {
   const lib = await hre.artifacts.readArtifact("TaskManagerLib");
   return ethers.getCreate2Address(CREATEX_ADDRESS, guardedSalt(), ethers.keccak256(lib.bytecode));
@@ -85,7 +95,7 @@ describe("task:upgradeTM refusals send nothing", function () {
   it("without UPGRADER_ROLE and without a Safe", async function () {
     this.timeout(300_000);
     const nonceBefore = await ethers.provider.getTransactionCount(ctx.upgrader.address);
-    await expect(hre.run("task:upgradeTM")).to.be.rejectedWith(/does not hold UPGRADER_ROLE/);
+    await expectRejection(hre.run("task:upgradeTM"), /does not hold UPGRADER_ROLE/);
     expect(await ethers.provider.getTransactionCount(ctx.upgrader.address)).to.equal(nonceBefore);
   });
 
@@ -94,7 +104,7 @@ describe("task:upgradeTM refusals send nothing", function () {
     const { taskManager, deployer, upgrader } = ctx;
     await (await taskManager.connect(deployer).grantRole(await taskManager.UPGRADER_ROLE(), upgrader.address)).wait();
     const nonceBefore = await ethers.provider.getTransactionCount(upgrader.address);
-    await expect(hre.run("task:upgradeTM")).to.be.rejectedWith(/Refusing to upgrade: default admin is/);
+    await expectRejection(hre.run("task:upgradeTM"), /Refusing to upgrade: default admin is/);
     expect(await ethers.provider.getTransactionCount(upgrader.address)).to.equal(nonceBefore);
   });
 });
