@@ -12,6 +12,7 @@ import {
 } from "../utils/roles";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { resolveTaskManager } from "../utils/addressBook";
+import { LINKED_LIBRARY_OPTS, deployTaskManagerLib, linkedTaskManagerFactory } from "../utils/taskManagerLib";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -34,10 +35,10 @@ async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any,
   const proxyAddress = await TMProxyContract.getAddress();
   try {
     console.log("Importing implementation contract...");
-    await upgrades.forceImport(proxyAddress, TMFactory, { kind: "uups" });
+    await upgrades.forceImport(proxyAddress, TMFactory, { kind: "uups", ...LINKED_LIBRARY_OPTS });
 
     console.log("Validating storage layout...");
-    await upgrades.validateUpgrade(proxyAddress, TMFactory, { kind: "uups" });
+    await upgrades.validateUpgrade(proxyAddress, TMFactory, { kind: "uups", ...LINKED_LIBRARY_OPTS });
     console.log(chalk.green("✅ Storage layout is compatible with the previous implementation"));
   } catch (error: any) {
     console.log(chalk.red("❌ Storage layout validation failed:"));
@@ -48,7 +49,9 @@ async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any,
 }
 
 /** Deploys the new implementation. Any funded key may do this; only the upgrade itself needs a role. */
-async function deployImplementation(TMFactory: any): Promise<string> {
+async function deployImplementation(hre: HardhatRuntimeEnvironment, TMFactory: any): Promise<string> {
+    // Deploys TaskManagerLib (if new) with the factory's signer; callers run this only after their checks.
+    await deployTaskManagerLib(hre, TMFactory.runner);
     const newIplDeployment = await TMFactory.deploy();
     await newIplDeployment.waitForDeployment();
     const newIplAddress = await newIplDeployment.getAddress();
@@ -73,7 +76,7 @@ async function reportUpgrade(ethers: any, TMProxyContract: any, oldImplementatio
  * of a pre-roles (Ownable) proxy.
  */
 async function upgradeAsSigner(
-    ethers: any,
+    hre: HardhatRuntimeEnvironment,
     TMProxyContract: any,
     TMFactory: any,
     adminSigner: any,
@@ -81,6 +84,7 @@ async function upgradeAsSigner(
     currentDefaultAdmin: string | null,
     oldImplementationAddress: string,
 ) {
+    const { ethers } = hre;
     const connectedImplementation = TMProxyContract.connect(adminSigner);
 
     // `_authorizeUpgrade` needs only UPGRADER_ROLE, but `grantAllRoles` below needs
@@ -89,7 +93,7 @@ async function upgradeAsSigner(
     // implementation with no operational roles and no version bump. Refuse up front instead.
     requireDefaultAdminIsSignerOrUnset(currentDefaultAdmin, adminSigner);
 
-    const newIplAddress = await deployImplementation(TMFactory);
+    const newIplAddress = await deployImplementation(hre, TMFactory);
 
     // A proxy still on the pre-roles (Ownable) implementation has no AccessControl storage.
     // Seed it via initializeV2 in the same transaction as the upgrade. initializeV2 is gated on
@@ -126,7 +130,7 @@ async function upgradeAsSafe(
 ) {
     const { ethers } = hre;
     const proxyAddress: string = await TMProxyContract.getAddress();
-    const newIplAddress = await deployImplementation(TMFactory);
+    const newIplAddress = await deployImplementation(hre, TMFactory);
     const calls = [
         {
             name: `upgradeToAndCall(${newIplAddress}, 0x)`,
@@ -197,7 +201,7 @@ async function upgradeTM(
     const upgraderRole = currentDefaultAdmin === null ? null : await TMProxyContract.UPGRADER_ROLE();
     if (upgraderRole === null || (await TMProxyContract.hasRole(upgraderRole, signer.address))) {
         await upgradeAsSigner(
-            ethers,
+            hre,
             TMProxyContract,
             TMFactory,
             signer,
@@ -255,7 +259,8 @@ task("task:upgradeTM")
     console.log(chalk.green("Network:", hre.network.name, signer.address));
     console.log(chalk.green(`Balance of account: ${signer.address}`, await ethers.provider.getBalance(signer.address)));
 
-    const TMFactory = await ethers.getContractFactory("TaskManager");
+    // Links the predicted TaskManagerLib address but deploys nothing; deployImplementation deploys the library.
+    const TMFactory = await linkedTaskManagerFactory(hre, signer, { deploy: false });
     const TMProxyContract = TMFactory.attach(await resolveTaskManager(hre)) as Contract;
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     

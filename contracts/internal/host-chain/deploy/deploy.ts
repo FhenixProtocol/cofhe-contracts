@@ -1,7 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { config as dotenvConfig } from "dotenv";
 import { resolve } from "path";
-import { Contract } from "ethers";
+import { Contract, ContractFactory } from "ethers";
 import chalk from "chalk";
 import hre, { ethers, upgrades } from "hardhat";
 
@@ -19,6 +19,7 @@ import {
 import { addressBookAddress, registeredTaskManager, taskManagerId } from "../utils/addressBook";
 import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
 import { readCommittedAddresses } from "../utils/addressBookDeterministic";
+import { LINKED_LIBRARY_OPTS, deployTaskManagerLib, linkedTaskManagerFactory } from "../utils/taskManagerLib";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -48,14 +49,15 @@ async function waitForCode(address: string, label: string, attempts = 30) {
  * @param adminSigner The admin account, which becomes the default admin and holds every role
  * @param contractName The name of the contract to deploy
  * @param initArgs Arguments for the contract's `initialize`
+ * @param linkedFactory A factory already linked to its libraries (TaskManager), used instead of the plain one
  * @returns The proxy contract and its address
  */
-async function getProxyContract(adminSigner: any, contractName: string, initArgs: unknown[]) {
-  const Factory = await ethers.getContractFactory(contractName);
+async function getProxyContract(adminSigner: any, contractName: string, initArgs: unknown[], linkedFactory?: ContractFactory) {
+  const Factory: ContractFactory = linkedFactory ?? (await ethers.getContractFactory(contractName));
   const ProxyContract = await upgrades.deployProxy(
     Factory,
     initArgs,
-    { kind: "uups", initializer: "initialize" },
+    { kind: "uups", initializer: "initialize", ...(linkedFactory ? LINKED_LIBRARY_OPTS : {}) },
   );
   const deployedImpl = await ProxyContract.waitForDeployment();
   const ProxyAddress = await deployedImpl.getAddress();
@@ -335,6 +337,8 @@ async function upgradeTM(TMProxyContract: any, TMFactory: any, adminSigner: any,
   const oldImplementationAddress = await getImplementationAddress(connectedImplementation);
   console.log(chalk.green("Old implementation address:", oldImplementationAddress));
 
+  // Deploys TaskManagerLib (if new), so it runs only after the admin check above.
+  await deployTaskManagerLib(hre, adminSigner);
   const newIplDeployment = await TMFactory.deploy();
   await newIplDeployment.waitForDeployment();
   const newIplAddress = await newIplDeployment.getAddress();
@@ -655,12 +659,13 @@ const func: DeployFunction = async function () {
   }
 
   console.log(chalk.bold.blue("-----------------------TaskManager--------------------------"));
-  const TMFactory = await ethers.getContractFactory("TaskManager");
   const id = taskManagerId();
   let TMProxyContract: any;
   let TMProxyAddress = await registeredTaskManager(addressBook, id);
   let registerFresh = false;
   if (TMProxyAddress) {
+    // Links the predicted TaskManagerLib address only; upgradeTM deploys the library after its admin check.
+    const TMFactory = await linkedTaskManagerFactory(hre, adminSigner, { deploy: false });
     TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
     console.log(chalk.green(`TaskManager id ${id} resolves to ${TMProxyAddress} - upgrading in place`));
     await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
@@ -678,7 +683,9 @@ const func: DeployFunction = async function () {
           `cannot register a new TaskManager. Have the book owner run setTm, or hand the book back.`,
       );
     }
-    const deployed = await getProxyContract(adminSigner, "TaskManager", [adminSigner.address, adminDelay]);
+    // Deploys TaskManagerLib, so it runs only after the checks above that can abort the run.
+    const TMFactory = await linkedTaskManagerFactory(hre, adminSigner);
+    const deployed = await getProxyContract(adminSigner, "TaskManager", [adminSigner.address, adminDelay], TMFactory);
     TMProxyContract = deployed.ProxyContract;
     TMProxyAddress = deployed.ProxyAddress;
     // getVersion() > 0 is how the local stack tells a configured TaskManager from a bare proxy.
