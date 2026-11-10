@@ -177,7 +177,6 @@ library TaskManagerLib {
     }
 
     function validateEncryptedInputs(uint256[] memory encryptedHashes, FunctionId funcId, string memory functionName, ACL acl, int32 securityZoneMin, int32 securityZoneMax) internal view {
-
         if (encryptedHashes.length == 0) {
             if (!isPlaintextOperation(funcId)) {
                 revert E.InvalidOperationInputs(functionName);
