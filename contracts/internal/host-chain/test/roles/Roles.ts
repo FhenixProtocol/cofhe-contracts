@@ -1,3 +1,4 @@
+import { deployLinkedTaskManagerFactory } from "../taskManagerFactory";
 import { expect } from "chai";
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -100,7 +101,7 @@ describe("Role-based access control", function () {
   // forget to grant - and forgetting it leaves the proxy permanently un-upgradeable.
   describe("UPGRADER_ROLE gates upgrades", function () {
     it("lets a holder upgrade TaskManager", async function () {
-      const TaskManager = await ethers.getContractFactory("TaskManager");
+      const TaskManager = await deployLinkedTaskManagerFactory();
       const newImpl = await TaskManager.deploy();
       await newImpl.waitForDeployment();
 
@@ -109,7 +110,7 @@ describe("Role-based access control", function () {
     });
 
     it("rejects a non-holder", async function () {
-      const TaskManager = await ethers.getContractFactory("TaskManager");
+      const TaskManager = await deployLinkedTaskManagerFactory();
       const newImpl = await TaskManager.deploy();
       await newImpl.waitForDeployment();
 
@@ -220,7 +221,7 @@ describe("Role-based access control", function () {
       );
       await proxy.waitForDeployment();
 
-      const TaskManager = await ethers.getContractFactory("TaskManager");
+      const TaskManager = await deployLinkedTaskManagerFactory();
       const newImpl = await TaskManager.deploy();
       await newImpl.waitForDeployment();
 

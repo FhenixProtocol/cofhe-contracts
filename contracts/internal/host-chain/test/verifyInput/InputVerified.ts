@@ -1,5 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
+import { deployLinkedTaskManagerFactory } from "../taskManagerFactory";
 
 import { grantAllRoles } from "../../utils/roles";
 import { installAddressBook, registerTaskManager } from "../helpers/addressBook";
@@ -16,7 +17,7 @@ async function deployTm(factoryName: string) {
 
     const addressBook = await installAddressBook(owner);
 
-    const TM = await ethers.getContractFactory(factoryName);
+    const TM = factoryName === "TaskManager" ? await deployLinkedTaskManagerFactory() : await ethers.getContractFactory(factoryName);
     const impl = await TM.deploy();
     await impl.waitForDeployment();
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
