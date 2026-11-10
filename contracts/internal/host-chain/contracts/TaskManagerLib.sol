@@ -57,6 +57,12 @@ library TaskManagerLib {
         ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, funcId);
 
         acl.allowTransient(ctHash, msg.sender, address(this));
+        sendEventCreated(ctHash, operation, inputs, enabled);
+    }
+
+    /// @dev `enabled` replaces TaskManager's `onlyIfEnabled` modifier, which a library cannot use
+    ///      because it reads TaskManager storage.
+    function sendEventCreated(uint256 ctHash, string memory operation, uint256[] memory inputs, bool enabled) private {
         if (!enabled) {
             revert E.CofheIsUnavailable();
         }
