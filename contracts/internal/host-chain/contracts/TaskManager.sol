@@ -489,7 +489,7 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
         }
     }
 
-    function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external onlyAccessListed returns (uint256) {
+    function createTask(uint8 returnType, FunctionId funcId, uint256[] calldata encryptedHashes, uint256[] calldata extraInputs) external onlyAccessListed returns (uint256) {
         return TaskManagerLib.createTask(returnType, funcId, encryptedHashes, extraInputs, acl, securityZoneMin, securityZoneMax, isEnabled);
     }
 
@@ -620,9 +620,9 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, Initializable, UUPSUpg
     /// @param signature The single ECDSA signature covering the whole batch.
     /// @return appendedHashes The metadata-appended ct hashes, in input order.
     function batchVerifyInputs(
-        UnsignedEncryptedInput[] memory inputs,
+        UnsignedEncryptedInput[] calldata inputs,
         address sender,
-        bytes memory signature
+        bytes calldata signature
     ) external onlyAccessListed returns (uint256[] memory) {
         return TaskManagerLib.batchVerifyInputs(inputs, sender, signature, verifierSigner, securityZoneMin, securityZoneMax, acl);
     }
