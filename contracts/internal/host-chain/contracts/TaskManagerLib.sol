@@ -176,8 +176,7 @@ library TaskManagerLib {
         }
     }
 
-    function validateEncryptedInputs(uint256[] memory encryptedHashes, FunctionId funcId, ACL acl, int32 securityZoneMin, int32 securityZoneMax) internal view {
-        string memory functionName = Utils.functionIdToString(funcId);
+    function validateEncryptedInputs(uint256[] memory encryptedHashes, FunctionId funcId, string memory functionName, ACL acl, int32 securityZoneMin, int32 securityZoneMax) internal view {
 
         if (encryptedHashes.length == 0) {
             if (!isPlaintextOperation(funcId)) {
@@ -223,7 +222,7 @@ library TaskManagerLib {
         }
     }
 
-    function validateExtraInputs(uint256[] memory extraInputs, FunctionId funcId, int32 securityZoneMin, int32 securityZoneMax) internal pure {
+    function validateExtraInputs(uint256[] memory extraInputs, FunctionId funcId, string memory functionName, int32 securityZoneMin, int32 securityZoneMax) internal pure {
         // The amount of inputs shouldn't be validated here
         // We validate that the amount of all the inputs (encrypted and plaintext) is not greater than 3
         // And then we validate that the amount of encrypted inputs is correct
@@ -236,7 +235,7 @@ library TaskManagerLib {
                 revert E.UnsupportedType(extraInputs[0]);
             }
         } else {
-            revert E.InvalidOperationInputs(Utils.functionIdToString(funcId));
+            revert E.InvalidOperationInputs(functionName);
         }
     }
 
@@ -262,14 +261,15 @@ library TaskManagerLib {
             revert E.UnsupportedType(returnType);
         }
 
+        string memory functionName = Utils.functionIdToString(funcId);
         uint256 inputsLength = encryptedHashes.length + extraInputs.length;
         if (inputsLength > 3) {
-            revert E.TooManyInputs( Utils.functionIdToString(funcId), inputsLength, 3 );
+            revert E.TooManyInputs( functionName, inputsLength, 3 );
         }
 
-        validateEncryptedInputs(encryptedHashes, funcId, acl, securityZoneMin, securityZoneMax);
+        validateEncryptedInputs(encryptedHashes, funcId, functionName, acl, securityZoneMin, securityZoneMax);
         if (extraInputs.length > 0) {
-            validateExtraInputs(extraInputs, funcId, securityZoneMin, securityZoneMax);
+            validateExtraInputs(extraInputs, funcId, functionName, securityZoneMin, securityZoneMax);
         }
 
         uint256[] memory inputs = TMCommon.combineInputs(encryptedHashes, extraInputs);
@@ -278,7 +278,7 @@ library TaskManagerLib {
         uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, funcId);
 
         acl.allowTransient(ctHash, msg.sender, address(this));
-        sendEventCreated(ctHash, Utils.functionIdToString(funcId), inputs, isEnabled);
+        sendEventCreated(ctHash, functionName, inputs, isEnabled);
 
         return ctHash;
     }
