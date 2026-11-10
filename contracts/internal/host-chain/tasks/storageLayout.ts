@@ -27,65 +27,49 @@ interface Snapshot {
 async function extractLayouts(
   hre: HardhatRuntimeEnvironment
 ): Promise<Record<string, StorageLayout>> {
-  const buildInfoDir = path.join(hre.config.paths.artifacts, "build-info");
-  if (!fs.existsSync(buildInfoDir)) {
-    throw new Error(
-      "No build-info directory found. Run `pnpm compile` first."
-    );
-  }
-
-  const buildInfoFiles = fs
-    .readdirSync(buildInfoDir)
-    .filter((f) => f.endsWith(".json"));
-
-  if (buildInfoFiles.length === 0) {
-    throw new Error("No build-info files found. Run `pnpm compile` first.");
-  }
-
-  let validationData: ValidationDataCurrent | undefined;
-
-  for (const file of buildInfoFiles) {
-    const buildInfo = JSON.parse(
-      fs.readFileSync(path.join(buildInfoDir, file), "utf8")
-    );
-    const decodeSrc = solcInputOutputDecoder(buildInfo.input, buildInfo.output);
-    const runData = validate(
-      buildInfo.output,
-      decodeSrc,
-      buildInfo.solcVersion,
-      buildInfo.input
-    );
-    validationData = concatRunData(runData, validationData);
-  }
-
-  if (!validationData) {
-    throw new Error("No validation data could be extracted.");
-  }
-
   const layouts: Record<string, StorageLayout> = {};
 
   for (const contractName of TRACKED_CONTRACTS) {
-    let found = false;
-    for (const runData of validationData.log) {
-      const fqn = Object.keys(runData).find((key) =>
-        key.endsWith(`:${contractName}`)
-      );
-      if (fqn) {
-        const version = getContractVersion(runData, fqn);
-        layouts[contractName] = getStorageLayout(validationData, version);
-        found = true;
-        break;
-      }
+    // Use the build-info the current artifact points to. artifacts/build-info can still hold older
+    // builds of the same source, and picking one of those would check a stale layout.
+    const artifact = await hre.artifacts.readArtifact(contractName);
+    const fqn = `${artifact.sourceName}:${artifact.contractName}`;
+    const buildInfo = await hre.artifacts.getBuildInfo(fqn);
+    if (!buildInfo) {
+      throw new Error(`No build-info for ${fqn}. Run \`pnpm compile\` first.`);
     }
-
-    if (!found) {
-      throw new Error(
-        `Contract ${contractName} not found in compiled artifacts.`
-      );
-    }
+    const decodeSrc = solcInputOutputDecoder(buildInfo.input, buildInfo.output);
+    const runData = validate(buildInfo.output, decodeSrc, buildInfo.solcVersion, buildInfo.input);
+    const validationData: ValidationDataCurrent = concatRunData(runData, undefined);
+    layouts[contractName] = getStorageLayout(validationData, getContractVersion(runData, fqn));
   }
 
   return layouts;
+}
+
+/**
+ * Throws unless the compiled storage layout of `contractName` is upgrade-compatible with the snapshot.
+ * The committed snapshot is the layout of the deployed proxies, so an upgrade checks against it
+ * instead of against the build it is about to deploy.
+ */
+export async function requireLayoutMatchesSnapshot(
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  snapshotPath: string = path.join(hre.config.paths.root, SNAPSHOT_FILE)
+): Promise<void> {
+  await hre.run("compile");
+  const committed: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
+  const original = committed.contracts[contractName];
+  if (!original) {
+    throw new Error(`${contractName} is not in ${snapshotPath}, so its upgrade cannot be checked.`);
+  }
+  const updated = (await extractLayouts(hre))[contractName];
+  const report = getStorageUpgradeReport(original, updated, withValidationDefaults({}));
+  if (!report.ok) {
+    throw new Error(
+      `${contractName} storage layout is NOT upgrade-compatible with ${snapshotPath}:\n${report.explain(true)}`
+    );
+  }
 }
 
 task("task:storage-layout", "Extract and validate storage layout snapshot")

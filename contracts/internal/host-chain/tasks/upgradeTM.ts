@@ -12,6 +12,7 @@ import {
 } from "../utils/roles";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { resolveTaskManager } from "../utils/addressBook";
+import { requireLayoutMatchesSnapshot } from "./storageLayout";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -28,19 +29,21 @@ async function getImplementationAddress(ethers: any, proxy: any) {
 }
 
 /**
- * Validates the storage layout of the pending upgrade, and throws if it is incompatible.
+ * Validates the pending upgrade, and throws if it is unsafe or its storage layout is incompatible.
+ * The layout reference is the committed snapshot of the deployed layout. The OpenZeppelin plugin has
+ * no record of the live implementation here, and importing the new build as "current" would only
+ * compare the new layout with itself.
  */
-async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any) {
-  const proxyAddress = await TMProxyContract.getAddress();
+async function validateUpgrade(hre: HardhatRuntimeEnvironment, TMFactory: any) {
   try {
-    console.log("Importing implementation contract...");
-    await upgrades.forceImport(proxyAddress, TMFactory, { kind: "uups" });
+    console.log("Validating the implementation...");
+    await hre.upgrades.validateImplementation(TMFactory, { kind: "uups" });
 
-    console.log("Validating storage layout...");
-    await upgrades.validateUpgrade(proxyAddress, TMFactory, { kind: "uups" });
-    console.log(chalk.green("✅ Storage layout is compatible with the previous implementation"));
+    console.log("Validating storage layout against the committed snapshot...");
+    await requireLayoutMatchesSnapshot(hre, "TaskManager");
+    console.log(chalk.green("✅ Storage layout is compatible with the deployed layout"));
   } catch (error: any) {
-    console.log(chalk.red("❌ Storage layout validation failed:"));
+    console.log(chalk.red("❌ Upgrade validation failed:"));
     // Rethrow: `return` here only exits this function, and the caller would go on to upgrade
     // anyway right after printing "Upgrade aborted".
     throw error;
@@ -233,7 +236,9 @@ task("task:upgradeTM")
   .addParam("key", "Signer key", "")
   .addParam("onlyvalidate", "Only validate the upgrade", false, types.boolean)
   .setAction(async function (taskArguments: TaskArguments, hre) {
-    const { fhenixjs, ethers, upgrades } = hre;
+    const { fhenixjs, ethers } = hre;
+    // Compile first, so the bytecode deployed below is the build the checks validate.
+    await hre.run("compile");
     const key = taskArguments.key;
     let signer : HardhatEthersSigner;
     if (key === "") {
@@ -260,7 +265,7 @@ task("task:upgradeTM")
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     
 
-    await validateUpgrade(ethers, upgrades, TMProxyContract, TMFactory);
+    await validateUpgrade(hre, TMFactory);
 
     if (!taskArguments.onlyvalidate) {
         await upgradeTM(hre, TMProxyContract, TMFactory, signer, resolveAdminDelay(hre));
