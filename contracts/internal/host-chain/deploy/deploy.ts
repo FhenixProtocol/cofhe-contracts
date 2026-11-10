@@ -664,8 +664,8 @@ const func: DeployFunction = async function () {
   let TMProxyAddress = await registeredTaskManager(addressBook, id);
   let registerFresh = false;
   if (TMProxyAddress) {
-    // Links the predicted TaskManagerLib address only; upgradeTM deploys the library after its admin check.
-    const TMFactory = await linkedTaskManagerFactory(hre, adminSigner, { deploy: false });
+    // Links the predicted TaskManagerLib address; upgradeTM deploys the library after its admin check.
+    const TMFactory = await linkedTaskManagerFactory(hre, adminSigner);
     TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
     console.log(chalk.green(`TaskManager id ${id} resolves to ${TMProxyAddress} - upgrading in place`));
     await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
@@ -684,6 +684,7 @@ const func: DeployFunction = async function () {
       );
     }
     // Deploys TaskManagerLib, so it runs only after the checks above that can abort the run.
+    await deployTaskManagerLib(hre, adminSigner);
     const TMFactory = await linkedTaskManagerFactory(hre, adminSigner);
     const deployed = await getProxyContract(adminSigner, "TaskManager", [adminSigner.address, adminDelay], TMFactory);
     TMProxyContract = deployed.ProxyContract;

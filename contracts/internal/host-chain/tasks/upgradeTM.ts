@@ -259,8 +259,8 @@ task("task:upgradeTM")
     console.log(chalk.green("Network:", hre.network.name, signer.address));
     console.log(chalk.green(`Balance of account: ${signer.address}`, await ethers.provider.getBalance(signer.address)));
 
-    // Links the predicted TaskManagerLib address but deploys nothing; deployImplementation deploys the library.
-    const TMFactory = await linkedTaskManagerFactory(hre, signer, { deploy: false });
+    // Links the predicted TaskManagerLib address; deployImplementation deploys the library after the checks.
+    const TMFactory = await linkedTaskManagerFactory(hre, signer);
     const TMProxyContract = TMFactory.attach(await resolveTaskManager(hre)) as Contract;
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     
