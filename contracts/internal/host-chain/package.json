@@ -9,7 +9,7 @@
     "test:decrypt-result:localfhenix": "hardhat test test/decryptResult/DecryptResult.ts",
     "test:onchain": "hardhat test test/onChain/OnChain.ts",
     "test:access-list": "hardhat test test/accessList/AccessList.ts --network hardhat",
-    "test:tmdiff": "TMDIFF=1 hardhat test test/tmdiff/TMDiff.ts --network hardhat",
+    "test:tmdiff": "hardhat test test/tmdiff/TMDiff.ts --network hardhat",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json ./deployments/localfhenix ./ignition/deployments ./.openzeppelin/*",
     "compile": "hardhat compile",
     "task:deploy": "hardhat deploy",
