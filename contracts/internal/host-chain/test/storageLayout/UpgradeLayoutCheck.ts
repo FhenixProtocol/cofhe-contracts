@@ -7,6 +7,8 @@ import hre from "hardhat";
 import { installAddressBook } from "../helpers/addressBook";
 import { requireLayoutMatchesSnapshot } from "../../tasks/storageLayout";
 import { resolveTaskManager } from "../../utils/addressBook";
+import { LINKED_LIBRARY_OPTS } from "../../utils/taskManagerLib";
+import { deployLinkedTaskManagerFactory } from "../taskManagerFactory";
 
 const { ethers, upgrades } = hre;
 
@@ -44,7 +46,7 @@ describe("task:upgradeTM storage layout check", function () {
 
   it("accepts the TaskManager implementation as upgrade-safe", async function () {
     this.timeout(300_000);
-    await upgrades.validateImplementation(await ethers.getContractFactory("TaskManager"), { kind: "uups" });
+    await upgrades.validateImplementation(await deployLinkedTaskManagerFactory(), { kind: "uups", ...LINKED_LIBRARY_OPTS });
   });
 });
 
