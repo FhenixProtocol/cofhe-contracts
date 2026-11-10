@@ -448,4 +448,25 @@ library TaskManagerLib {
 
         return signer;
     }
+
+    function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone, ACL acl, int32 securityZoneMin, int32 securityZoneMax) external returns (uint256) {
+        if (!isValidType(returnType)) {
+            revert E.UnsupportedType(returnType);
+        }
+
+        if (!isValidSecurityZone(securityZone, securityZoneMin, securityZoneMax)) {
+            revert E.InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
+        }
+
+        /// @dev msg.sender is part of the preimage so the same seed from different
+        /// callers yields different handles.
+        uint256[] memory inputs = new uint256[](2);
+        inputs[0] = seed;
+        inputs[1] = uint256(uint160(msg.sender));
+
+        uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, FunctionId.random);
+        acl.allowTransient(ctHash, msg.sender, address(this));
+        emit TaskManager.TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), inputs[1]);
+        return ctHash;
+    }
 }
