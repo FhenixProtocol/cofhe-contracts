@@ -1,3 +1,4 @@
+import { deployLinkedTaskManagerFactory } from "../taskManagerFactory";
 import { expect } from "chai";
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -8,7 +9,7 @@ import { taskManagerId } from "../../utils/addressBook";
 const { ethers } = hre;
 
 async function deployTaskManager(admin: HardhatEthersSigner): Promise<string> {
-  const TaskManager = await ethers.getContractFactory("TaskManager");
+  const TaskManager = await deployLinkedTaskManagerFactory();
   const impl = await TaskManager.deploy();
   await impl.waitForDeployment();
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
