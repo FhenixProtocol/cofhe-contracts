@@ -4,11 +4,9 @@
 // revert data, every log and the ACL permissions on returned handles, byte for byte.
 //
 // The baseline is the TaskManager artifact of master b5c20ed, the last build before TaskManagerLib.
-// Behaviour must stay identical to it; only gas differs. After an intended behaviour change, refresh
-// it: compile the new reference commit and copy artifacts/contracts/TaskManager.sol/TaskManager.json
-// over baseline-TaskManager.json.
-//
-// Slow (about 700 cases), so it runs only on request: pnpm test:tmdiff
+// Behaviour must stay identical to it; only gas differs. The file keeps only the artifact's abi,
+// bytecode and sha, and the bytecode must need no linking: a build after TaskManagerLib does, so
+// refreshing it to a newer commit also means linking TaskManagerLib before the deploy below.
 import { deployLinkedTaskManagerFactory } from "../taskManagerFactory";
 import hre from "hardhat";
 import { expect } from "chai";
@@ -19,7 +17,7 @@ import { installAddressBook, registerTaskManager } from "../helpers/addressBook"
 
 const { ethers } = hre;
 const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-const BASELINE = process.env.TMDIFF_BASELINE ?? path.join(__dirname, "baseline-TaskManager.json");
+const BASELINE = path.join(__dirname, "baseline-TaskManager.json");
 const GAS = 16_000_000n;
 
 // FunctionId and type values as in the baseline's ICofhe.sol; the baseline is frozen, so these are too.
@@ -30,14 +28,13 @@ const BINARY = [7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
 const UINT256_MAX = 2n ** 256n - 1n;
 const SECP_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
 
-type Tx = { from: "owner"; fn: string; args: any[] };
+type Tx = { fn: string; args: any[] };
 type Case = { name: string; pre?: Tx[]; data: string; mode: number; expectOk?: boolean };
 
 describe("TaskManager differential (master vs branch)", function () {
   this.timeout(0);
 
   it("matches byte-for-byte on the full call matrix", async function () {
-    if (process.env.TMDIFF !== "1") this.skip();
     await ethers.provider.send("hardhat_reset", []);
     const [owner] = await ethers.getSigners();
     const vSigner = new ethers.Wallet(ethers.keccak256(ethers.toUtf8Bytes("verifier")));
@@ -144,23 +141,23 @@ describe("TaskManager differential (master vs branch)", function () {
     add("ct ACL not allowed unary", ct(4, F.not, [notAllowed], []));
     // Invalid enum value: hand-encoded, the typed encoder refuses it.
     add("ct funcId=32 (invalid enum)", ct(4, 8, [h(4), h(4)], []).replace(/^(0x.{8}.{64}).{64}/, `$1${"0".repeat(62)}20`));
-    const disable: Tx = { from: "owner", fn: "disable", args: [] };
+    const disable: Tx = { fn: "disable", args: [] };
     add("ct disabled valid trivial", ct(4, F.trivialEncrypt, [], [1n, 4n, 0n]), 1, [disable]);
     add("ct disabled valid binary", ct(4, 8, [h(4), h(4)], []), 1, [disable]);
     add("ct disabled invalid input", ct(4, F.not, [h(4), h(4)], []), 1, [disable]);
     add("ct disabled bad type", ct(9, 8, [h(4), h(4)], []), 1, [disable]);
-    add("ct disabled then enabled", ct(4, 8, [h(4), h(4)], []), 1, [disable, { from: "owner", fn: "enable", args: [] }]);
-    const alOn: Tx = { from: "owner", fn: "enableAccessList", args: [] };
-    const listProbe: Tx = { from: "owner", fn: "addToAccessList", args: [[probeAddr]] };
-    const denyProbe: Tx = { from: "owner", fn: "setDenyList", args: [[probeAddr], true] };
+    add("ct disabled then enabled", ct(4, 8, [h(4), h(4)], []), 1, [disable, { fn: "enable", args: [] }]);
+    const alOn: Tx = { fn: "enableAccessList", args: [] };
+    const listProbe: Tx = { fn: "addToAccessList", args: [[probeAddr]] };
+    const denyProbe: Tx = { fn: "setDenyList", args: [[probeAddr], true] };
     add("ct access list on, not listed", ct(4, 8, [h(4), h(4)], []), 1, [alOn]);
     add("ct access list on, listed", ct(4, 8, [h(4), h(4)], []), 1, [alOn, listProbe], true);
-    add("ct access list on, listed then removed", ct(4, 8, [h(4), h(4)], []), 1, [alOn, listProbe, { from: "owner", fn: "removeFromAccessList", args: [[probeAddr]] }]);
+    add("ct access list on, listed then removed", ct(4, 8, [h(4), h(4)], []), 1, [alOn, listProbe, { fn: "removeFromAccessList", args: [[probeAddr]] }]);
     add("ct access list off, listed only", ct(4, 8, [h(4), h(4)], []), 1, [listProbe]);
     add("ct deny list", ct(4, 8, [h(4), h(4)], []), 1, [denyProbe]);
     add("ct deny list, invalid input", ct(4, F.not, [h(4), h(4)], []), 1, [denyProbe]);
     add("ct deny list ignored when access list on + listed", ct(4, 8, [h(4), h(4)], []), 1, [denyProbe, alOn, listProbe]);
-    add("ct deny list off again", ct(4, 8, [h(4), h(4)], []), 1, [denyProbe, { from: "owner", fn: "setDenyList", args: [[probeAddr], false] }]);
+    add("ct deny list off again", ct(4, 8, [h(4), h(4)], []), 1, [denyProbe, { fn: "setDenyList", args: [[probeAddr], false] }]);
     add("ct valid add", ct(4, 8, [h(4), h(4, 0, 1n)], []), 1, undefined, true);
 
     // ---------------- createRandomTask ----------------
@@ -216,7 +213,7 @@ describe("TaskManager differential (master vs branch)", function () {
     const highS = ethers.concat([sigIn1.r, ethers.toBeHex(SECP_N - BigInt(sigIn1.s), 32), sigIn1.v === 27 ? "0x1c" : "0x1b"]);
     add("bvi high-s sig", bvi(in1, user, highS), 2);
     add("bvi compact 64-byte valid sig", bvi(in1, user, sigIn1.compactSerialized), 2);
-    const zeroV: Tx = { from: "owner", fn: "setVerifierSigner", args: [ethers.ZeroAddress] };
+    const zeroV: Tx = { fn: "setVerifierSigner", args: [ethers.ZeroAddress] };
     add("bvi signer 0, garbage sig", bvi(in3, user, "0x1234"), 2, [zeroV], true);
     add("bvi signer 0, bad zone", bvi([{ ctHash: 5n, securityZone: 9, utype: 4 }], user, "0x"), 2, [zeroV]);
     add("bvi signer 0, empty", bvi([], user, "0x"), 2, [zeroV]);
@@ -243,7 +240,7 @@ describe("TaskManager differential (master vs branch)", function () {
       "high-s": (() => { const s = ethers.Signature.from(sig1); return ethers.concat([s.r, ethers.toBeHex(SECP_N - BigInt(s.s), 32), s.v === 27 ? "0x1c" : "0x1b"]); })(),
       "bad v": ethers.concat([ethers.dataSlice(sig1, 0, 64), "0x05"]),
     };
-    const zeroD: Tx = { from: "owner", fn: "setDecryptResultSigner", args: [ethers.ZeroAddress] };
+    const zeroD: Tx = { fn: "setDecryptResultSigner", args: [ethers.ZeroAddress] };
     for (const fn of ["publishDecryptResult", "verifyDecryptResult", "verifyDecryptResultSafe"]) {
       const enc = (sig: string, r = r1) => I.encodeFunctionData(fn, [c1, r, sig]);
       add(`${fn} valid`, enc(sig1), 0, undefined, true);
@@ -288,7 +285,14 @@ describe("TaskManager differential (master vs branch)", function () {
       const r = await (await probe.exec(tmAddr, c.data, c.mode, { gasLimit: GAS })).wait();
       const logs = r.logs.map((l: any) => [l.address, l.topics, l.data]);
       const res = probe.interface.parseLog(r.logs[r.logs.length - 1]);
-      out.push({ status: r.status, logs });
+      // The probe's in-transaction isAllowed cannot tell a transient grant from a permanent one;
+      // a read after the transaction can, because transient grants are gone by then.
+      const coder = ethers.AbiCoder.defaultAbiCoder();
+      const handles: bigint[] = !res.args.success || c.mode === 0 ? []
+        : c.mode === 1 ? [coder.decode(["uint256"], res.args.ret)[0]]
+        : [...coder.decode(["uint256[]"], res.args.ret)[0]];
+      const allowedAfter = await Promise.all(handles.map((handle) => tm.isAllowed(handle, probeAddr)));
+      out.push({ status: r.status, logs, allowedAfter });
       return { out, ok: res.args.success as boolean, gas: r.gasUsed as bigint };
     };
 
