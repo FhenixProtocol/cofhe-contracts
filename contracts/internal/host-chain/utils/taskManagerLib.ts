@@ -39,16 +39,10 @@ export async function deployTaskManagerLib(hre: HardhatRuntimeEnvironment, signe
 }
 
 /**
- * Returns a TaskManager factory linked to TaskManagerLib's CREATE2 address.
- *
- * With `deploy: false` nothing is sent: the factory links the predicted address, which is the one
- * deployTaskManagerLib uses. Deploy the library before deploying from such a factory.
+ * Returns a TaskManager factory linked to TaskManagerLib's CREATE2 address. Sends nothing: call
+ * deployTaskManagerLib before deploying from the factory.
  */
-export async function linkedTaskManagerFactory(
-  hre: HardhatRuntimeEnvironment,
-  signer: any,
-  { deploy = true }: { deploy?: boolean } = {},
-) {
-  const libAddress = deploy ? await deployTaskManagerLib(hre, signer) : await taskManagerLibAddress(hre);
+export async function linkedTaskManagerFactory(hre: HardhatRuntimeEnvironment, signer: any) {
+  const libAddress = await taskManagerLibAddress(hre);
   return hre.ethers.getContractFactory("TaskManager", { signer, libraries: { TaskManagerLib: libAddress } });
 }
