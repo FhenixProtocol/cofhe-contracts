@@ -1,0 +1,144 @@
+/**
+ * Round 1 repros — R-A1, R-A2, R-A3, R-A4 (ACL.sol).
+ * Runs against the repo's own mock fixtures (placeholder task hashes only;
+ * no coprocessor involved).
+ */
+import { expect } from "chai";
+import hre from "hardhat";
+import type { Contract } from "ethers";
+
+import { deployDecryptResultFixture } from "../decryptResult/DecryptResult.fixture";
+
+const { ethers } = hre;
+
+describe("hunt R-A1 — delegateAccount can never succeed", function () {
+  let taskManager: Contract;
+  let acl: Contract;
+
+  beforeEach(async function () {
+    const fixture = await deployDecryptResultFixture();
+    taskManager = fixture.taskManager as unknown as Contract;
+    acl = fixture.acl as unknown as Contract;
+  });
+
+  it("the TaskManager exposes no delegateAccount entry point", async function () {
+    expect(taskManager.interface.hasFunction("delegateAccount")).to.equal(false);
+  });
+
+  it("a direct delegateAccount call reverts, and allowedOnBehalf stays false", async function () {
+    const [, , stranger] = await ethers.getSigners();
+    await expect(
+      acl.connect(stranger).delegateAccount(stranger.address, stranger.address),
+    )
+      .to.be.revertedWithCustomError(acl, "DirectAllowForbidden")
+      .withArgs(stranger.address);
+    expect(
+      await acl.allowedOnBehalf(
+        stranger.address,
+        123n,
+        stranger.address,
+        stranger.address,
+      ),
+    ).to.equal(false);
+  });
+});
+
+describe("hunt R-A2 (fixed) — cleanTransientStorage is reachable", function () {
+  let taskManager: Contract;
+  let acl: Contract;
+  let harness: Contract;
+
+  beforeEach(async function () {
+    const fixture = await deployDecryptResultFixture();
+    taskManager = fixture.taskManager as unknown as Contract;
+    acl = fixture.acl as unknown as Contract;
+    const Harness = await ethers.getContractFactory("HuntHarness");
+    harness = await Harness.deploy(await taskManager.getAddress());
+    await harness.waitForDeployment();
+  });
+
+  it("the TaskManager exposes a cleanTransientStorage entry point", async function () {
+    expect(taskManager.interface.hasFunction("cleanTransientStorage")).to.equal(
+      true,
+    );
+  });
+
+  it("a direct cleanTransientStorage call still reverts", async function () {
+    const [, , stranger] = await ethers.getSigners();
+    await expect(
+      acl.connect(stranger).cleanTransientStorage(),
+    )
+      .to.be.revertedWithCustomError(acl, "DirectAllowForbidden")
+      .withArgs(stranger.address);
+  });
+
+  it("a transient grant is cleared mid-transaction by the TaskManager entry point", async function () {
+    await (await harness.transientCleanedMidTx()).wait();
+    expect(await harness.lastBool()).to.equal(false); // cleared mid-tx
+    const handle = await harness.lastHandle();
+    expect(await acl.isAllowed(handle, await harness.getAddress())).to.equal(
+      false,
+    );
+  });
+
+  it("without cleanup, a transient grant is still visible to a second call in the same transaction", async function () {
+    await (await harness.transientAcrossCalls()).wait();
+    const handle = await harness.lastHandle();
+    expect(await harness.lastBool()).to.equal(true); // live in-tx …
+    expect(await acl.isAllowed(handle, await harness.getAddress())).to.equal(
+      false, // … and gone at tx end. Cleanup is opt-in per UserOp boundary.
+    );
+  });
+});
+
+describe("hunt R-A3 / R-A4 — shares via ShareOrchestrator (one tx each)", function () {
+  let taskManager: Contract;
+  let acl: Contract;
+  let orchestrator: Contract;
+  let sharer1: Contract;
+  let sharer2: Contract;
+  let receiver: Contract;
+
+  beforeEach(async function () {
+    const fixture = await deployDecryptResultFixture();
+    taskManager = fixture.taskManager as unknown as Contract;
+    acl = fixture.acl as unknown as Contract;
+    const Orchestrator = await ethers.getContractFactory("ShareOrchestrator");
+    orchestrator = await Orchestrator.deploy(await taskManager.getAddress());
+    await orchestrator.waitForDeployment();
+    const Sharer = await ethers.getContractFactory("ShareSharer");
+    sharer1 = await Sharer.deploy();
+    await sharer1.waitForDeployment();
+    sharer2 = await Sharer.deploy();
+    await sharer2.waitForDeployment();
+    const Receiver = await ethers.getContractFactory("ShareReceiver");
+    receiver = await Receiver.deploy();
+    await receiver.waitForDeployment();
+  });
+
+  it("R-A3: a transient-only share receiver can permanently globalize the handle", async function () {
+    await (
+      await orchestrator.runEscalation(
+        await sharer1.getAddress(),
+        await receiver.getAddress(),
+      )
+    ).wait();
+    expect(await orchestrator.escReceived()).to.equal(true);
+    expect(await orchestrator.escGlobalized()).to.equal(true);
+    expect(await acl.globalAllowed(await orchestrator.escHandle())).to.equal(
+      true,
+    );
+  });
+
+  it("R-A4: a second share overwrites the first — first claim fails, second succeeds", async function () {
+    await (
+      await orchestrator.runOverwrite(
+        await sharer1.getAddress(),
+        await sharer2.getAddress(),
+        await receiver.getAddress(),
+      )
+    ).wait();
+    expect(await orchestrator.owFirst()).to.equal(false); // first share destroyed
+    expect(await orchestrator.owSecond()).to.equal(true);
+  });
+});

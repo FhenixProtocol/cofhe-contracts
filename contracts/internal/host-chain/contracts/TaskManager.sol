@@ -970,6 +970,15 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         acl.allowForDecryption(hashes, msg.sender);
     }
 
+    /// @notice Clears all transient allowances (and share slots) for the current transaction.
+    /// @dev    Intended for account-abstraction bundlers: call between bundled UserOps so a
+    ///         transient grant from one UserOp cannot be used by a later one in the same
+    ///         transaction. Transient storage auto-clears at transaction end; this is the
+    ///         only way to clear it mid-transaction.
+    function cleanTransientStorage() external {
+        acl.cleanTransientStorage();
+    }
+
     function isAllowed(uint256 ctHash, address account) external view returns (bool) {
         return acl.isAllowed(ctHash, account);
     }
