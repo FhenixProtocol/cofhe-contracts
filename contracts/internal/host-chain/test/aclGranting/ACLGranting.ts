@@ -107,7 +107,7 @@ describe("ACL granting", function () {
     });
 
     it("rejects a direct delegateAccount", async function () {
-      await expect(acl.connect(stranger).delegateAccount(receiver.address, minter))
+      await expect(acl.connect(stranger).delegateAccount(receiver.address, minter, stranger.address))
         .to.be.revertedWithCustomError(acl, "DirectAllowForbidden")
         .withArgs(stranger.address);
     });
