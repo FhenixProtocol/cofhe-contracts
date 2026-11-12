@@ -172,7 +172,10 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
 
     /**
      * @notice              Allows the use of `handle` globally (all accounts).
-     * @dev                 The caller must be allowed to use `handle` for allowGlobal() to succeed. If not, allowGlobal() reverts.
+     * @dev                 The caller must PERSISTENTLY hold `handle` for allowGlobal() to succeed:
+     *                      a persistent grant or an already-global handle. Transient (this-transaction-only)
+     *                      access is NOT enough — a transient share must never be convertible into a
+     *                      permanent, irreversible global grant.
      * @param handle        Handle.
      * @param requester     Address of the account giving the permissions.
      */
@@ -181,7 +184,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
             revert DirectAllowForbidden(msg.sender);
         }
 
-        if (!isAllowed(handle, requester)) {
+        if (!_isPersistentlyAllowed(handle, requester)) {
             revert SenderNotAllowed(requester);
         }
 
@@ -192,6 +195,10 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
 
     /**
      * @notice              Allows a list of handles to be decrypted.
+     * @dev                 The caller must PERSISTENTLY hold every handle for allowForDecryption() to
+     *                      succeed: a persistent grant or an already-global handle. Transient
+     *                      (this-transaction-only) access is NOT enough — a transient share must never
+     *                      be convertible into a permanent, irreversible decrypt approval.
      * @param handlesList   List of handles.
      */
     function allowForDecryption(uint256[] memory handlesList, address requester) public virtual {
@@ -204,7 +211,7 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
 
         for (uint256 k = 0; k < len; k++) {
             uint256 handle = handlesList[k];
-            if (!isAllowed(handle, requester)) {
+            if (!_isPersistentlyAllowed(handle, requester)) {
                 revert SenderNotAllowed(requester);
             }
             $.allowedForDecryption[handle] = true;
@@ -435,6 +442,18 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
      */
     function getTaskManagerAddress() public view virtual returns (address) {
         return _taskManager();
+    }
+
+    /**
+     * @dev                 Persistent holding only: a persistent pair grant or an already-global
+     *                      handle. Transient (this-transaction-only) access does NOT count.
+     *                      Used to gate the irreversible grants (allowGlobal, allowForDecryption)
+     *                      so a transient share can never be escalated into a permanent one.
+     *                      `allow()` intentionally keeps using `isAllowed()` — the transient ->
+     *                      persistent bootstrap for freshly created task results depends on it.
+     */
+    function _isPersistentlyAllowed(uint256 handle, address requester) internal view returns (bool) {
+        return persistAllowed(handle, requester) || globalAllowed(handle);
     }
 
     /**

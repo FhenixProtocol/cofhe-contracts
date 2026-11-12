@@ -9,6 +9,9 @@ contract PubliclyAllowedTest {
 
     function createAndAllowGlobal(uint8 value) public returns (euint8) {
         euint8 encrypted = FHE.asEuint8(value);
+        // allowGlobal requires a persistent grant: the transient access from
+        // creation alone is not enough. Persist to self first, then globalize.
+        FHE.allow(encrypted, address(this));
         FHE.allowGlobal(encrypted);
         lastHandle = encrypted;
         return encrypted;
