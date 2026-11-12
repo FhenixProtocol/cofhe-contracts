@@ -19,6 +19,7 @@ import {
 import { addressBookAddress, registeredTaskManager, taskManagerId } from "../utils/addressBook";
 import { updateTaskManagerAddressInJsonArtifact } from "../utils/updateTaskManagerAddress";
 import { readCommittedAddresses } from "../utils/addressBookDeterministic";
+import { validateUpgrade } from "../tasks/storageLayout";
 
 // DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
@@ -663,6 +664,7 @@ const func: DeployFunction = async function () {
   if (TMProxyAddress) {
     TMProxyContract = TMFactory.attach(TMProxyAddress) as Contract;
     console.log(chalk.green(`TaskManager id ${id} resolves to ${TMProxyAddress} - upgrading in place`));
+    await validateUpgrade(hre, "TaskManager", TMFactory);
     await upgradeTM(TMProxyContract, TMFactory, adminSigner, adminDelay);
   } else {
     if (!isLocalNetwork(hre) && process.env.REGISTER_TASK_MANAGER?.trim() !== "1") {

@@ -12,6 +12,7 @@ import {
 } from "../utils/roles";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { resolveTaskManager } from "../utils/addressBook";
+import { validateUpgrade } from "./storageLayout";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -25,26 +26,6 @@ async function getImplementationAddress(ethers: any, proxy: any) {
   return ethers.getAddress(
     "0x" + implementationAddress.slice(-40),
   );
-}
-
-/**
- * Validates the storage layout of the pending upgrade, and throws if it is incompatible.
- */
-async function validateUpgrade(ethers: any, upgrades: any, TMProxyContract: any, TMFactory: any) {
-  const proxyAddress = await TMProxyContract.getAddress();
-  try {
-    console.log("Importing implementation contract...");
-    await upgrades.forceImport(proxyAddress, TMFactory, { kind: "uups" });
-
-    console.log("Validating storage layout...");
-    await upgrades.validateUpgrade(proxyAddress, TMFactory, { kind: "uups" });
-    console.log(chalk.green("✅ Storage layout is compatible with the previous implementation"));
-  } catch (error: any) {
-    console.log(chalk.red("❌ Storage layout validation failed:"));
-    // Rethrow: `return` here only exits this function, and the caller would go on to upgrade
-    // anyway right after printing "Upgrade aborted".
-    throw error;
-  }
 }
 
 /** Deploys the new implementation. Any funded key may do this; only the upgrade itself needs a role. */
@@ -233,7 +214,9 @@ task("task:upgradeTM")
   .addParam("key", "Signer key", "")
   .addParam("onlyvalidate", "Only validate the upgrade", false, types.boolean)
   .setAction(async function (taskArguments: TaskArguments, hre) {
-    const { fhenixjs, ethers, upgrades } = hre;
+    const { fhenixjs, ethers } = hre;
+    // Compile first, so the bytecode deployed below is the build the checks validate.
+    await hre.run("compile");
     const key = taskArguments.key;
     let signer : HardhatEthersSigner;
     if (key === "") {
@@ -260,7 +243,7 @@ task("task:upgradeTM")
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     
 
-    await validateUpgrade(ethers, upgrades, TMProxyContract, TMFactory);
+    await validateUpgrade(hre, "TaskManager", TMFactory);
 
     if (!taskArguments.onlyvalidate) {
         await upgradeTM(hre, TMProxyContract, TMFactory, signer, resolveAdminDelay(hre));
