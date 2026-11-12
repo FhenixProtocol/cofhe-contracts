@@ -7,6 +7,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { resolveTaskManager } from "../utils/addressBook";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { confirm } from "../utils/confirm";
+import { validateUpgrade } from "./storageLayout";
 
 const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
@@ -184,14 +185,14 @@ async function upgradeShareRegistry(
     return;
   }
 
-  // Import the layout the proxy runs now, then check this one against it.
-  const fromV1 = !(await runsPointerImplementation(ethers, proxy, Factory));
-  const Current = fromV1 ? await ethers.getContractFactory("ACPShareRegistryV1") : Factory;
-  await upgrades.forceImport(proxy, Current, { kind: "uups" });
-  await upgrades.validateUpgrade(proxy, Factory, { kind: "uups" });
-  console.log(
-    chalk.green(`✅ Storage layout is compatible with the ${fromV1 ? "first version" : "previous implementation"}`),
-  );
+  if (await runsPointerImplementation(ethers, proxy, Factory)) {
+    await validateUpgrade(hre, REGISTRY_NAME, Factory);
+  } else {
+    // The snapshot holds the pointer-based layout, so the first version is checked against its own source.
+    await upgrades.forceImport(proxy, await ethers.getContractFactory("ACPShareRegistryV1"), { kind: "uups" });
+    await upgrades.validateUpgrade(proxy, Factory, { kind: "uups" });
+    console.log(chalk.green("✅ Storage layout is compatible with the first version"));
+  }
   if (taskArguments.onlyvalidate) return;
 
   const registry = Factory.attach(proxy) as Contract;

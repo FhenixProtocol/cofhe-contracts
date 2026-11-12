@@ -3,6 +3,7 @@ import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import * as fs from "fs";
 import * as path from "path";
 import chalk from "chalk";
+import type { ContractFactory } from "ethers";
 import {
   validate,
   solcInputOutputDecoder,
@@ -72,7 +73,25 @@ export async function requireLayoutMatchesSnapshot(
   }
 }
 
-task("task:storage-layout", "Extract and validate storage layout snapshot")
+/**
+ * Throws unless `factory` is upgrade-safe and its storage layout matches the committed snapshot of
+ * the deployed proxies. Every upgrade path runs this before it sends anything: the OpenZeppelin
+ * plugin has no record of the live implementation, and importing the new build as the current one
+ * would only compare the new layout with itself.
+ */
+export async function validateUpgrade(
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  factory: ContractFactory
+): Promise<void> {
+  console.log(`Validating the ${contractName} implementation...`);
+  await hre.upgrades.validateImplementation(factory, { kind: "uups" });
+  console.log("Validating storage layout against the committed snapshot...");
+  await requireLayoutMatchesSnapshot(hre, contractName);
+  console.log(chalk.green(`✅ ${contractName} storage layout is compatible with the deployed layout`));
+}
+
+task("task:storage-layout","Extract and validate storage layout snapshot")
   .addFlag("check", "Check current layout is upgrade-compatible with snapshot")
   .setAction(async function (taskArguments, hre) {
     await hre.run("compile");

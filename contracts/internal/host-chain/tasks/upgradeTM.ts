@@ -12,7 +12,7 @@ import {
 } from "../utils/roles";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { resolveTaskManager } from "../utils/addressBook";
-import { requireLayoutMatchesSnapshot } from "./storageLayout";
+import { validateUpgrade } from "./storageLayout";
 
 async function getImplementationAddress(ethers: any, proxy: any) {
   const IMPLEMENTATION_SLOT =
@@ -26,28 +26,6 @@ async function getImplementationAddress(ethers: any, proxy: any) {
   return ethers.getAddress(
     "0x" + implementationAddress.slice(-40),
   );
-}
-
-/**
- * Validates the pending upgrade, and throws if it is unsafe or its storage layout is incompatible.
- * The layout reference is the committed snapshot of the deployed layout. The OpenZeppelin plugin has
- * no record of the live implementation here, and importing the new build as "current" would only
- * compare the new layout with itself.
- */
-async function validateUpgrade(hre: HardhatRuntimeEnvironment, TMFactory: any) {
-  try {
-    console.log("Validating the implementation...");
-    await hre.upgrades.validateImplementation(TMFactory, { kind: "uups" });
-
-    console.log("Validating storage layout against the committed snapshot...");
-    await requireLayoutMatchesSnapshot(hre, "TaskManager");
-    console.log(chalk.green("✅ Storage layout is compatible with the deployed layout"));
-  } catch (error: any) {
-    console.log(chalk.red("❌ Upgrade validation failed:"));
-    // Rethrow: `return` here only exits this function, and the caller would go on to upgrade
-    // anyway right after printing "Upgrade aborted".
-    throw error;
-  }
 }
 
 /** Deploys the new implementation. Any funded key may do this; only the upgrade itself needs a role. */
@@ -265,7 +243,7 @@ task("task:upgradeTM")
     console.log(chalk.green("TMProxyContract:", await TMProxyContract.getAddress()));
     
 
-    await validateUpgrade(hre, TMFactory);
+    await validateUpgrade(hre, "TaskManager", TMFactory);
 
     if (!taskArguments.onlyvalidate) {
         await upgradeTM(hre, TMProxyContract, TMFactory, signer, resolveAdminDelay(hre));
