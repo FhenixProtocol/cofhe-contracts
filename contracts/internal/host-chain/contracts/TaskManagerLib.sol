@@ -466,7 +466,7 @@ library TaskManagerLib {
 
         uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, FunctionId.random);
         acl.allowTransient(ctHash, msg.sender, address(this));
-        emit TaskManager.TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), inputs[1]);
+        emit ITaskManagerEvents.TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), inputs[1]);
         return ctHash;
     }
 }
