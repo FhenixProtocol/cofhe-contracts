@@ -4,7 +4,7 @@ pragma solidity >=0.8.25 <0.9.0;
 import {ACL} from "./ACL.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
-import {TMCommon, TaskManager, ITaskManagerErrors as E} from "./TaskManager.sol";
+import {TMCommon, ITaskManagerErrors as E, ITaskManagerEvents} from "./TaskManagerTypes.sol";
 
 /// @notice TaskManager logic moved out of TaskManager to keep it under the EIP-170 size limit.
 ///         TaskManager reaches the external functions by delegatecall, so `msg.sender`,
@@ -21,11 +21,11 @@ library TaskManagerLib {
 
     function sendEventCreated(uint256 ctHash, string memory operation, uint256[] memory inputs, bool isEnabled) private onlyIfEnabled(isEnabled) {
         if (inputs.length == 1) {
-            emit TaskManager.TaskCreated(ctHash, operation, inputs[0], 0, 0);
+            emit ITaskManagerEvents.TaskCreated(ctHash, operation, inputs[0], 0, 0);
         } else if (inputs.length == 2) {
-            emit TaskManager.TaskCreated(ctHash, operation, inputs[0], inputs[1], 0);
+            emit ITaskManagerEvents.TaskCreated(ctHash, operation, inputs[0], inputs[1], 0);
         } else {
-            emit TaskManager.TaskCreated(ctHash, operation, inputs[0], inputs[1], inputs[2]);
+            emit ITaskManagerEvents.TaskCreated(ctHash, operation, inputs[0], inputs[1], inputs[2]);
         }
     }
 
@@ -392,7 +392,7 @@ library TaskManagerLib {
             int32 securityZone = int32(uint32(inputs[i].securityZone));
             appendedHashes[i] =
                 TMCommon.appendMetadata(inputs[i].ctHash, securityZone, inputs[i].utype, false);
-            emit TaskManager.InputVerified(appendedHashes[i], bytes32(inputs[i].ctHash));
+            emit ITaskManagerEvents.InputVerified(appendedHashes[i], bytes32(inputs[i].ctHash));
         }
 
         acl.batchAllowTransient(appendedHashes, msg.sender, address(this));
