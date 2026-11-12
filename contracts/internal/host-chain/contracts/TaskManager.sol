@@ -970,6 +970,10 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         acl.allowForDecryption(hashes, msg.sender);
     }
 
+    function delegateAccount(address delegatee, address delegateeContract) external {
+        acl.delegateAccount(delegatee, delegateeContract, msg.sender);
+    }
+
     function isAllowed(uint256 ctHash, address account) external view returns (bool) {
         return acl.isAllowed(ctHash, account);
     }
