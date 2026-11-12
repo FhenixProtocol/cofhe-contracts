@@ -287,28 +287,11 @@ contract TaskManager is ITaskManager, ITaskManagerErrors, ITaskManagerEvents, In
     }
 
     function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external onlyIfEnabled onlyAccessListed returns (uint256) {
-        if (!TaskManagerLib.isValidType(returnType)) {
-            revert UnsupportedType(returnType);
-        }
-
-        if (!TaskManagerLib.isValidSecurityZone(securityZone, securityZoneMin, securityZoneMax)) {
-            revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-        }
-
+        // The seed stays here: it increments randomCounter, a storage value the library cannot reach.
         if (seed == 0) {
             seed = _generateSeed(securityZone);
         }
-
-        /// @dev msg.sender is part of the preimage so the same seed from different
-        /// callers yields different handles.
-        uint256[] memory inputs = new uint256[](2);
-        inputs[0] = seed;
-        inputs[1] = uint256(uint160(msg.sender));
-
-        uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, FunctionId.random);
-        acl.allowTransient(ctHash, msg.sender, address(this));
-        emit TaskCreated(ctHash, Utils.functionIdToString(FunctionId.random), seed, uint256(uint32(securityZone)), inputs[1]);
-        return ctHash;
+        return TaskManagerLib.createRandomTask(returnType, seed, securityZone, acl, securityZoneMin, securityZoneMax);
     }
 
     function _generateSeed(int32 securityZone) internal returns (uint256 seed) {
