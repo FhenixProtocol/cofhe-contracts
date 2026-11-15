@@ -7,6 +7,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { getDefaultAdmin, resolveAdminDelay } from "../utils/roles";
 import { resolveTaskManager } from "../utils/addressBook";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
+import { validateUpgrade } from "./storageLayout";
 
 /**
  * A TaskManager satellite proxy: resolved through the registered TaskManager rather than passed in,
@@ -31,26 +32,6 @@ async function getImplementationAddress(ethers: any, proxy: any) {
   return ethers.getAddress(
     "0x" + implementationAddress.slice(-40),
   );
-}
-
-/**
- * Validates the storage layout of the pending upgrade, and throws if it is incompatible.
- */
-async function validateUpgrade(ethers: any, upgrades: any, ProxyContract: any, Factory: any) {
-  const proxyAddress = await ProxyContract.getAddress();
-  try {
-    console.log("Importing implementation contract...");
-    await upgrades.forceImport(proxyAddress, Factory, { kind: "uups" });
-
-    console.log("Validating storage layout...");
-    await upgrades.validateUpgrade(proxyAddress, Factory, { kind: "uups" });
-    console.log(chalk.green("✅ Storage layout is compatible with the previous implementation"));
-  } catch (error: any) {
-    console.log(chalk.red("❌ Storage layout validation failed:"));
-    // Rethrow: `return` here only exits this function, and the caller would go on to upgrade
-    // anyway right after printing "Upgrade aborted".
-    throw error;
-  }
 }
 
 async function upgradeSatellite(
@@ -240,7 +221,9 @@ function registerUpgradeTask(taskName: string, satellite: Satellite) {
     .addParam("key", "Signer key", "")
     .addParam("onlyvalidate", "Only validate the upgrade", false, types.boolean)
     .setAction(async function (taskArguments: TaskArguments, hre) {
-      const { fhenixjs, ethers, upgrades } = hre;
+      const { fhenixjs, ethers } = hre;
+      // Compile first, so the bytecode deployed below is the build the checks validate.
+      await hre.run("compile");
       const key = taskArguments.key;
       let signer : HardhatEthersSigner;
       if (key === "") {
@@ -274,7 +257,7 @@ function registerUpgradeTask(taskName: string, satellite: Satellite) {
       console.log(chalk.green("TaskManager:", taskManagerAddress));
       console.log(chalk.green(`${satellite.name} proxy:`, await ProxyContract.getAddress()));
 
-      await validateUpgrade(ethers, upgrades, ProxyContract, Factory);
+      await validateUpgrade(hre, satellite.name, Factory);
 
       if (!taskArguments.onlyvalidate) {
           await upgradeSatellite(hre, satellite, ProxyContract, Factory, taskManagerAddress, signer);
