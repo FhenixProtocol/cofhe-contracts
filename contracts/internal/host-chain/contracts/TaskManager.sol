@@ -26,6 +26,7 @@ error InvalidSecurityZone(int32 zone, int32 min, int32 max);
 error InvalidSignature();
 error InvalidSigner(address signer, address expectedSigner);
 error UnsupportedType(uint256 t);
+error ReturnTypeMismatch(uint256 returnType, uint256 actualType); // issue #153
 error LengthMismatch();
 
 // Access control errors
@@ -719,6 +720,20 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         validateEncryptedInputs(encryptedHashes, funcId);
         if (extraInputs.length > 0) {
             validateExtraInputs(extraInputs, funcId);
+        }
+
+        // Issue #153: the returned placeholder handle embeds returnType, while the
+        // TaskCreated event reports the type the processor will actually compute from
+        // the extras. Bind the two so the handle type metadata cannot diverge from the
+        // executed computation.
+        if (funcId == FunctionId.trivialEncrypt) {
+            if (returnType != uint8(extraInputs[1])) {
+                revert ReturnTypeMismatch(returnType, uint8(extraInputs[1]));
+            }
+        } else if (funcId == FunctionId.cast) {
+            if (returnType != uint8(extraInputs[0])) {
+                revert ReturnTypeMismatch(returnType, uint8(extraInputs[0]));
+            }
         }
 
         uint256[] memory inputs = TMCommon.combineInputs(encryptedHashes, extraInputs);
