@@ -639,6 +639,11 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if ((TMCommon.getSecAndTypeFromHash(encryptedHashes[1] ^ encryptedHashes[2])) != 0) {
             revert InvalidTypeOrSecurityZone("select");
         }
+        // The control's zone becomes the result's zone (getSecurityZone reads input 0), so it
+        // must match the branches' zone, as both operands of a binary op must.
+        if (TMCommon.getSecurityZoneFromHash(encryptedHashes[0]) != TMCommon.getSecurityZoneFromHash(encryptedHashes[1])) {
+            revert InvalidTypeOrSecurityZone("select");
+        }
 
         uint8 uintType = TMCommon.getUintTypeFromHash(encryptedHashes[0]);
         if ((uintType ^ Utils.EBOOL_TFHE) != 0) {
