@@ -77,6 +77,8 @@ Verify sources (proxy + implementation are linked automatically):
 npx hardhat verify --network <net> <address>
 ```
 
+Verify `TaskManagerLib` first, at the address the deploy prints ("TaskManagerLib deployed to the deterministic address" or "already deterministically deployed at"). It has no constructor arguments. The TaskManager implementation links it, and `hardhat verify` reads the linked address from the deployed bytecode, so the implementation needs no `--libraries` flag. The library address changes only when the library's code changes, so after most upgrades it is already verified.
+
 ## Commitment registry deployment (Arbitrum One)
 
 From `contracts/internal/registry-chain`, with `.env` filled in (`DEPLOYER_PRIVATE_KEY` here can be any funded deployer key):

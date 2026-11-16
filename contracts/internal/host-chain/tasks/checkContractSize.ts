@@ -6,6 +6,7 @@ const WARN_THRESHOLD = 22_528; // 22KB
 
 const TRACKED_CONTRACTS = [
   "TaskManager",
+  "TaskManagerLib",
   "ACL",
   "PlaintextsStorage",
   "ERC1967Proxy",

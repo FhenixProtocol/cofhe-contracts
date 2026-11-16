@@ -82,10 +82,11 @@ export async function requireLayoutMatchesSnapshot(
 export async function validateUpgrade(
   hre: HardhatRuntimeEnvironment,
   contractName: string,
-  factory: ContractFactory
+  factory: ContractFactory,
+  options: { unsafeAllowLinkedLibraries?: boolean } = {}
 ): Promise<void> {
   console.log(`Validating the ${contractName} implementation...`);
-  await hre.upgrades.validateImplementation(factory, { kind: "uups" });
+  await hre.upgrades.validateImplementation(factory, { kind: "uups", ...options });
   console.log("Validating storage layout against the committed snapshot...");
   await requireLayoutMatchesSnapshot(hre, contractName);
   console.log(chalk.green(`✅ ${contractName} storage layout is compatible with the deployed layout`));

@@ -8,153 +8,16 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {TaskManagerLib} from "./TaskManagerLib.sol";
 import {ITaskManager, FunctionId, Utils, UnsignedEncryptedInput} from "@fhenixprotocol/cofhe-contracts/ICofhe.sol";
+import {ITaskManagerErrors, ITaskManagerEvents, TMCommon} from "./TaskManagerTypes.sol";
 
 
-error DecryptionResultNotReady(uint256 ctHash);
-// Input validation errors
-error InvalidInputsAmount(string operation, uint256 got, uint256 expected);
-error InvalidOperationInputs(string operation);
-error TooManyInputs(string operation, uint256 got, uint256 maxAllowed);
+// Declared but not used; kept outside ITaskManagerErrors so the ABI stays as before the library.
 error InvalidBytesLength(uint256 got, uint256 expected);
-// Type and security validation errors
-error InvalidTypeOrSecurityZone(string operation);
-error InvalidInputType(uint8 actual, uint8 expected);
-error InvalidInputForFunction(string functionName, uint8 inputType);
-error InvalidSecurityZone(int32 zone, int32 min, int32 max);
-error InvalidSignature();
-error InvalidSigner(address signer, address expectedSigner);
-error UnsupportedType(uint256 t);
-error LengthMismatch();
-
-// Access control errors
-error InvalidAddress();
 error OnlyOwnerAllowed(address caller);
-error CofheIsUnavailable();
-error NotOnAccessList(address caller);
-error OnDenyList(address caller);
 
-
-// Operation-specific errors
-error RandomFunctionNotSupported();
-error DecryptFunctionNotSupported();
-
-library TMCommon {
-    uint256 private constant HASH_MASK_FOR_METADATA  = type(uint256).max - type(uint16).max; // 2 bytes reserved for metadata
-    uint256 private constant SECURITY_ZONE_MASK = type(uint8).max; // 0xff -  1 byte reserved for security zone
-    uint256 private constant UINT_TYPE_MASK = (type(uint8).max >> 1); // 0x7f - 7 bits reserved for uint type in the one before last byte
-    uint256 private constant TRIVIALLY_ENCRYPTED_MASK = type(uint8).max - UINT_TYPE_MASK; //0x80  1 bit reserved for isTriviallyEncrypted
-    uint256 private constant TYPE_AND_TRIVIALLY_ENCRYPTED_BYTE_OFFSET = 8;
-    uint256 private constant SHIFTED_TYPE_MASK = UINT_TYPE_MASK << TYPE_AND_TRIVIALLY_ENCRYPTED_BYTE_OFFSET; // 0x7f00 - 7 bits reserved for uint type in the one before last byte
-    uint256 private constant SHIFTED_TRIVIALLY_ENCRYPTED_MASK = TRIVIALLY_ENCRYPTED_MASK << TYPE_AND_TRIVIALLY_ENCRYPTED_BYTE_OFFSET; //0x80  1 bit reserved for isTriviallyEncrypted
-    /*
-      The format: keccak256(operands_list, op)[0:29] || is_trivial (1 bit) & ct_type (7 bit) || securityZone
-    */
-
-    // Constants for decrypt result hash computation (message format: result || enc_type || chain_id || ct_hash)
-    uint256 internal constant SHIFT_ENC_TYPE = 224;      // Shift for 4-byte enc_type (256 - 32 = 224)
-    uint256 internal constant SHIFT_CHAIN_ID = 192;      // Shift for 8-byte chain_id (256 - 64 = 192)
-    uint256 internal constant OFFSET_ENC_TYPE = 0x20;    // Byte offset for enc_type in message
-    uint256 internal constant OFFSET_CHAIN_ID = 0x24;    // Byte offset for chain_id in message
-    uint256 internal constant OFFSET_CT_HASH = 0x2c;     // Byte offset for ctHash in message
-    uint256 internal constant MESSAGE_LENGTH = 0x4c;     // Total message length: 76 bytes
-
-    function uint256ToBytes32(uint256 value) internal pure returns (bytes memory) {
-        bytes memory result = new bytes(32);
-        assembly {
-            mstore(add(result, 32), value)
-        }
-        return result;
-    }
-
-    function combineInputs(uint256[] memory encryptedHashes, uint256[] memory extraInputs) internal pure returns (uint256[] memory) {
-        uint256[] memory inputs = new uint256[](encryptedHashes.length + extraInputs.length);
-        uint8 i = 0;
-        for (; i < encryptedHashes.length; i++) {
-            inputs[i] = encryptedHashes[i];
-        }
-        for (; i < encryptedHashes.length + extraInputs.length; i++) {
-            inputs[i] = extraInputs[i - encryptedHashes.length];
-        }
-
-        return inputs;
-    }
-
-    function getReturnType(FunctionId functionId, uint8 ctType) internal pure returns (uint8) {
-        if (functionId == FunctionId.lte ||
-            functionId == FunctionId.lt ||
-            functionId == FunctionId.gte ||
-            functionId == FunctionId.gt ||
-            functionId == FunctionId.eq ||
-            functionId == FunctionId.ne) {
-            return Utils.EBOOL_TFHE;
-        }
-
-        return ctType;
-    }
-
-    /// @notice Calculates the temporary hash for async operations
-    /// @dev Must result the same temp hash as calculated by warp-drive/fhe-driver/CalcBinaryPlaceholderValueHash
-    /// @param functionId - The function id
-    /// @return The calculated temporary key
-    function calcPlaceholderKey(
-        uint8 ctType,
-        int32 securityZone,
-        uint256[] memory inputs,
-        FunctionId functionId
-    ) internal pure returns (uint256) {
-        bytes memory combined = "";
-        bool isTriviallyEncrypted = (functionId == FunctionId.trivialEncrypt);
-        for (uint8 i = 0; i < inputs.length; i++) {
-            combined = bytes.concat(combined, uint256ToBytes32(inputs[i]));
-        }
-
-        // Square is doing mul behind the scene
-        if (functionId == FunctionId.square) {
-            functionId = FunctionId.mul;
-            combined = bytes.concat(combined, uint256ToBytes32(inputs[0]));
-        }
-
-        bytes1 functionIdByte = bytes1(uint8(functionId));
-        combined = bytes.concat(combined, functionIdByte);
-
-        // Calculate Keccak256 hash
-        bytes32 hash = keccak256(combined);
-
-        return appendMetadata(uint256(hash), securityZone, getReturnType(functionId, ctType), isTriviallyEncrypted);
-    }
-
-    function getByteForTrivialAndType(bool isTrivial, uint8 uintType) internal pure returns (uint256) {
-      /// @dev first bit for isTriviallyEncrypted
-      /// @dev last 7 bits for uintType
-
-      return uint256(((isTrivial ? SHIFTED_TRIVIALLY_ENCRYPTED_MASK : 0x0000) | (uint256(uintType) << TYPE_AND_TRIVIALLY_ENCRYPTED_BYTE_OFFSET) & SHIFTED_TYPE_MASK));
-    }
-
-    /**
-     *      Results format is: keccak256(operands_list, op)[0:29] || is_trivial (1 bit) & ct_type (7 bit) || securityZone
-     */
-    function appendMetadata(uint256 preCtHash, int32 securityZone, uint8 uintType, bool isTrivial) internal pure returns (uint256 result) {
-        result = preCtHash & HASH_MASK_FOR_METADATA ;
-        uint256 metadata = getByteForTrivialAndType(isTrivial, uintType) | (uint256(uint8(int8(securityZone)))); /// @dev 8 bits for type, 8 bits for securityZone
-        result = result | metadata;
-    }
-
-    function getSecurityZoneFromHash(uint256 hash) internal pure returns (int32) {
-      return int32(int8(uint8(hash & SECURITY_ZONE_MASK)));
-    }
-
-    function getUintTypeFromHash(uint256 hash) internal pure returns (uint8) {
-      return uint8((hash & SHIFTED_TYPE_MASK) >> 8);
-    }
-
-    function getSecAndTypeFromHash(uint256 hash) internal pure returns (uint256) {
-      return uint256((SHIFTED_TYPE_MASK | SECURITY_ZONE_MASK) & hash);
-    }
-}
-
-contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
+contract TaskManager is ITaskManager, ITaskManagerErrors, ITaskManagerEvents, Initializable, UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
     // ---------------------------------------------------------------------------------------
     // Roles. Splitting `onlyOwner` into capabilities limits *who has to hold* each key, not how
     // much damage each key can do. Four of these are protocol-critical - a single holder can
@@ -266,23 +129,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         if (decryptResultSigner == address(0)) decryptResultSigner = address(1);
     }
 
-    // Events
-    event TaskCreated(uint256 ctHash, string operation, uint256 input1, uint256 input2, uint256 input3);
-    event ProtocolNotification(uint256 ctHash, string operation, string errorMessage);
-    event DecryptionResult(uint256 ctHash, uint256 result, address indexed requestor);
-    event InputVerified(uint256 indexed ctHash, bytes32 commitment);
-    event DecryptResultSignerChanged(address indexed oldSigner, address indexed newSigner);
-    event VerifierSignerChanged(address indexed oldSigner, address indexed newSigner);
-    event AccessListEnabledSet(bool enabled);
-    event AccessGranted(address indexed account);
-    event AccessRevoked(address indexed account);
-    event DenyListSet(address indexed account, bool denied);
-    event ACLContractChanged(address indexed oldACL, address indexed newACL);
-    event PlaintextsStorageChanged(address indexed oldStorage, address indexed newStorage);
-    event SecurityZonesChanged(int32 oldMin, int32 oldMax, int32 newMin, int32 newMax);
-    event EnabledSet(bool enabled);
-    event VersionIncremented(uint8 newVersion);
-
     function setSecurityZones(int32 minSZ, int32 maxSZ) external onlyRole(SECURITY_ZONE_MANAGER_ROLE) {
         _setSecurityZones(minSZ, maxSZ);
     }
@@ -318,8 +164,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
 
     // Errors
     // Returned when the handle is not allowed in the ACL for the account.
-    error ACLNotAllowed(uint256 handle, address account);
-
     struct Task {
         address creator;
         uint256 createdAt;
@@ -442,233 +286,12 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         }
     }
 
-    function sendEventCreated(uint256 ctHash, string memory operation, uint256[] memory inputs) private onlyIfEnabled {
-        if (inputs.length == 1) {
-            emit TaskCreated(ctHash, operation, inputs[0], 0, 0);
-        } else if (inputs.length == 2) {
-            emit TaskCreated(ctHash, operation, inputs[0], inputs[1], 0);
-        } else {
-            emit TaskCreated(ctHash, operation, inputs[0], inputs[1], inputs[2]);
-        }
-    }
-
-    function checkAllowed(uint256 ctHash) internal view {
-        if (!acl.isAllowed(ctHash, msg.sender)) revert ACLNotAllowed(ctHash, msg.sender);
-    }
-
-    function isUnaryOperation(FunctionId funcId) internal pure returns (bool) {
-        return funcId == FunctionId.not || 
-               funcId == FunctionId.square || 
-               funcId == FunctionId.cast;
-    }
-
-    function isPlaintextOperation(FunctionId funcId) internal pure returns (bool) {
-        return funcId == FunctionId.random || funcId == FunctionId.trivialEncrypt;
-    }
-
-    function getSecurityZone(FunctionId functionId, uint256[] memory encryptedInputs, uint256[] memory plaintextInputs) internal pure returns (int32) {
-        if (isPlaintextOperation(functionId)) {
-            // If inputs are plaintext (currently trivialEncrypt and random) the security zone will be the last input
-            return int32(int256(plaintextInputs[plaintextInputs.length - 1]));
-        }
-
-        // First param of a function that receives some encrypted values will always be encrypted
-        // Refer to: combineInput for more details
-        return TMCommon.getSecurityZoneFromHash(encryptedInputs[0]);
-
-    }
-
-    function isValidSecurityZone(int32 _securityZone) internal view returns (bool) {
-        return _securityZone >= securityZoneMin && _securityZone <= securityZoneMax;
-    }
-
-    function isValidSecurityZone(uint256 _securityZone) internal view returns (bool) {
-        if (_securityZone > uint256(int256(type(int32).max))) {
-            return false;
-        }
-
-        return isValidSecurityZone(int32(int256(_securityZone)));
-    }
-
-    function isValidType(uint8 t) internal pure returns (bool) {
-        return t == Utils.EUINT8_TFHE ||
-               t == Utils.EUINT16_TFHE ||
-               t == Utils.EUINT32_TFHE ||
-               t == Utils.EUINT64_TFHE ||
-               t == Utils.EUINT128_TFHE ||
-               t == Utils.EADDRESS_TFHE ||
-               t == Utils.EBOOL_TFHE;
-    }
-
-    function isValidTypeUint256(uint256 t) internal pure returns (bool) {
-        if (t > type(uint8).max) {
-            return false;
-        }
-
-        return isValidType(uint8(t));
-    }
-
-    function validateEncryptedHashes(uint256[] memory encryptedHashes) internal view {
-        for (uint8 i = 0; i < encryptedHashes.length; i++) {
-            checkAllowed(encryptedHashes[i]);
-        }
-    }
-
-    function validateTrivialEncryptInputs(uint256[] memory extraInputs) internal view {
-        if (extraInputs[1] > type(uint8).max) {
-            revert UnsupportedType(extraInputs[1]);
-        }
-
-        if (!isValidSecurityZone(extraInputs[2])) {
-            revert InvalidSecurityZone(int32(int256(extraInputs[2])), securityZoneMin, securityZoneMax);
-        }
-
-        uint256 valueToEncrypt = extraInputs[0];
-        uint8 toType = uint8(extraInputs[1]);
-
-        if (toType == Utils.EUINT8_TFHE) {
-            if (valueToEncrypt > type(uint8).max) {
-                revert InvalidInputForFunction("trivialEncrypt", toType);
-            }
-        } else if (toType == Utils.EUINT16_TFHE) {
-            if (valueToEncrypt > type(uint16).max) {
-                revert InvalidInputForFunction("trivialEncrypt", toType);
-            }
-        } else if (toType == Utils.EUINT32_TFHE) {
-            if (valueToEncrypt > type(uint32).max) {
-                revert InvalidInputForFunction("trivialEncrypt", toType);
-            }
-        } else if (toType == Utils.EUINT64_TFHE) {
-            if (valueToEncrypt > type(uint64).max) {
-                revert InvalidInputForFunction("trivialEncrypt", toType);
-            }
-        } else if (toType == Utils.EUINT128_TFHE) {
-            if (valueToEncrypt > type(uint128).max) {
-                revert InvalidInputForFunction("trivialEncrypt", toType);
-            }
-        } else if (toType == Utils.EADDRESS_TFHE) {
-            if (valueToEncrypt > type(uint160).max) {
-                revert InvalidInputForFunction("trivialEncrypt", toType);
-            }
-        } else if (toType == Utils.EBOOL_TFHE) {
-            if (valueToEncrypt > 1) {
-                revert InvalidInputForFunction("trivialEncrypt", toType);
-            }
-        } else {
-            revert UnsupportedType(toType);
-        }
-
-    }
-
-    // Verifies if a function is a function that supports all types (including select for ifTrue, ifFalse)
-    function isAllTypesFunction(FunctionId funcId) internal pure returns (bool) {
-        return funcId == FunctionId.select ||
-               funcId == FunctionId.eq ||
-               funcId == FunctionId.ne ||
-               funcId == FunctionId.cast;
-    }
-
-    // Verifies if a function is receives ONLY boolean or numeral inputs
-    function isBooleanAndNumeralFunction(FunctionId funcId) internal pure returns (bool) {
-        return funcId == FunctionId.xor ||
-               funcId == FunctionId.and ||
-               funcId == FunctionId.or ||
-               funcId == FunctionId.not;
-    }
-
-    function validateFunctionInputTypes(FunctionId funcId, string memory functionName, uint256[] memory inputs) internal pure {
-        if (isAllTypesFunction(funcId)) {
-            return;
-        }
-
-        if (isBooleanAndNumeralFunction(funcId)) {
-            for (uint8 i = 0; i < inputs.length; i++) {
-                uint8 inputType = TMCommon.getUintTypeFromHash(inputs[i]);
-                if ((inputType ^ Utils.EADDRESS_TFHE) == 0) {
-                    revert InvalidInputForFunction(functionName, Utils.EADDRESS_TFHE);
-                }
-            }
-        } else {
-            // In this case we expect a function that only work with numbers
-            for (uint8 i = 0; i < inputs.length; i++) {
-                uint8 inputType = TMCommon.getUintTypeFromHash(inputs[i]);
-                if ((inputType ^ Utils.EADDRESS_TFHE) == 0 || (inputType ^ Utils.EBOOL_TFHE) == 0) {
-                    revert InvalidInputForFunction(functionName, inputType);
-                }
-            }
-        }
-    }
-
-    function validateEncryptedInputs(uint256[] memory encryptedHashes, FunctionId funcId) internal view {
-        string memory functionName = Utils.functionIdToString(funcId);
-
-        if (encryptedHashes.length == 0) {
-            if (!isPlaintextOperation(funcId)) {
-                revert InvalidOperationInputs(functionName);
-            }
-            return;
-        }
-
-        if (funcId == FunctionId.select) {
-            validateSelectInputs(encryptedHashes);
-        } else if (isUnaryOperation(funcId)) {
-            if (encryptedHashes.length != 1) {
-                revert InvalidInputsAmount(functionName, encryptedHashes.length, 1);
-            }
-        } else {
-            if (encryptedHashes.length != 2) {
-                revert InvalidInputsAmount(functionName, encryptedHashes.length, 2);
-            }
-            if ((TMCommon.getSecAndTypeFromHash(encryptedHashes[0] ^ encryptedHashes[1])) != 0) {
-                revert InvalidTypeOrSecurityZone(functionName);
-            }
-        }
-
-        int32 securityZone = TMCommon.getSecurityZoneFromHash(encryptedHashes[0]);
-        if (!isValidSecurityZone(securityZone)) {
-            revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-        }
-        validateEncryptedHashes(encryptedHashes);
-        validateFunctionInputTypes(funcId, functionName, encryptedHashes);
-    }
-
-    function validateSelectInputs(uint256[] memory encryptedHashes) internal pure {
-        if (encryptedHashes.length != 3) {
-            revert InvalidInputsAmount("select", encryptedHashes.length, 3);
-        }
-        if ((TMCommon.getSecAndTypeFromHash(encryptedHashes[1] ^ encryptedHashes[2])) != 0) {
-            revert InvalidTypeOrSecurityZone("select");
-        }
-
-        uint8 uintType = TMCommon.getUintTypeFromHash(encryptedHashes[0]);
-        if ((uintType ^ Utils.EBOOL_TFHE) != 0) {
-            revert InvalidInputType(uintType, Utils.EBOOL_TFHE);
-        }
-    }
-
-    function validateExtraInputs(uint256[] memory extraInputs, FunctionId funcId) internal view {
-        // The amount of inputs shouldn't be validated here
-        // We validate that the amount of all the inputs (encrypted and plaintext) is not greater than 3
-        // And then we validate that the amount of encrypted inputs is correct
-        // The above forces the amount of extra inputs to be correct
-
-        if (funcId == FunctionId.trivialEncrypt) {
-            validateTrivialEncryptInputs(extraInputs);
-        } else if (funcId == FunctionId.cast) {
-            if (!isValidTypeUint256(extraInputs[0])) {
-                revert UnsupportedType(extraInputs[0]);
-            }
-        } else {
-            revert InvalidOperationInputs(Utils.functionIdToString(funcId));
-        }
-    }
-
     function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external onlyIfEnabled onlyAccessListed returns (uint256) {
-        if (!isValidType(returnType)) {
+        if (!TaskManagerLib.isValidType(returnType)) {
             revert UnsupportedType(returnType);
         }
 
-        if (!isValidSecurityZone(securityZone)) {
+        if (!TaskManagerLib.isValidSecurityZone(securityZone, securityZoneMin, securityZoneMax)) {
             revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
         }
 
@@ -699,37 +322,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
     }
 
     function createTask(uint8 returnType, FunctionId funcId, uint256[] memory encryptedHashes, uint256[] memory extraInputs) external onlyAccessListed returns (uint256) {
-        if (funcId == FunctionId.random) {
-            revert RandomFunctionNotSupported();
-        }
-
-        if (funcId == FunctionId.decrypt) {
-            revert DecryptFunctionNotSupported();
-        }
-
-        if (!isValidType(returnType)) {
-            revert UnsupportedType(returnType);
-        }
-
-        uint256 inputsLength = encryptedHashes.length + extraInputs.length;
-        if (inputsLength > 3) {
-            revert TooManyInputs( Utils.functionIdToString(funcId), inputsLength, 3 );
-        }
-
-        validateEncryptedInputs(encryptedHashes, funcId);
-        if (extraInputs.length > 0) {
-            validateExtraInputs(extraInputs, funcId);
-        }
-
-        uint256[] memory inputs = TMCommon.combineInputs(encryptedHashes, extraInputs);
-
-        int32 securityZone = getSecurityZone(funcId, encryptedHashes, extraInputs);
-        uint256 ctHash = TMCommon.calcPlaceholderKey(returnType, securityZone, inputs, funcId);
-
-        acl.allowTransient(ctHash, msg.sender, address(this));
-        sendEventCreated(ctHash, Utils.functionIdToString(funcId), inputs);
-
-        return ctHash;
+        return TaskManagerLib.createTask(returnType, funcId, encryptedHashes, extraInputs, acl, securityZoneMin, securityZoneMax, isEnabled);
     }
 
     /// @notice Publish a signed decrypt result to the chain
@@ -819,64 +412,13 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         return validResults;
     }
 
-    /// @dev Verify decrypt result signature
-    /// @dev Skips verification if decryptResultSigner is address(0) (debug mode)
-    /// @param shouldRevert If true, reverts on invalid signature; if false, returns false
     function _verifyDecryptResult(
         uint256 ctHash,
         uint256 result,
         bytes calldata signature,
         bool shouldRevert
     ) private view returns (bool) {
-        if (decryptResultSigner == address(0)) {
-            return true;
-        }
-
-        bytes32 messageHash = _computeDecryptResultHash(ctHash, result);
-        // slither-disable-next-line unused-return
-        (address recovered, ECDSA.RecoverError err, ) = ECDSA.tryRecover(messageHash, signature);
-
-        if (err != ECDSA.RecoverError.NoError || recovered == address(0)) {
-            if (shouldRevert) revert InvalidSignature();
-            return false;
-        }
-        if (recovered != decryptResultSigner) {
-            if (shouldRevert) revert InvalidSigner(recovered, decryptResultSigner);
-            return false;
-        }
-        return true;
-    }
-
-    /// @dev Compute message hash using assembly for gas efficiency
-    /// @notice Format: result (32) || enc_type (4) || chain_id (8) || ct_hash (32) = 76 bytes
-    function _computeDecryptResultHash(
-        uint256 ctHash,
-        uint256 result
-    ) private view returns (bytes32 messageHash) {
-        uint8 encryptionType = TMCommon.getUintTypeFromHash(ctHash);
-        uint64 chainId = uint64(block.chainid);
-
-        // Load constants for assembly
-        uint256 shiftEncType = TMCommon.SHIFT_ENC_TYPE;
-        uint256 shiftChainId = TMCommon.SHIFT_CHAIN_ID;
-        uint256 offsetEncType = TMCommon.OFFSET_ENC_TYPE;
-        uint256 offsetChainId = TMCommon.OFFSET_CHAIN_ID;
-        uint256 offsetCtHash = TMCommon.OFFSET_CT_HASH;
-        uint256 msgLength = TMCommon.MESSAGE_LENGTH;
-
-        // Assembly for gas-efficient message construction
-        // Overlapping 32-byte mstores are safe here: each subsequent mstore overwrites
-        // only the tail bytes of the previous one, and the final mstore (ctHash) lands
-        // exactly at the end of the 76-byte message, so all fields end up correctly placed.
-        assembly {
-            let ptr := mload(0x40)
-            mstore(ptr, result)                                            // bytes 0-31: result
-            mstore(add(ptr, offsetEncType), shl(shiftEncType, encryptionType))  // bytes 32-35: enc_type
-            mstore(add(ptr, offsetChainId), shl(shiftChainId, chainId))         // bytes 36-43: chain_id
-            mstore(add(ptr, offsetCtHash), ctHash)                              // bytes 44-75: ctHash
-            messageHash := keccak256(ptr, msgLength)                            // hash 76 bytes
-            mstore(0x40, add(ptr, msgLength))                                   // advance free memory pointer
-        }
+        return TaskManagerLib._verifyDecryptResult(ctHash, result, signature, shouldRevert, decryptResultSigner);
     }
 
     // slither-disable-next-line unused-return
@@ -914,34 +456,7 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
         address sender,
         bytes memory signature
     ) external onlyAccessListed returns (uint256[] memory) {
-        uint256 len = inputs.length;
-        // When signer is set to 0 address we skip this logic to be able to support debug use cases.
-        // In debug use cases we assume that the verifier is not necessarily running.
-        if (verifierSigner != address(0)) {
-            for (uint256 i = 0; i < len; i++) {
-                int32 securityZone = int32(uint32(inputs[i].securityZone));
-                if (!isValidSecurityZone(securityZone)) {
-                    revert InvalidSecurityZone(securityZone, securityZoneMin, securityZoneMax);
-                }
-            }
-
-            address signer = extractBatchSigner(inputs, sender, msg.sender, signature);
-            if (signer != verifierSigner) {
-                revert InvalidSigner(signer, verifierSigner);
-            }
-        }
-
-        uint256[] memory appendedHashes = new uint256[](len);
-        for (uint256 i = 0; i < len; i++) {
-            int32 securityZone = int32(uint32(inputs[i].securityZone));
-            appendedHashes[i] =
-                TMCommon.appendMetadata(inputs[i].ctHash, securityZone, inputs[i].utype, false);
-            emit InputVerified(appendedHashes[i], bytes32(inputs[i].ctHash));
-        }
-
-        acl.batchAllowTransient(appendedHashes, msg.sender, address(this));
-
-        return appendedHashes;
+        return TaskManagerLib.batchVerifyInputs(inputs, sender, signature, verifierSigner, securityZoneMin, securityZoneMax, acl);
     }
 
     function allow(uint256 ctHash, address account) external {
@@ -976,56 +491,6 @@ contract TaskManager is ITaskManager, Initializable, UUPSUpgradeable, AccessCont
 
     function isPubliclyAllowed(uint256 ctHash) external view returns (bool) {
         return acl.globalAllowed(ctHash);
-    }
-
-    /// @dev Per-input message hash folded into the batch digest:
-    ///      keccak256(ctHash || utype || securityZone || sender || chainid || contractAddress).
-    function inputMessageHash(
-        uint256 ctHash,
-        uint8 utype,
-        uint8 securityZone,
-        address sender,
-        address contractAddress
-    ) private view returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                ctHash,
-                utype,
-                securityZone,
-                sender,
-                block.chainid,
-                contractAddress
-            )
-        );
-    }
-
-    /// @dev Recover the signer of a batch from the single signature over
-    ///      keccak256(h_0 || h_1 || ... || h_n), where each h_i is `inputMessageHash`.
-    function extractBatchSigner(
-        UnsignedEncryptedInput[] memory inputs,
-        address sender,
-        address contractAddress,
-        bytes memory signature
-    ) private view returns (address) {
-        uint256 len = inputs.length;
-        // One allocation of 32*len bytes, each hash written in place, so the
-        // buffer is not reallocated and recopied once per input.
-        bytes memory concatenatedHashes = new bytes(len * 32);
-        for (uint256 i = 0; i < len; i++) {
-            bytes32 h = inputMessageHash(inputs[i].ctHash, inputs[i].utype, inputs[i].securityZone, sender, contractAddress);
-            assembly ("memory-safe") {
-                mstore(add(add(concatenatedHashes, 32), mul(i, 32)), h)
-            }
-        }
-
-        bytes32 batchHash = keccak256(concatenatedHashes);
-
-        address signer = ECDSA.recover(batchHash, signature);
-        if (signer == address(0)) {
-            revert InvalidSignature();
-        }
-
-        return signer;
     }
 
     /// @notice Set the authorized signer for encrypted inputs
