@@ -2816,22 +2816,37 @@ library FHE {
     // ********** TYPE CASTING ************* //
     /// @notice Converts a ebool to an euint8
     function asEuint8(ebool value) internal returns (euint8) {
+        if (!Common.isInitialized(value)) {
+            value = asEbool(false);
+        }
         return euint8.wrap(Impl.cast(ebool.unwrap(value), Utils.EUINT8_TFHE));
     }
     /// @notice Converts a ebool to an euint16
     function asEuint16(ebool value) internal returns (euint16) {
+        if (!Common.isInitialized(value)) {
+            value = asEbool(false);
+        }
         return euint16.wrap(Impl.cast(ebool.unwrap(value), Utils.EUINT16_TFHE));
     }
     /// @notice Converts a ebool to an euint32
     function asEuint32(ebool value) internal returns (euint32) {
+        if (!Common.isInitialized(value)) {
+            value = asEbool(false);
+        }
         return euint32.wrap(Impl.cast(ebool.unwrap(value), Utils.EUINT32_TFHE));
     }
     /// @notice Converts a ebool to an euint64
     function asEuint64(ebool value) internal returns (euint64) {
+        if (!Common.isInitialized(value)) {
+            value = asEbool(false);
+        }
         return euint64.wrap(Impl.cast(ebool.unwrap(value), Utils.EUINT64_TFHE));
     }
     /// @notice Converts a ebool to an euint128
     function asEuint128(ebool value) internal returns (euint128) {
+        if (!Common.isInitialized(value)) {
+            value = asEbool(false);
+        }
         return euint128.wrap(Impl.cast(ebool.unwrap(value), Utils.EUINT128_TFHE));
     }
 
@@ -2841,18 +2856,30 @@ library FHE {
     }
     /// @notice Converts a euint8 to an euint16
     function asEuint16(euint8 value) internal returns (euint16) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint8(0);
+        }
         return euint16.wrap(Impl.cast(euint8.unwrap(value), Utils.EUINT16_TFHE));
     }
     /// @notice Converts a euint8 to an euint32
     function asEuint32(euint8 value) internal returns (euint32) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint8(0);
+        }
         return euint32.wrap(Impl.cast(euint8.unwrap(value), Utils.EUINT32_TFHE));
     }
     /// @notice Converts a euint8 to an euint64
     function asEuint64(euint8 value) internal returns (euint64) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint8(0);
+        }
         return euint64.wrap(Impl.cast(euint8.unwrap(value), Utils.EUINT64_TFHE));
     }
     /// @notice Converts a euint8 to an euint128
     function asEuint128(euint8 value) internal returns (euint128) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint8(0);
+        }
         return euint128.wrap(Impl.cast(euint8.unwrap(value), Utils.EUINT128_TFHE));
     }
 
@@ -2862,18 +2889,30 @@ library FHE {
     }
     /// @notice Converts a euint16 to an euint8
     function asEuint8(euint16 value) internal returns (euint8) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint16(0);
+        }
         return euint8.wrap(Impl.cast(euint16.unwrap(value), Utils.EUINT8_TFHE));
     }
     /// @notice Converts a euint16 to an euint32
     function asEuint32(euint16 value) internal returns (euint32) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint16(0);
+        }
         return euint32.wrap(Impl.cast(euint16.unwrap(value), Utils.EUINT32_TFHE));
     }
     /// @notice Converts a euint16 to an euint64
     function asEuint64(euint16 value) internal returns (euint64) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint16(0);
+        }
         return euint64.wrap(Impl.cast(euint16.unwrap(value), Utils.EUINT64_TFHE));
     }
     /// @notice Converts a euint16 to an euint128
     function asEuint128(euint16 value) internal returns (euint128) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint16(0);
+        }
         return euint128.wrap(Impl.cast(euint16.unwrap(value), Utils.EUINT128_TFHE));
     }
 
@@ -2883,18 +2922,30 @@ library FHE {
     }
     /// @notice Converts a euint32 to an euint8
     function asEuint8(euint32 value) internal returns (euint8) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint32(0);
+        }
         return euint8.wrap(Impl.cast(euint32.unwrap(value), Utils.EUINT8_TFHE));
     }
     /// @notice Converts a euint32 to an euint16
     function asEuint16(euint32 value) internal returns (euint16) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint32(0);
+        }
         return euint16.wrap(Impl.cast(euint32.unwrap(value), Utils.EUINT16_TFHE));
     }
     /// @notice Converts a euint32 to an euint64
     function asEuint64(euint32 value) internal returns (euint64) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint32(0);
+        }
         return euint64.wrap(Impl.cast(euint32.unwrap(value), Utils.EUINT64_TFHE));
     }
     /// @notice Converts a euint32 to an euint128
     function asEuint128(euint32 value) internal returns (euint128) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint32(0);
+        }
         return euint128.wrap(Impl.cast(euint32.unwrap(value), Utils.EUINT128_TFHE));
     }
 
@@ -2904,18 +2955,30 @@ library FHE {
     }
     /// @notice Converts a euint64 to an euint8
     function asEuint8(euint64 value) internal returns (euint8) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint64(0);
+        }
         return euint8.wrap(Impl.cast(euint64.unwrap(value), Utils.EUINT8_TFHE));
     }
     /// @notice Converts a euint64 to an euint16
     function asEuint16(euint64 value) internal returns (euint16) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint64(0);
+        }
         return euint16.wrap(Impl.cast(euint64.unwrap(value), Utils.EUINT16_TFHE));
     }
     /// @notice Converts a euint64 to an euint32
     function asEuint32(euint64 value) internal returns (euint32) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint64(0);
+        }
         return euint32.wrap(Impl.cast(euint64.unwrap(value), Utils.EUINT32_TFHE));
     }
     /// @notice Converts a euint64 to an euint128
     function asEuint128(euint64 value) internal returns (euint128) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint64(0);
+        }
         return euint128.wrap(Impl.cast(euint64.unwrap(value), Utils.EUINT128_TFHE));
     }
 
@@ -2925,18 +2988,30 @@ library FHE {
     }
     /// @notice Converts a euint128 to an euint8
     function asEuint8(euint128 value) internal returns (euint8) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint128(0);
+        }
         return euint8.wrap(Impl.cast(euint128.unwrap(value), Utils.EUINT8_TFHE));
     }
     /// @notice Converts a euint128 to an euint16
     function asEuint16(euint128 value) internal returns (euint16) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint128(0);
+        }
         return euint16.wrap(Impl.cast(euint128.unwrap(value), Utils.EUINT16_TFHE));
     }
     /// @notice Converts a euint128 to an euint32
     function asEuint32(euint128 value) internal returns (euint32) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint128(0);
+        }
         return euint32.wrap(Impl.cast(euint128.unwrap(value), Utils.EUINT32_TFHE));
     }
     /// @notice Converts a euint128 to an euint64
     function asEuint64(euint128 value) internal returns (euint64) {
+        if (!Common.isInitialized(value)) {
+            value = asEuint128(0);
+        }
         return euint64.wrap(Impl.cast(euint128.unwrap(value), Utils.EUINT64_TFHE));
     }
 
@@ -2946,22 +3021,37 @@ library FHE {
     }
     /// @notice Converts a eaddress to an euint8
     function asEuint8(eaddress value) internal returns (euint8) {
+        if (!Common.isInitialized(value)) {
+            value = asEaddress(address(0));
+        }
         return euint8.wrap(Impl.cast(eaddress.unwrap(value), Utils.EUINT8_TFHE));
     }
     /// @notice Converts a eaddress to an euint16
     function asEuint16(eaddress value) internal returns (euint16) {
+        if (!Common.isInitialized(value)) {
+            value = asEaddress(address(0));
+        }
         return euint16.wrap(Impl.cast(eaddress.unwrap(value), Utils.EUINT16_TFHE));
     }
     /// @notice Converts a eaddress to an euint32
     function asEuint32(eaddress value) internal returns (euint32) {
+        if (!Common.isInitialized(value)) {
+            value = asEaddress(address(0));
+        }
         return euint32.wrap(Impl.cast(eaddress.unwrap(value), Utils.EUINT32_TFHE));
     }
     /// @notice Converts a eaddress to an euint64
     function asEuint64(eaddress value) internal returns (euint64) {
+        if (!Common.isInitialized(value)) {
+            value = asEaddress(address(0));
+        }
         return euint64.wrap(Impl.cast(eaddress.unwrap(value), Utils.EUINT64_TFHE));
     }
     /// @notice Converts a eaddress to an euint128
     function asEuint128(eaddress value) internal returns (euint128) {
+        if (!Common.isInitialized(value)) {
+            value = asEaddress(address(0));
+        }
         return euint128.wrap(Impl.cast(eaddress.unwrap(value), Utils.EUINT128_TFHE));
     }
     /// @notice Converts a plaintext boolean value to a ciphertext ebool
