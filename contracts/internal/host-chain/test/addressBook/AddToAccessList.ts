@@ -11,7 +11,7 @@ import { taskManagerId } from "../../utils/addressBook";
 
 const { ethers } = hre;
 
-const ENV_KEYS = ["SAFE_ADMIN_ADDRESS", "SAFE_OWNER_KEY", "SAFE_BATCH_OUT"] as const;
+const ENV_KEYS = ["SAFE_ADMIN_ADDRESS", "SAFE_OWNER_KEY", "SAFE_BATCH_OUT", "LEDGER_ADDRESS"] as const;
 
 async function deployTaskManager(admin: HardhatEthersSigner): Promise<any> {
   const TaskManager = await deployLinkedTaskManagerFactory();
@@ -54,6 +54,8 @@ describe("task:addToAccessList", function () {
     process.env.SAFE_ADMIN_ADDRESS = "";
     process.env.SAFE_OWNER_KEY = "";
     process.env.SAFE_BATCH_OUT = "";
+    process.env.LEDGER_ADDRESS = "";
+    (hre.network.config as any).ledgerAccounts = [];
     await ethers.provider.send("hardhat_reset", []);
     [deployer] = await ethers.getSigners();
     const book = await installAddressBook(deployer);
@@ -130,6 +132,42 @@ describe("task:addToAccessList", function () {
     const batch = JSON.parse(fs.readFileSync(outPath, "utf8"));
     expect(batch.transactions[0].data).to.equal(
       taskManager.interface.encodeFunctionData("addToAccessList", [[first]]),
+    );
+    expect(await taskManager.accessList(first)).to.equal(false);
+  });
+
+  // No device in tests: a hardhat account stands in for the Ledger account.
+  function useLedgerAccount(address: string) {
+    process.env.LEDGER_ADDRESS = address;
+    (hre.network.config as any).ledgerAccounts = [address];
+  }
+
+  it("WithLedger sends from the Ledger account, not the first signer", async function () {
+    const [, ledger] = await ethers.getSigners();
+    await (await taskManager.grantRole(await taskManager.ACCESS_LIST_MANAGER_ROLE(), ledger.address)).wait();
+    useLedgerAccount(ledger.address);
+    const nonceBefore = await ethers.provider.getTransactionCount(ledger.address);
+    await hre.run("task:addToAccessListWithLedger", { accounts: first });
+    expect(await taskManager.accessList(first)).to.equal(true);
+    expect(await ethers.provider.getTransactionCount(ledger.address)).to.equal(nonceBefore + 1);
+  });
+
+  it("WithLedger refuses without LEDGER_ADDRESS", async function () {
+    await expectRejection(hre.run("task:addToAccessListWithLedger", { accounts: first }), /LEDGER_ADDRESS must be set/);
+  });
+
+  it("WithLedger refuses when the network has no such Ledger account", async function () {
+    process.env.LEDGER_ADDRESS = deployer.address;
+    await expectRejection(hre.run("task:addToAccessListWithLedger", { accounts: first }), /no Ledger account/);
+    expect(await taskManager.accessList(first)).to.equal(false);
+  });
+
+  it("WithLedger refuses when the Ledger account lacks the role", async function () {
+    const [, ledger] = await ethers.getSigners();
+    useLedgerAccount(ledger.address);
+    await expectRejection(
+      hre.run("task:addToAccessListWithLedger", { accounts: first }),
+      /does not hold ACCESS_LIST_MANAGER_ROLE/,
     );
     expect(await taskManager.accessList(first)).to.equal(false);
   });

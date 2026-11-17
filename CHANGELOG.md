@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- **`task:addToAccessListWithLedger --accounts <a,b>`** adds to the access list signing on a Ledger at the new optional `LEDGER_ADDRESS`, which must hold `ACCESS_LIST_MANAGER_ROLE`. While set, remote networks ignore the private keys. Run `pnpm install` for the new plugin.
+- **`task:grantRole --role <NAME> --account <addr>`** grants a TaskManager role (e.g. `ACCESS_LIST_MANAGER_ROLE`): directly when the signer is default admin, else through the Safe with `SAFE_OWNER_KEY` or as a Safe batch. **`task:grantRoleAsSafe`** always goes through the Safe. Re-run to verify.
 - **`FHE.addToAccessList` / `FHE.removeFromAccessList(accounts)`** let a contract holding the TaskManager's `ACCESS_LIST_MANAGER_ROLE` manage the access list. `ITaskManager` gains both, so contracts that implement it (e.g. SDK mocks) must add them.
 - **`task:goLiveAsSafe --accounts <a,b>`** checks the go-live preconditions, then access-lists the callers and calls `enable()` through the Safe (batch without `SAFE_OWNER_KEY`). **`task:disableTaskManager`** is the maintenance wallet's emergency `disable()`; optional new `MAINTENANCE_KEY`.
 - **`task:upgradeShareRegistry`** upgrades the ACL's ACPShareRegistry in place (same address) as a signer holding `UPGRADER_ROLE`; **`task:upgradeShareRegistryAsSafe`** goes through the Safe at `SAFE_ADMIN_ADDRESS` with `SAFE_OWNER_KEY`, otherwise writes a Safe batch. Re-run to verify.
