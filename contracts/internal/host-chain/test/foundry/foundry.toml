@@ -1,0 +1,20 @@
+# Foundry is used only for the gas tests in this folder; Hardhat stays the main toolchain.
+# This file lives here, not at the host-chain root: a root foundry.toml makes CI's Slither
+# (crytic-compile) treat host-chain as a Foundry project and skip the Hardhat build.
+# Run from this folder: forge test -vv
+[profile.default]
+src = "."
+test = "."
+out = "out"
+cache_path = "cache"
+libs = ["../../node_modules"]
+allow_paths = ["../.."]
+solc_version = "0.8.25"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 800 # same as hardhat.config.ts
+remappings = [
+  "contracts/=../../contracts/",
+  "@openzeppelin/=../../node_modules/@openzeppelin/",
+  "@fhenixprotocol/cofhe-contracts/=../../node_modules/@fhenixprotocol/cofhe-contracts/",
+]

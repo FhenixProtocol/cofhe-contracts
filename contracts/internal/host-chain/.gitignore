@@ -11,8 +11,7 @@ types
 deployments
 cache
 artifacts
-out-foundry
-cache-foundry
+test/foundry/out
 typechain-types
 
 # files

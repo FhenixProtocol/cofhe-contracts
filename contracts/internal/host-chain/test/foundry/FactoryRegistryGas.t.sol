@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {COFHE_ADDRESS_BOOK} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
-import {FactoryRegistry} from "../../contracts/FactoryRegistry.sol";
+import {FactoryRegistry} from "contracts/FactoryRegistry.sol";
 
 // Gas measurement of FactoryRegistry with a stand-in TaskManager. Run: forge test -vv
 // setUp builds each tree in its own transaction, and each test makes ONE measured call, so storage
