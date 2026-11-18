@@ -298,7 +298,10 @@ task("task:approveFactory", "Approve a factory as the root of a new tree in the 
       console.log(chalk.yellow(`${factory}: no code on ${hre.network.name}. An address without code is approved only if it is a wallet you trust.`));
     }
     if (parent === ethers.ZeroAddress && (await tm.accessList(factory))) {
-      throw new Error(`${factory} is on the TaskManager list by hand. Remove it with task:removeFromAccessList first.`);
+      throw new Error(
+        `${factory} is on the TaskManager list by hand. To keep its access, adopt it: ` +
+          `task:adoptIntoRegistry --accounts ${factory}.`,
+      );
     }
 
     const roles = [{ role: await registry.FACTORY_APPROVER_ROLE(), name: "FACTORY_APPROVER_ROLE" }];
@@ -340,6 +343,65 @@ task("task:approveFactory", "Approve a factory as the root of a new tree in the 
       throw new Error(`The transaction executed but ${factory} is not an approved factory on the TaskManager list.`);
     }
     console.log(chalk.green(`${factory} is approved and on the TaskManager list.`));
+  });
+
+task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list into a FactoryRegistry tree")
+  .addParam("accounts", "Comma-separated addresses, all already on the TaskManager list")
+  .addOptionalParam("parent", "The registered parent; omit to adopt the accounts as approved factories")
+  .addOptionalParam("out", "Path for the Safe batch file, when one is written")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+    const { ethers } = hre;
+    const { registry, address } = await requireRegistry(hre);
+    const tm: any = await ethers.getContractAt("TaskManager", await registry.taskManager());
+    const parent = taskArguments.parent ? ethers.getAddress(taskArguments.parent) : address;
+    const accounts = [...new Set((taskArguments.accounts as string).split(",").map((a) => ethers.getAddress(a.trim())))];
+    if (parent !== address && (await registry.nodeOf(parent))[0] === ethers.ZeroAddress) {
+      throw new Error(`The parent ${parent} is not registered in FactoryRegistry ${address}.`);
+    }
+
+    const todo: string[] = [];
+    for (const account of accounts) {
+      const [now] = await registry.nodeOf(account);
+      if (now === parent) continue; // adopted on an earlier run
+      if (now !== ethers.ZeroAddress) throw new Error(`${account} is already registered under ${now}.`);
+      if (!(await tm.accessList(account))) throw new Error(`${account} is not on the TaskManager list. Use task:approveFactory or register instead.`);
+      todo.push(account);
+    }
+    if (todo.length === 0) {
+      console.log(chalk.green("Every account is already adopted - nothing to do."));
+      return;
+    }
+    console.log(chalk.yellow(`Adopting ${todo.length} account(s) under ${parent === address ? "the registry, as approved factories" : parent}.`));
+    console.log(chalk.yellow("Their tree can now remove them, and they can register contracts. Check that they belong to it."));
+
+    // Adoption makes no TaskManager call, but 500 nodes in one call would still pass the gas cap.
+    const calls: { to: string; data: string; what: string }[] = [];
+    for (let i = 0; i < todo.length; i += 100) {
+      const chunk = todo.slice(i, i + 100);
+      calls.push({
+        to: address,
+        data: registry.interface.encodeFunctionData("adopt", [parent, chunk]),
+        what: `adopt(${parent}, ${chunk.length} accounts)`,
+      });
+    }
+    const sender = await resolveSender(
+      hre,
+      registry,
+      [{ role: await registry.FACTORY_APPROVER_ROLE(), name: "FACTORY_APPROVER_ROLE" }],
+      `FactoryRegistry ${address}`,
+    );
+    const sent = await send(
+      hre,
+      sender,
+      calls,
+      { slug: "adopt", name: "CoFHE - adopt access-list entries into the FactoryRegistry", taskName: "task:adoptIntoRegistry" },
+      taskArguments.out,
+    );
+    if (!sent) return;
+    for (const account of todo) {
+      if ((await registry.nodeOf(account))[0] !== parent) throw new Error(`The transaction executed but ${account} is not under ${parent}.`);
+    }
+    console.log(chalk.green(`${todo.length} account(s) adopted under ${parent}.`));
   });
 
 task("task:unregisterFromRegistry", "Remove a contract and everything below it from the FactoryRegistry")
