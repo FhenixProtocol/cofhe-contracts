@@ -71,6 +71,86 @@ describe("FactoryRegistry", function () {
     });
   });
 
+  describe("adopt", function () {
+    it("moves a hand-listed factory and its contracts into one tree, with no gap in access", async function () {
+      const { tm, registry, owner, factory, worker, worker2 } = await loadFixture(deployFixture);
+      const registryAddress = await registry.getAddress();
+      await tm.connect(owner).addToAccessList([factory.address, worker.address, worker2.address]);
+
+      await expect(registry.connect(owner).adopt(registryAddress, [factory.address]))
+        .to.emit(registry, "FactoryApproved")
+        .withArgs(factory.address);
+      await expect(registry.connect(owner).adopt(factory.address, [worker.address, worker2.address]))
+        .to.emit(registry, "Registered")
+        .withArgs(worker.address, factory.address, factory.address)
+        .and.not.to.emit(tm, "AccessGranted");
+
+      expect(await registry.nodeOf(factory.address)).to.deep.equal([registryAddress, 0n]);
+      expect(await registry.nodeOf(worker2.address)).to.deep.equal([factory.address, 1n]);
+      expect(await registry.treeSizeOf(factory.address)).to.equal(2n);
+      expect(await canSendTask(tm, worker)).to.equal(true);
+
+      // The tree now owns the adopted entries: the factory can remove them.
+      await registry.connect(factory).unregister(worker.address);
+      expect(await tm.accessList(worker.address)).to.equal(false);
+      expect(await tm.accessList(worker2.address)).to.equal(true);
+    });
+
+    it("lets only FACTORY_APPROVER_ROLE adopt", async function () {
+      const { tm, registry, owner, factory, outsider } = await loadFixture(deployFixture);
+      await tm.connect(owner).addToAccessList([factory.address]);
+      await expect(registry.connect(outsider).adopt(await registry.getAddress(), [factory.address]))
+        .to.be.revertedWithCustomError(registry, "AccessControlUnauthorizedAccount")
+        .withArgs(outsider.address, await registry.FACTORY_APPROVER_ROLE());
+    });
+
+    it("rejects an address that is not on the list, already registered, or under an unknown parent", async function () {
+      const { tm, registry, owner, factory, worker, outsider } = await loadFixture(deployFixture);
+      const registryAddress = await registry.getAddress();
+      await expect(registry.connect(owner).adopt(registryAddress, [factory.address])).to.be.revertedWithCustomError(registry, "MustBeOnAccessList");
+
+      await registry.connect(owner).approveFactory(factory.address);
+      await registry.connect(factory).register([worker.address]);
+      await expect(registry.connect(owner).adopt(factory.address, [worker.address])).to.be.revertedWithCustomError(registry, "AlreadyRegistered");
+
+      await tm.connect(owner).addToAccessList([outsider.address]);
+      await expect(registry.connect(owner).adopt(outsider.address, [outsider.address])).to.be.revertedWithCustomError(registry, "NotRegistered");
+      await expect(registry.connect(owner).adopt(registryAddress, [registryAddress])).to.be.revertedWithCustomError(registry, "InvalidChild");
+      await expect(registry.connect(owner).adopt(factory.address, [ethers.ZeroAddress])).to.be.revertedWithCustomError(registry, "InvalidChild");
+      await expect(registry.connect(owner).adopt(factory.address, [outsider.address, outsider.address])).to.be.revertedWithCustomError(registry, "AlreadyRegistered");
+    });
+
+    it("rejects a node of another tree, and a parent at MAX_DEPTH", async function () {
+      const { tm, registry, owner, factory, otherFactory, worker } = await loadFixture(deployFixture);
+      await registry.connect(owner).approveFactory(factory.address);
+      await registry.connect(owner).approveFactory(otherFactory.address);
+      await registry.connect(otherFactory).register([worker.address]);
+      await expect(registry.connect(owner).adopt(factory.address, [worker.address])).to.be.revertedWithCustomError(registry, "AlreadyRegistered");
+
+      const chain = randomAddresses(8);
+      await tm.connect(owner).addToAccessList(chain);
+      let parent = factory.address;
+      for (const a of chain) {
+        await registry.connect(owner).adopt(parent, [a]);
+        parent = a;
+      }
+      const extra = randomAddresses(1);
+      await tm.connect(owner).addToAccessList(extra);
+      await expect(registry.connect(owner).adopt(parent, extra)).to.be.revertedWithCustomError(registry, "MaxDepthExceeded");
+    });
+
+    it("counts adopted contracts toward the tree size limit", async function () {
+      const { tm, registry, owner, factory } = await loadFixture(deployFixture);
+      await registry.connect(owner).approveFactory(factory.address);
+      for (let i = 0; i < 499; i += 100) await registry.connect(factory).register(randomAddresses(Math.min(100, 499 - i)));
+      const two = randomAddresses(2);
+      await tm.connect(owner).addToAccessList(two);
+      await expect(registry.connect(owner).adopt(factory.address, two)).to.be.revertedWithCustomError(registry, "TreeFull");
+      await registry.connect(owner).adopt(factory.address, [two[0]]);
+      expect(await registry.treeSizeOf(factory.address)).to.equal(500n);
+    });
+  });
+
   describe("register", function () {
     it("gives a registered child access; an unregistered caller stays blocked", async function () {
       const { tm, registry, owner, factory, worker, outsider } = await loadFixture(deployFixture);

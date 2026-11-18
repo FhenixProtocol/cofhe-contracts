@@ -47,6 +47,9 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
     /// @notice The registry now writes to `current` instead of `previous`.
     event TaskManagerSet(address indexed previous, address indexed current);
 
+    /// @notice adopt() got an address that is not on the TaskManager list.
+    error MustBeOnAccessList();
+
     /// @dev 27 bytes, one storage slot.
     struct Node {
         address parent; // zero: not registered; this registry: an approved factory (a root)
@@ -88,38 +91,30 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
 
     /// @notice Makes `factory` the root of a new tree and gives it FHE access.
     function approveFactory(address factory) external onlyRole(FACTORY_APPROVER_ROLE) {
-        _checkNewNode(factory);
-        _s().nodes[factory] = Node({parent: address(this), depth: 0, index: 0, treeSize: 0});
-        emit FactoryApproved(factory);
-
+        _makeRoot(factory, false);
         address[] memory one = new address[](1);
         one[0] = factory;
         _s().taskManager.addToAccessList(one);
     }
 
+    /// @notice Moves addresses that are already on the TaskManager list into a tree. The list does
+    ///         not change, so the addresses keep FHE access without a gap.
+    /// @dev    For migrating entries added by hand. With `parent` set to this registry, each address
+    ///         becomes a root. Adopted addresses become removable by everything above them, so check
+    ///         off-chain that they belong to that tree before adopting them. They can also register
+    ///         children, like any node: adopt only contracts you would approve as factories.
+    function adopt(address parent, address[] calldata accounts) external onlyRole(FACTORY_APPROVER_ROLE) {
+        if (parent == address(this)) {
+            for (uint256 i = 0; i < accounts.length; i++) _makeRoot(accounts[i], true);
+        } else {
+            _attach(parent, accounts, true);
+        }
+    }
+
     /// @inheritdoc IFactoryRegistry
     function register(address[] calldata children) external {
-        RegistryStorage storage $ = _s();
-        Node memory caller = $.nodes[msg.sender];
-        if (caller.parent == address(0)) revert NotRegistered();
-        if (caller.depth >= MAX_DEPTH) revert MaxDepthExceeded();
-
-        address root = _rootOf(msg.sender);
-        Node storage rootNode = $.nodes[root];
-        uint256 size = rootNode.treeSize + children.length;
-        if (size > MAX_TREE_SIZE) revert TreeFull();
-        rootNode.treeSize = uint16(size);
-
-        address[] storage list = $.childrenOf[msg.sender];
-        uint8 depth = caller.depth + 1;
-        for (uint256 i = 0; i < children.length; i++) {
-            address child = children[i];
-            _checkNewNode(child);
-            $.nodes[child] = Node({parent: msg.sender, depth: depth, index: uint32(list.length), treeSize: 0});
-            list.push(child);
-            emit Registered(child, msg.sender, root);
-        }
-        $.taskManager.addToAccessList(children);
+        _attach(msg.sender, children, false);
+        _s().taskManager.addToAccessList(children);
     }
 
     /// @inheritdoc IFactoryRegistry
@@ -169,14 +164,48 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
         emit TaskManagerSet(previous, address($.taskManager));
     }
 
-    /// @dev Shared by approval and registration, so a root gets the same protection as a child.
-    function _checkNewNode(address account) private view {
+    function _makeRoot(address account, bool listed) private {
+        _checkNewNode(account, listed);
+        _s().nodes[account] = Node({parent: address(this), depth: 0, index: 0, treeSize: 0});
+        emit FactoryApproved(account);
+    }
+
+    /// @dev Writes `children` below `parent` without touching the TaskManager list.
+    function _attach(address parent, address[] calldata children, bool listed) private {
+        RegistryStorage storage $ = _s();
+        Node memory p = $.nodes[parent];
+        if (p.parent == address(0)) revert NotRegistered();
+        if (p.depth >= MAX_DEPTH) revert MaxDepthExceeded();
+
+        address root = _rootOf(parent);
+        Node storage rootNode = $.nodes[root];
+        uint256 size = rootNode.treeSize + children.length;
+        if (size > MAX_TREE_SIZE) revert TreeFull();
+        rootNode.treeSize = uint16(size);
+
+        address[] storage list = $.childrenOf[parent];
+        uint8 depth = p.depth + 1;
+        for (uint256 i = 0; i < children.length; i++) {
+            address child = children[i];
+            _checkNewNode(child, listed);
+            $.nodes[child] = Node({parent: parent, depth: depth, index: uint32(list.length), treeSize: 0});
+            list.push(child);
+            emit Registered(child, parent, root);
+        }
+    }
+
+    /// @dev Shared by approval, registration and adoption, so a root gets the same protection as a child.
+    ///      `listed` says whether the account must already be on the TaskManager list (adoption) or
+    ///      must not be (everything else).
+    function _checkNewNode(address account, bool listed) private view {
         // The registry is every root's parent: as a node, its own ancestors would rank above every tree.
         if (account == address(0) || account == address(this)) revert InvalidChild();
         RegistryStorage storage $ = _s();
         if ($.nodes[account].parent != address(0)) revert AlreadyRegistered();
-        // Entries Fhenix added by hand stay Fhenix's: a tree must never be able to remove them.
-        if (IAccessListView(address($.taskManager)).accessList(account)) revert AlreadyOnAccessList();
+        bool onList = IAccessListView(address($.taskManager)).accessList(account);
+        // Entries Fhenix added by hand stay Fhenix's: only Fhenix can move them into a tree, by adoption.
+        if (onList && !listed) revert AlreadyOnAccessList();
+        if (!onList && listed) revert MustBeOnAccessList();
     }
 
     function _checkCaller(address target, address parent) private view {
