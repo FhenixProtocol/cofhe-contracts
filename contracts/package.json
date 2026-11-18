@@ -13,6 +13,7 @@
 	"files": [
 		"FHE.sol",
 		"ICofhe.sol",
+		"IFactoryRegistry.sol",
 		"internal/host-chain/contracts/ACPShareRegistry.sol",
 		"internal/host-chain/contracts/ACPTimestampRevoker.sol",
 		"internal/host-chain/contracts/Permissioned.sol"
