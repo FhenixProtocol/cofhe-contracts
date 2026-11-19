@@ -227,12 +227,13 @@ Check: the explorer shows the contract as verified.
 npx hardhat task:setSignersAsSafe --verifier <zk-verifier signer> --decrypt <teecryptor signer> --network <net>
 ```
 
-```text
-TaskManager.addToAccessList(accounts)   # an ACCESS_LIST_MANAGER_ROLE holder
-TaskManager.enable()                    # a PAUSER_ROLE holder
+```bash
+npx hardhat task:goLiveAsSafe --accounts <addr>[,<addr>...] --network <net>
 ```
 
-If the deploy ran with placeholder signers, set the production ones first: the task executes through the Safe with `SAFE_OWNER_KEY`, otherwise it writes a Transaction Builder batch (`task:setVerifierSignerAsSafe` / `task:setDecryptResultSignerAsSafe` set one at a time; full procedure in [set-signers-as-safe.md](set-signers-as-safe.md)). Then an `ACCESS_LIST_MANAGER_ROLE` holder calls `addToAccessList(accounts)` with the contracts allowed to create tasks (`task:addToAccessList --accounts <addr>[,<addr>...]` does this directly or through the Safe, same two paths), and a `PAUSER_ROLE` holder calls `enable()` on the TaskManager. Opens intake to those accounts.
+If the deploy ran with placeholder signers, set the production ones first: the signer task executes through the Safe with `SAFE_OWNER_KEY`, otherwise it writes a Transaction Builder batch (`task:setVerifierSignerAsSafe` / `task:setDecryptResultSignerAsSafe` set one at a time; full procedure in [set-signers-as-safe.md](set-signers-as-safe.md)). Then `task:goLiveAsSafe` checks the signers, ACL / PlaintextsStorage / share-registry wiring and access-list state before it calls `addToAccessList(accounts)` and `enable()` through the Safe. With `SAFE_OWNER_KEY` it executes the calls; otherwise it writes one Transaction Builder batch. Re-run the task after execution to verify.
+
+To access-list more contracts later, use `task:addToAccessList --accounts <addr>[,<addr>...] --network <net>`. For an emergency stop, the maintenance wallet runs `task:disableTaskManager --network <net>`; re-enable with `task:goLiveAsSafe`.
 
 Check: `verifierSigner()` and `decryptResultSigner()` are the production signers, `isEnabled()` is true and `accessList(account)` is true for each added account.
 
