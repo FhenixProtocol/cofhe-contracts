@@ -1,4 +1,7 @@
 import chalk from "chalk";
+import type { HardhatRuntimeEnvironment } from "hardhat/types";
+
+import { requireEnv } from "./env";
 
 /**
  * Grants every role a contract declares (any `*_ROLE` public constant in its ABI) to `account`.
@@ -264,4 +267,50 @@ export function requireDefaultAdminIsSignerOrUnset(
         `admin-signed steps.`,
     );
   }
+}
+
+/** Who sends a change that needs DEFAULT_ADMIN_ROLE: the signer, or the Safe at SAFE_ADMIN_ADDRESS. */
+export type DefaultAdminAuthority =
+  | { kind: "signer"; signer: any }
+  | { kind: "safe"; safeAddress: string; ownerSigner: any | null };
+
+/**
+ * Decides who can send a role change on `contract`, and refuses when that is nobody available here.
+ *
+ * Every `*_ROLE` is administered by DEFAULT_ADMIN_ROLE, so the sender has to hold it. Before the
+ * handover that is the deployer; afterwards it is the Safe, and the change has to go through it:
+ * `ownerSigner` is set from SAFE_OWNER_KEY when present, otherwise the caller writes a batch.
+ * `viaSafe` skips the signer, so the change goes through the Safe even if the signer could send it.
+ */
+export async function resolveDefaultAdminAuthority(
+  hre: HardhatRuntimeEnvironment,
+  contract: any,
+  viaSafe = false,
+): Promise<DefaultAdminAuthority> {
+  const { ethers } = hre;
+  const [signer] = viaSafe ? [] : await ethers.getSigners();
+  const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE();
+
+  if (signer && (await contract.hasRole(defaultAdminRole, signer.address))) {
+    return { kind: "signer", signer };
+  }
+
+  const safeAddress = ethers.getAddress(requireEnv("SAFE_ADMIN_ADDRESS"));
+  if (!(await contract.hasRole(defaultAdminRole, safeAddress))) {
+    const currentAdmin = await contract.defaultAdmin();
+    throw new Error(
+      viaSafe
+        ? `SAFE_ADMIN_ADDRESS (${safeAddress}) does not hold DEFAULT_ADMIN_ROLE on the TaskManager - ` +
+          `it is ${currentAdmin}. Was the handover step of the deployment run?`
+        : `Neither the signer (${signer?.address ?? "none"}) nor SAFE_ADMIN_ADDRESS (${safeAddress}) holds ` +
+          `DEFAULT_ADMIN_ROLE on the TaskManager - it is ${currentAdmin}. Run from the account ` +
+          `that does.`,
+    );
+  }
+  const ownerKey = process.env.SAFE_OWNER_KEY?.trim();
+  return {
+    kind: "safe",
+    safeAddress,
+    ownerSigner: ownerKey ? new ethers.Wallet(ownerKey, ethers.provider) : null,
+  };
 }

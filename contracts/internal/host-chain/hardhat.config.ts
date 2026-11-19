@@ -41,38 +41,48 @@ const ARBITRUM_ONE_RPC_URL = process.env.ARBITRUM_ONE_RPC_URL || "https://arbitr
 const accountsFrom = (...keys: (string | undefined)[]): string[] =>
   keys.filter((key): key is string => Boolean(key && key.trim()));
 
-// Mainnet deploys sign with DEPLOYER_PRIVATE_KEY only - there is no KEY2 / aggregator identity on mainnet.
-const mainnetAccounts = accountsFrom(process.env.DEPLOYER_PRIVATE_KEY);
+// Set LEDGER_ADDRESS to sign with a Ledger (task:addToAccessListWithLedger). The plugin is loaded
+// only then: it pulls in native USB bindings that CI and the docker images do not need.
+// The Ledger then replaces the private keys on the remote networks rather than joining them:
+// Hardhat's local-key signer rejects any sender it has no key for, so the two cannot be mixed.
+const ledgerAccounts = accountsFrom(process.env.LEDGER_ADDRESS);
+if (ledgerAccounts.length > 0) {
+  require("@nomicfoundation/hardhat-ledger");
+}
+const signersFrom = (...keys: (string | undefined)[]) =>
+  ledgerAccounts.length > 0 ? { ledgerAccounts } : { accounts: accountsFrom(...keys) };
 
+// Mainnet deploys sign with DEPLOYER_PRIVATE_KEY only - there is no KEY2 / aggregator identity on mainnet.
+const mainnetSigners = signersFrom(process.env.DEPLOYER_PRIVATE_KEY);
 
 const sepoliaConfig = {
     chainId: SEPOLIA_CHAIN_ID,
     url: SEPOLIA_RPC_URL,
-    accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    ...signersFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const arbitrumSepoliaConfig = {
     chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
     url: ARBITRUM_SEPOLIA_RPC_URL,
-    accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+    ...signersFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const baseSepoliaConfig = {
   chainId: BASE_SEPOLIA_CHAIN_ID,
   url: BASE_SEPOLIA_RPC_URL,
-  accounts: accountsFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
+  ...signersFrom(process.env.DEPLOYER_PRIVATE_KEY, process.env.KEY2), // Same address as used in Aggregator.js - should be in the .env file (not in .env.example)
 }
 
 const ethereumConfig = {
   chainId: ETHEREUM_CHAIN_ID,
   url: ETHEREUM_RPC_URL,
-  accounts: mainnetAccounts,
+  ...mainnetSigners,
 }
 
 const arbitrumOneConfig = {
   chainId: ARBITRUM_ONE_CHAIN_ID,
   url: ARBITRUM_ONE_RPC_URL,
-  accounts: mainnetAccounts,
+  ...mainnetSigners,
 }
 
 // Making sure we use different account in localfhenix -
