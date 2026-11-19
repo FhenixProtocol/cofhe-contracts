@@ -10,6 +10,7 @@ const TRACKED_CONTRACTS = [
   "ACL",
   "PlaintextsStorage",
   "ERC1967Proxy",
+  "FactoryRegistry",
 ];
 
 task(
