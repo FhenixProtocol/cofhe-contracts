@@ -415,6 +415,13 @@ task("task:unregisterFromRegistry", "Remove a contract and everything below it f
     if (parent === ethers.ZeroAddress) {
       throw new Error(`${target} is not registered in FactoryRegistry ${address}.`);
     }
+    const tm: any = await ethers.getContractAt("TaskManager", await registry.taskManager());
+    if (!(await tm.accessListEnabled())) {
+      // While the list is disabled the TaskManager checks only the deny list, so unregistering blocks nothing yet.
+      console.log(
+        chalk.yellow("The access list is disabled - unregistering blocks nothing now. To block now, use task:addToDenyList."),
+      );
+    }
     if (parent === address) {
       console.log(chalk.yellow(`${target} is an approved factory with ${await registry.treeSizeOf(target)} contracts below it.`));
     } else {

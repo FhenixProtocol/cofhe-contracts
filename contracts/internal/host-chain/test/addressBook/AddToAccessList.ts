@@ -7,6 +7,7 @@ import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { installAddressBook } from "../helpers/addressBook";
+import { logsOf } from "../helpers/logs";
 import { taskManagerId } from "../../utils/addressBook";
 
 const { ethers } = hre;
@@ -149,6 +150,17 @@ describe("task:addToAccessList", function () {
     await hre.run("task:removeFromAccessList", { accounts: `${first},${second}` });
     expect(await taskManager.accessList(second)).to.equal(false);
     await expectRejection(hre.run("task:removeFromAccessList", { accounts: ethers.ZeroAddress }), /address\(0\)/);
+  });
+
+  it("task:removeFromAccessList warns that a removal blocks nothing while the list is disabled", async function () {
+    await hre.run("task:addToAccessList", { accounts: first });
+    const disabled = await logsOf(() => hre.run("task:removeFromAccessList", { accounts: first }));
+    expect(disabled).to.match(/removal blocks nothing now.*task:addToDenyList/);
+
+    await (await taskManager.enableAccessList()).wait();
+    await hre.run("task:addToAccessList", { accounts: first });
+    const enabled = await logsOf(() => hre.run("task:removeFromAccessList", { accounts: first }));
+    expect(enabled).not.to.match(/blocks nothing/);
   });
 
   it("task:removeFromAccessList removes as the Safe, or writes a batch without SAFE_OWNER_KEY", async function () {

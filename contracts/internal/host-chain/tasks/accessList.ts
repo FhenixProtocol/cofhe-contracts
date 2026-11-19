@@ -51,8 +51,15 @@ async function changeAccessList(hre: HardhatRuntimeEnvironment, taskArguments: T
   const tmAddress = await resolveTaskManager(hre);
   const tm: any = await ethers.getContractAt("TaskManager", tmAddress);
   console.log(chalk.dim(`TaskManager: ${tmAddress} on ${hre.network.name}`));
-  if (add && !(await tm.accessListEnabled())) {
-    console.log(chalk.yellow("The access list is disabled - the accounts take effect once it is enabled."));
+  if (!(await tm.accessListEnabled())) {
+    // While the list is disabled the TaskManager checks only the deny list, so a removal blocks nothing yet.
+    console.log(
+      chalk.yellow(
+        add
+          ? "The access list is disabled - the accounts take effect once it is enabled."
+          : "The access list is disabled - removal blocks nothing now. To block now, use task:addToDenyList.",
+      ),
+    );
   }
 
   const pending: string[] = [];

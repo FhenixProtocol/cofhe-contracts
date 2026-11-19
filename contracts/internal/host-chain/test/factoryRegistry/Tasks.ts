@@ -7,6 +7,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 import { deployOnChainFixture } from "../onChain/OnChain.fixture";
 import { runsCurrentBuild } from "../../utils/upgrade";
+import { logsOf } from "../helpers/logs";
 
 const { ethers, upgrades } = hre;
 
@@ -161,6 +162,21 @@ describe("FactoryRegistry tasks", function () {
     expect(await tm.accessList(factory.address)).to.equal(false);
     expect(await tm.accessList(worker.address)).to.equal(false);
     await expectRejection(hre.run("task:unregisterFromRegistry", { target: other.address }), /not registered/);
+  });
+
+  it("warns that unregistering blocks nothing while the access list is disabled", async function () {
+    const { tm, owner, factory, worker } = await loadFixture(fixture);
+    const registry = await ready();
+    await hre.run("task:approveFactory", { factory: factory.address });
+    await (await registry.connect(factory).register([worker.address])).wait();
+
+    const enabled = await logsOf(() => hre.run("task:unregisterFromRegistry", { target: worker.address }));
+    expect(enabled).not.to.match(/blocks nothing/);
+
+    await (await registry.connect(factory).register([worker.address])).wait();
+    await (await tm.connect(owner).disableAccessList()).wait();
+    const disabled = await logsOf(() => hre.run("task:unregisterFromRegistry", { target: worker.address }));
+    expect(disabled).to.match(/unregistering blocks nothing now.*task:addToDenyList/);
   });
 
   it("grants and revokes REVOKER_ROLE for an ops key", async function () {
