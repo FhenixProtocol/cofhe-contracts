@@ -44,7 +44,9 @@ jobs:
           title: 'Update Submodule from cofhe-contracts'
           body: |
             Updated submodule from cofhe-contracts push to [master](https://github.com/fhenixprotocol/cofhe-contracts/commit/${{ github.sha }})
+          # skip-changelog: cofhe's merge-gatekeeper accepts a pin-only PR without a changelog.d entry.
           labels: |
             report
             automated pr
+            skip-changelog
           draft: false
