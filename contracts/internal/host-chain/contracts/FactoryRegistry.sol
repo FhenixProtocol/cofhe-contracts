@@ -47,7 +47,7 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
     /// @notice The registry now writes to `current` instead of `previous`.
     event TaskManagerSet(address indexed previous, address indexed current);
 
-    /// @notice adopt() got an address that is not on the TaskManager list.
+    /// @notice adopt() or adoptFactories() got an address that is not on the TaskManager list.
     error MustBeOnAccessList();
 
     /// @dev 27 bytes, one storage slot.
@@ -97,18 +97,21 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
         _s().taskManager.addToAccessList(one);
     }
 
-    /// @notice Moves addresses that are already on the TaskManager list into a tree. The list does
-    ///         not change, so the addresses keep FHE access without a gap.
-    /// @dev    For migrating entries added by hand. With `parent` set to this registry, each address
-    ///         becomes a root. Adopted addresses become removable by everything above them, so check
-    ///         off-chain that they belong to that tree before adopting them. They can also register
-    ///         children, like any node: adopt only contracts you would approve as factories.
+    /// @notice Makes addresses that are already on the TaskManager list approved factories (roots).
+    ///         The list does not change, so they keep FHE access without a gap.
+    /// @dev    For migrating factories added by hand. Approve only factories you would approve with
+    ///         approveFactory: a root can register contracts.
+    function adoptFactories(address[] calldata factories) external onlyRole(FACTORY_APPROVER_ROLE) {
+        for (uint256 i = 0; i < factories.length; i++) _makeRoot(factories[i], true);
+    }
+
+    /// @notice Moves addresses that are already on the TaskManager list below `parent`. The list does
+    ///         not change, so they keep FHE access without a gap.
+    /// @dev    For migrating contracts added by hand. Adopted addresses become removable by everything
+    ///         above them, so check off-chain that they belong to that tree before adopting them. They
+    ///         can also register children, like any node.
     function adopt(address parent, address[] calldata accounts) external onlyRole(FACTORY_APPROVER_ROLE) {
-        if (parent == address(this)) {
-            for (uint256 i = 0; i < accounts.length; i++) _makeRoot(accounts[i], true);
-        } else {
-            _attach(parent, accounts, true);
-        }
+        _attach(parent, accounts, true);
     }
 
     /// @inheritdoc IFactoryRegistry

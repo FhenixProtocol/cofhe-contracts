@@ -77,7 +77,7 @@ describe("FactoryRegistry", function () {
       const registryAddress = await registry.getAddress();
       await tm.connect(owner).addToAccessList([factory.address, worker.address, worker2.address]);
 
-      await expect(registry.connect(owner).adopt(registryAddress, [factory.address]))
+      await expect(registry.connect(owner).adoptFactories([factory.address]))
         .to.emit(registry, "FactoryApproved")
         .withArgs(factory.address);
       await expect(registry.connect(owner).adopt(factory.address, [worker.address, worker2.address]))
@@ -97,17 +97,22 @@ describe("FactoryRegistry", function () {
     });
 
     it("lets only FACTORY_APPROVER_ROLE adopt", async function () {
-      const { tm, registry, owner, factory, outsider } = await loadFixture(deployFixture);
-      await tm.connect(owner).addToAccessList([factory.address]);
-      await expect(registry.connect(outsider).adopt(await registry.getAddress(), [factory.address]))
+      const { tm, registry, owner, factory, worker, outsider } = await loadFixture(deployFixture);
+      const role = await registry.FACTORY_APPROVER_ROLE();
+      await tm.connect(owner).addToAccessList([factory.address, worker.address]);
+      await expect(registry.connect(outsider).adoptFactories([factory.address]))
         .to.be.revertedWithCustomError(registry, "AccessControlUnauthorizedAccount")
-        .withArgs(outsider.address, await registry.FACTORY_APPROVER_ROLE());
+        .withArgs(outsider.address, role);
+      await registry.connect(owner).adoptFactories([factory.address]);
+      await expect(registry.connect(outsider).adopt(factory.address, [worker.address]))
+        .to.be.revertedWithCustomError(registry, "AccessControlUnauthorizedAccount")
+        .withArgs(outsider.address, role);
     });
 
     it("rejects an address that is not on the list, already registered, or under an unknown parent", async function () {
       const { tm, registry, owner, factory, worker, outsider } = await loadFixture(deployFixture);
       const registryAddress = await registry.getAddress();
-      await expect(registry.connect(owner).adopt(registryAddress, [factory.address])).to.be.revertedWithCustomError(registry, "MustBeOnAccessList");
+      await expect(registry.connect(owner).adoptFactories([factory.address])).to.be.revertedWithCustomError(registry, "MustBeOnAccessList");
 
       await registry.connect(owner).approveFactory(factory.address);
       await registry.connect(factory).register([worker.address]);
@@ -115,7 +120,10 @@ describe("FactoryRegistry", function () {
 
       await tm.connect(owner).addToAccessList([outsider.address]);
       await expect(registry.connect(owner).adopt(outsider.address, [outsider.address])).to.be.revertedWithCustomError(registry, "NotRegistered");
-      await expect(registry.connect(owner).adopt(registryAddress, [registryAddress])).to.be.revertedWithCustomError(registry, "InvalidChild");
+      await expect(registry.connect(owner).adoptFactories([registryAddress])).to.be.revertedWithCustomError(registry, "InvalidChild");
+      await expect(registry.connect(owner).adoptFactories([outsider.address, outsider.address])).to.be.revertedWithCustomError(registry, "AlreadyRegistered");
+      // Roots go through adoptFactories only: the registry is not a node, so it cannot be a parent.
+      await expect(registry.connect(owner).adopt(registryAddress, [outsider.address])).to.be.revertedWithCustomError(registry, "NotRegistered");
       await expect(registry.connect(owner).adopt(factory.address, [ethers.ZeroAddress])).to.be.revertedWithCustomError(registry, "InvalidChild");
       await expect(registry.connect(owner).adopt(factory.address, [outsider.address, outsider.address])).to.be.revertedWithCustomError(registry, "AlreadyRegistered");
     });
