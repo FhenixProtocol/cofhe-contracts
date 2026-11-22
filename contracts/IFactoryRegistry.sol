@@ -17,6 +17,8 @@ interface IFactoryRegistry {
 
     /// @notice The caller, or the target, is not registered.
     error NotRegistered();
+    /// @notice The caller is registered but not on the CoFHE access list, so it cannot give access to others.
+    error CallerNotOnAccessList();
     /// @notice The child is the zero address or the registry itself.
     error InvalidChild();
     /// @notice The child already has a parent.
