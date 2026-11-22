@@ -157,6 +157,36 @@ describe("FactoryRegistry", function () {
       await registry.connect(owner).adopt(factory.address, [two[0]]);
       expect(await registry.treeSizeOf(factory.address)).to.equal(500n);
     });
+
+    it("adopts roots with no TaskManager call; an adopted child registers its own children", async function () {
+      const { tm, registry, owner, factory, sub, worker } = await loadFixture(deployFixture);
+      await tm.connect(owner).addToAccessList([factory.address, sub.address]);
+      await expect(registry.connect(owner).adoptFactories([factory.address])).not.to.emit(tm, "AccessGranted");
+      await registry.connect(owner).adopt(factory.address, [sub.address]);
+
+      await expect(registry.connect(sub).register([worker.address]))
+        .to.emit(registry, "Registered")
+        .withArgs(worker.address, sub.address, factory.address);
+      expect(await registry.nodeOf(worker.address)).to.deep.equal([sub.address, 2n]);
+      expect(await tm.accessList(worker.address)).to.equal(true);
+      expect(await registry.treeSizeOf(factory.address)).to.equal(2n);
+    });
+
+    it("unregisters an adopted root with its whole subtree", async function () {
+      const { tm, registry, owner, factory, sub, worker } = await loadFixture(deployFixture);
+      await tm.connect(owner).addToAccessList([factory.address, sub.address]);
+      await registry.connect(owner).adoptFactories([factory.address]);
+      await registry.connect(owner).adopt(factory.address, [sub.address]);
+      await registry.connect(sub).register([worker.address]);
+
+      await expect(registry.connect(owner).unregister(factory.address))
+        .to.emit(registry, "Unregistered")
+        .withArgs(factory.address, owner.address, 3n);
+      for (const a of [factory.address, sub.address, worker.address]) {
+        expect(await tm.accessList(a)).to.equal(false);
+        expect((await registry.nodeOf(a))[0]).to.equal(ethers.ZeroAddress);
+      }
+    });
   });
 
   describe("register", function () {
