@@ -22,6 +22,7 @@ interface IFactoryRegistry {
     /// @notice The child already has a parent.
     error AlreadyRegistered();
     /// @notice The child is already on the CoFHE access list, for example added by Fhenix by hand.
+    ///         To register it under the FactoryRegistry, ask Fhenix to adopt it.
     error AlreadyOnAccessList();
     /// @notice The child would sit more than `MAX_DEPTH` levels below its approved factory.
     error MaxDepthExceeded();
