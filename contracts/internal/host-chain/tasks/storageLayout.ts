@@ -16,7 +16,14 @@ import {
   type StorageLayout,
 } from "@openzeppelin/upgrades-core";
 
-const TRACKED_CONTRACTS = ["TaskManager", "ACL", "PlaintextsStorage", "ACPShareRegistry", "CoFHEAddressBook"];
+const TRACKED_CONTRACTS = [
+  "TaskManager",
+  "ACL",
+  "PlaintextsStorage",
+  "ACPShareRegistry",
+  "CoFHEAddressBook",
+  "FactoryRegistry",
+];
 
 const SNAPSHOT_FILE = "storage-layout-snapshot.json";
 
@@ -94,6 +101,10 @@ export async function validateUpgrade(
 
 task("task:storage-layout","Extract and validate storage layout snapshot")
   .addFlag("check", "Check current layout is upgrade-compatible with snapshot")
+  .addOptionalParam(
+    "contract",
+    "Write the entry of this one contract and keep the others as committed (for a newly deployed contract)",
+  )
   .setAction(async function (taskArguments, hre) {
     await hre.run("compile");
 
@@ -153,6 +164,17 @@ task("task:storage-layout","Extract and validate storage layout snapshot")
         );
         process.exit(1);
       }
+    } else if (taskArguments.contract) {
+      // A full rewrite would also move every other baseline to this branch's source, which is
+      // wrong whenever the branch holds an undeployed change to another contract.
+      const name: string = taskArguments.contract;
+      if (!TRACKED_CONTRACTS.includes(name)) {
+        throw new Error(`${name} is not tracked. Add it to TRACKED_CONTRACTS in tasks/storageLayout.ts first.`);
+      }
+      const snapshot: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
+      snapshot.contracts[name] = layouts[name];
+      fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2) + "\n");
+      console.log(chalk.green(`Storage layout snapshot: wrote ${name} only, kept the other entries.`));
     } else {
       const snapshot: Snapshot = { version: 1, contracts: layouts };
       fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2) + "\n");
