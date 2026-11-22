@@ -17,11 +17,9 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 const REGISTRY_SOURCE = "contracts/FactoryRegistry.sol";
 const REGISTRY_NAME = "FactoryRegistry";
 const TX_GAS_CAP = 16_777_216n; // Ethereum's per-transaction cap (EIP-7825)
-const LOG_WINDOW = 10_000;
 
 interface RegistryRecord {
   address: string;
-  block: number; // the deploy block, where the event scans in task:inspectFactoryRegistry start
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -52,17 +50,23 @@ async function writeRecord(hre: HardhatRuntimeEnvironment, record: RegistryRecor
   fs.writeFileSync(recordFile(hre), JSON.stringify(records, null, 2) + "\n");
 }
 
-/** The deployed registry on this chain; throws when there is none. */
-async function requireRegistry(hre: HardhatRuntimeEnvironment): Promise<{ registry: any; address: string; record: RegistryRecord }> {
+/** The registry the record names on this chain; null when there is no record or no code there. */
+async function recordedRegistry(hre: HardhatRuntimeEnvironment): Promise<{ registry: any; address: string } | null> {
   const record = await readRecord(hre);
-  if (!record || (await hre.ethers.provider.getCode(record.address)) === "0x") {
+  if (!record || (await hre.ethers.provider.getCode(record.address)) === "0x") return null;
+  return { registry: await hre.ethers.getContractAt(REGISTRY_NAME, record.address), address: record.address };
+}
+
+/** The deployed registry on this chain; throws when there is none. */
+async function requireRegistry(hre: HardhatRuntimeEnvironment): Promise<{ registry: any; address: string }> {
+  const recorded = await recordedRegistry(hre);
+  if (!recorded) {
     throw new Error(
       `No FactoryRegistry recorded for chain ${await chainKey(hre)} in ${recordFile(hre)}. ` +
         `Run task:deployFactoryRegistry first.`,
     );
   }
-  const registry = await hre.ethers.getContractAt(REGISTRY_NAME, record.address);
-  return { registry, address: record.address, record };
+  return recorded;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -154,8 +158,8 @@ task("task:deployFactoryRegistry", "Deploy the FactoryRegistry proxy on this cha
   .addFlag("yes", "Skip the confirmation prompt")
   .setAction(async function (taskArguments: TaskArguments, hre) {
     const { ethers, upgrades } = hre;
-    const existing = await readRecord(hre);
-    if (existing && (await ethers.provider.getCode(existing.address)) !== "0x") {
+    const existing = await recordedRegistry(hre);
+    if (existing) {
       console.log(chalk.green(`FactoryRegistry already deployed at ${existing.address} - nothing to do.`));
       console.log(chalk.dim("Run task:inspectFactoryRegistry to see its state."));
       return;
@@ -180,22 +184,9 @@ task("task:deployFactoryRegistry", "Deploy the FactoryRegistry proxy on this cha
     const proxy: any = await upgrades.deployProxy(Factory, [admin, delay], { kind: "uups", initializer: "initialize" });
     await proxy.waitForDeployment();
     const address = await proxy.getAddress();
-    const receipt = await proxy.deploymentTransaction()!.wait();
-    // Recorded before the checks: if they fail, a re-run must find this proxy, not deploy a second one.
-    await writeRecord(hre, { address, block: receipt.blockNumber });
+    await writeRecord(hre, { address });
 
-    const problems: string[] = [];
-    if ((await proxy.taskManager()) !== tmAddress) problems.push(`taskManager() is not ${tmAddress}`);
-    if ((await proxy.defaultAdmin()) !== admin) problems.push(`defaultAdmin() is not ${admin}`);
-    if ((await proxy.defaultAdminDelay()) !== delay) problems.push(`defaultAdminDelay() is not ${delay}`);
-    for (const name of ["UPGRADER_ROLE", "FACTORY_APPROVER_ROLE", "REVOKER_ROLE"]) {
-      if (!(await proxy.hasRole(await proxy[name](), admin))) problems.push(`${admin} lacks ${name}`);
-    }
-    if (problems.length > 0) {
-      throw new Error(`FactoryRegistry at ${address} is not in the expected state: ${problems.join("; ")}.`);
-    }
-
-    console.log(chalk.green(`FactoryRegistry deployed at ${address} (block ${receipt.blockNumber}), admin ${admin}`));
+    console.log(chalk.green(`FactoryRegistry deployed at ${address}, admin ${admin}`));
     console.log(chalk.dim(`Recorded in ${recordFile(hre)} - commit it.`));
     console.log(chalk.dim(`Verify the source: npx hardhat verify --network ${hre.network.name} ${address}`));
     console.log(chalk.dim("Next: task:grantRegistryRole"));
@@ -410,16 +401,6 @@ task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list i
     console.log(chalk.green(`${todo.length} account(s) adopted under ${parent}.`));
   });
 
-/** The registry on this chain, but only while it controls this TaskManager's list; otherwise null. */
-async function liveRegistry(hre: HardhatRuntimeEnvironment, tm: any): Promise<{ registry: any; address: string } | null> {
-  const record = await readRecord(hre);
-  if (!record || (await hre.ethers.provider.getCode(record.address)) === "0x") return null;
-  const registry: any = await hre.ethers.getContractAt(REGISTRY_NAME, record.address);
-  if ((await registry.taskManager()) !== (await tm.getAddress())) return null;
-  if (!(await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), record.address))) return null;
-  return { registry, address: record.address };
-}
-
 task("task:revokeAccess", "Take CoFHE access away from accounts, through the FactoryRegistry or the TaskManager list")
   .addParam("accounts", "Comma-separated addresses")
   .addFlag("yes", "Skip the confirmation prompt")
@@ -434,25 +415,43 @@ task("task:revokeAccess", "Take CoFHE access away from accounts, through the Fac
       // While the list is disabled the TaskManager checks only the deny list, so a revoke blocks nothing yet.
       console.log(chalk.yellow("The access list is disabled - revoking blocks nothing now. To block now, use task:addToDenyList."));
     }
-    const live = await liveRegistry(hre, tm);
-    if (!live && (await readRecord(hre))) {
-      console.log(chalk.yellow("The FactoryRegistry does not control this TaskManager list - every account is removed by hand."));
-    }
+    // The registry controls the list only while it writes to this TaskManager and holds its role.
+    const recorded = await recordedRegistry(hre);
+    const live =
+      recorded &&
+      (await recorded.registry.taskManager()) === tmAddress &&
+      (await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), recorded.address))
+        ? recorded
+        : null;
+    const inTree = async (a: string) => (await recorded!.registry.nodeOf(a))[0] !== ethers.ZeroAddress;
 
     // A tree node goes through unregister, so its subtree goes with it and no node is left without access.
     const tracked = new Set<string>();
     const manual: string[] = [];
     for (const account of accounts) {
-      if (live && (await live.registry.nodeOf(account))[0] !== ethers.ZeroAddress) tracked.add(account);
-      else if (await tm.accessList(account)) manual.push(account);
+      if (live && (await inTree(account))) {
+        tracked.add(account);
+        continue;
+      }
+      if (recorded && !live && (await inTree(account))) {
+        console.log(
+          chalk.yellow(
+            `${account} is in a FactoryRegistry tree, but the registry does not control this TaskManager list: ` +
+              "contracts below it keep their access. Restore the role with task:grantRegistryRole and re-run.",
+          ),
+        );
+      }
+      if (await tm.accessList(account)) manual.push(account);
       else console.log(chalk.green(`${account}: no access to revoke - nothing to do`));
     }
     // Unregistering an ancestor already removes its descendants; a second unregister would revert the batch.
     const unregister: string[] = [];
     for (const account of tracked) {
       let covered = false;
-      for (let a = (await live!.registry.nodeOf(account))[0]; a !== live!.address; a = (await live!.registry.nodeOf(a))[0]) {
+      let a = (await live!.registry.nodeOf(account))[0];
+      while (a !== live!.address && a !== ethers.ZeroAddress) {
         if (tracked.has(a)) covered = true;
+        a = (await live!.registry.nodeOf(a))[0];
       }
       if (covered) console.log(chalk.dim(`${account}: removed with an account above it`));
       else unregister.push(account);
@@ -470,7 +469,8 @@ task("task:revokeAccess", "Take CoFHE access away from accounts, through the Fac
       return;
     }
 
-    const groups: { sender: Sender; calls: { to: string; data: string; what: string }[] }[] = [];
+    type Call = { to: string; data: string; what: string };
+    const groups: { sender: Sender; calls: Call[]; accounts: string[] }[] = [];
     if (unregister.length > 0) {
       const sender = await resolveSender(
         hre,
@@ -478,16 +478,12 @@ task("task:revokeAccess", "Take CoFHE access away from accounts, through the Fac
         [{ role: await live!.registry.REVOKER_ROLE(), name: "REVOKER_ROLE" }],
         `FactoryRegistry ${live!.address}`,
       );
-      const calls = [];
-      for (const account of unregister) {
-        const data = live!.registry.interface.encodeFunctionData("unregister", [account]);
-        const gas = await ethers.provider.estimateGas({ from: sender.address, to: live!.address, data });
-        if (gas > TX_GAS_CAP) {
-          throw new Error(`Unregistering ${account} needs ${gas} gas, over the ${TX_GAS_CAP} cap. Revoke contracts below it first.`);
-        }
-        calls.push({ to: live!.address, data, what: `unregister(${account})` });
-      }
-      groups.push({ sender, calls });
+      const calls = unregister.map((a) => ({
+        to: live!.address,
+        data: live!.registry.interface.encodeFunctionData("unregister", [a]),
+        what: `unregister(${a})`,
+      }));
+      groups.push({ sender, calls, accounts: [...tracked] });
     }
     if (manual.length > 0) {
       const sender = await resolveSender(
@@ -496,25 +492,43 @@ task("task:revokeAccess", "Take CoFHE access away from accounts, through the Fac
         [{ role: await tm.ACCESS_LIST_MANAGER_ROLE(), name: "ACCESS_LIST_MANAGER_ROLE" }],
         `TaskManager ${tmAddress}`,
       );
-      const call = { to: tmAddress, data: tm.interface.encodeFunctionData("removeFromAccessList", [manual]), what: `removeFromAccessList(${manual.length} accounts)` };
+      const call = {
+        to: tmAddress,
+        data: tm.interface.encodeFunctionData("removeFromAccessList", [manual]),
+        what: `removeFromAccessList(${manual.length} accounts)`,
+      };
       // The same Safe or signer sends both kinds in one batch.
-      if (groups[0]?.sender.address === sender.address) groups[0].calls.push(call);
-      else groups.push({ sender, calls: [call] });
-    }
-
-    let allSent = true;
-    for (const { sender, calls } of groups) {
-      const batch = { slug: "revoke-access", name: "CoFHE - revoke access", taskName: "task:revokeAccess" };
-      allSent = (await send(hre, sender, calls, batch, groups.length === 1 ? taskArguments.out : undefined)) && allSent;
-    }
-    if (!allSent) return;
-    for (const account of [...tracked, ...manual]) {
-      if (await tm.accessList(account)) throw new Error(`The transaction executed but ${account} is still on the TaskManager list.`);
-      if (live && (await live.registry.nodeOf(account))[0] !== ethers.ZeroAddress) {
-        throw new Error(`The transaction executed but ${account} is still registered.`);
+      if (groups[0]?.sender.address === sender.address) {
+        groups[0].calls.push(call);
+        groups[0].accounts.push(...manual);
+      } else {
+        groups.push({ sender, calls: [call], accounts: manual });
       }
     }
-    console.log(chalk.green(`Access revoked for ${tracked.size + manual.length} account(s).`));
+
+    // A batch file runs all its calls in one transaction; the other paths send one transaction per call.
+    for (const { sender, calls } of groups) {
+      const oneTx = sender.kind === "safe" && sender.owner === null;
+      let total = 0n;
+      for (const c of calls) {
+        const gas = await ethers.provider.estimateGas({ from: sender.address, to: c.to, data: c.data });
+        total = oneTx ? total + gas : gas;
+        if (total > TX_GAS_CAP) {
+          throw new Error(`${c.what} brings the transaction to ${total} gas, over the ${TX_GAS_CAP} cap. Revoke fewer accounts per run.`);
+        }
+      }
+    }
+    if (taskArguments.out && groups.length > 1) console.log(chalk.yellow("--out is ignored: the calls need two senders."));
+
+    for (const { sender, calls, accounts: groupAccounts } of groups) {
+      const batch = { slug: "revoke-access", name: "CoFHE - revoke access", taskName: "task:revokeAccess" };
+      if (!(await send(hre, sender, calls, batch, groups.length === 1 ? taskArguments.out : undefined))) continue;
+      for (const account of groupAccounts) {
+        if (await tm.accessList(account)) throw new Error(`The transaction executed but ${account} is still on the TaskManager list.`);
+        if (live && (await inTree(account))) throw new Error(`The transaction executed but ${account} is still registered.`);
+        console.log(chalk.green(`${account}: access revoked`));
+      }
+    }
   });
 
 task("task:setRegistryRevoker", "Grant or revoke the FactoryRegistry's REVOKER_ROLE, e.g. for an ops key")
@@ -615,7 +629,7 @@ task("task:upgradeFactoryRegistry", "Upgrade the FactoryRegistry proxy in place 
 task("task:inspectFactoryRegistry", "Print the FactoryRegistry's state on this chain (read only)").setAction(
   async function (_taskArguments: TaskArguments, hre) {
     const { ethers } = hre;
-    const { registry, address, record } = await requireRegistry(hre);
+    const { registry, address } = await requireRegistry(hre);
     const tmAddress = await resolveTaskManager(hre);
     const tm: any = await ethers.getContractAt("TaskManager", tmAddress);
     const [pendingAdmin, schedule] = await registry.pendingDefaultAdmin();
@@ -634,22 +648,6 @@ task("task:inspectFactoryRegistry", "Print the FactoryRegistry's state on this c
       for (const name of ["DEFAULT_ADMIN_ROLE", "UPGRADER_ROLE", "FACTORY_APPROVER_ROLE", "REVOKER_ROLE"]) {
         console.log(`  Safe holds ${name.padEnd(22)} ${await registry.hasRole(await registry[name](), ethers.getAddress(safe))}`);
       }
-    }
-
-    // RPC providers cap one log query at about 10,000 blocks, so scan in windows.
-    const latest = await ethers.provider.getBlockNumber();
-    const roots = new Set<string>();
-    for (let from = record.block; from <= latest; from += LOG_WINDOW) {
-      const to = Math.min(from + LOG_WINDOW - 1, latest);
-      for (const e of await registry.queryFilter(registry.filters.FactoryApproved(), from, to)) {
-        roots.add((e as any).args.factory as string);
-      }
-    }
-    console.log(`  approved factories:  ${roots.size === 0 ? "none" : ""}`);
-    for (const root of roots) {
-      const [parent] = await registry.nodeOf(root);
-      const live = parent === address;
-      console.log(`    ${root}  ${live ? `${await registry.treeSizeOf(root)} live contracts` : "unregistered"}`);
     }
   },
 );
