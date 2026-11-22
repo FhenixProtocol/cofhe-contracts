@@ -42,7 +42,7 @@ function readRecords(hre: HardhatRuntimeEnvironment): Record<string, RegistryRec
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
 }
 
-async function readRecord(hre: HardhatRuntimeEnvironment): Promise<RegistryRecord | null> {
+export async function readRecord(hre: HardhatRuntimeEnvironment): Promise<RegistryRecord | null> {
   return readRecords(hre)[await chainKey(hre)] ?? null;
 }
 
@@ -362,7 +362,13 @@ task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list i
     const todo: string[] = [];
     for (const account of accounts) {
       const [now] = await registry.nodeOf(account);
-      if (now === parent) continue; // adopted on an earlier run
+      if (now === parent) {
+        // Adopted on an earlier run; flag it if someone took it off the list by hand since.
+        if (!(await tm.accessList(account))) {
+          console.log(chalk.yellow(`${account} is adopted but no longer on the TaskManager list. Unregister it, or add it back by hand.`));
+        }
+        continue;
+      }
       if (now !== ethers.ZeroAddress) throw new Error(`${account} is already registered under ${now}.`);
       if (!(await tm.accessList(account))) throw new Error(`${account} is not on the TaskManager list. Use task:approveFactory or register instead.`);
       todo.push(account);
@@ -374,19 +380,21 @@ task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list i
     console.log(chalk.yellow(`Adopting ${todo.length} account(s) under ${parent === address ? "the registry, as approved factories" : parent}.`));
     console.log(chalk.yellow("Their tree can now remove them, and they can register contracts. Check that they belong to it."));
 
-    // Adoption makes no TaskManager call, but 500 nodes in one call would still pass the gas cap.
-    const calls: { to: string; data: string; what: string }[] = [];
-    for (let i = 0; i < todo.length; i += 100) {
-      const chunk = todo.slice(i, i + 100);
-      calls.push({
-        to: address,
-        data:
-          parent === address
-            ? registry.interface.encodeFunctionData("adoptFactories", [chunk])
-            : registry.interface.encodeFunctionData("adopt", [parent, chunk]),
-        what: parent === address ? `adoptFactories(${chunk.length} accounts)` : `adopt(${parent}, ${chunk.length} accounts)`,
-      });
-    }
+    // shortcut: one call, about 53k gas per account (250 measured at 13.3M); past about 300 accounts it
+    // passes Ethereum's 2^24 per-transaction cap, so split the list then.
+    const calls = [
+      parent === address
+        ? {
+            to: address,
+            data: registry.interface.encodeFunctionData("adoptFactories", [todo]),
+            what: `adoptFactories(${todo.length} accounts)`,
+          }
+        : {
+            to: address,
+            data: registry.interface.encodeFunctionData("adopt", [parent, todo]),
+            what: `adopt(${parent}, ${todo.length} accounts)`,
+          },
+    ];
     const sender = await resolveSender(
       hre,
       registry,

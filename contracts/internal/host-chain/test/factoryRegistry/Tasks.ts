@@ -128,6 +128,28 @@ describe("FactoryRegistry tasks", function () {
     await expectRejection(hre.run("task:adoptIntoRegistry", { accounts: other.address, parent: factory.address }), /not on the TaskManager list/);
   });
 
+  it("refuses to remove a registered account by hand, pointing to unregister", async function () {
+    const { tm, factory, worker } = await loadFixture(fixture);
+    const registry = await ready();
+    await hre.run("task:approveFactory", { factory: factory.address });
+    await (await registry.connect(factory).register([worker.address])).wait();
+
+    await expectRejection(hre.run("task:removeFromAccessList", { accounts: worker.address }), /task:unregisterFromRegistry --target/);
+    expect(await tm.accessList(worker.address)).to.equal(true);
+  });
+
+  it("warns when an adopted account has since left the list", async function () {
+    const { tm, owner, factory, worker } = await loadFixture(fixture);
+    await ready();
+    await (await tm.connect(owner).addToAccessList([factory.address, worker.address])).wait();
+    await hre.run("task:adoptIntoRegistry", { accounts: factory.address });
+    await hre.run("task:adoptIntoRegistry", { accounts: worker.address, parent: factory.address });
+    await (await tm.connect(owner).removeFromAccessList([worker.address])).wait();
+
+    const logs = await logsOf(() => hre.run("task:adoptIntoRegistry", { accounts: worker.address, parent: factory.address }));
+    expect(logs).to.match(/adopted but no longer on the TaskManager list/);
+  });
+
   it("takes back a squatted factory address only as one atomic Safe batch", async function () {
     const { owner, factory, other } = await loadFixture(fixture);
     const safe = ethers.Wallet.createRandom().connect(ethers.provider);

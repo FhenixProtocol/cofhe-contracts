@@ -6,6 +6,7 @@ import chalk from "chalk";
 
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { resolveTaskManager } from "../utils/addressBook";
+import { readRecord } from "./factoryRegistry";
 
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "../.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
@@ -62,8 +63,21 @@ async function changeAccessList(hre: HardhatRuntimeEnvironment, taskArguments: T
     );
   }
 
+  const record = add ? null : await readRecord(hre);
+  const registry: any =
+    record && (await ethers.provider.getCode(record.address)) !== "0x"
+      ? await ethers.getContractAt("FactoryRegistry", record.address)
+      : null;
+
   const pending: string[] = [];
   for (const account of accounts) {
+    // A removal by hand would leave the node in its tree, where it can still register contracts.
+    if (registry && (await registry.nodeOf(account))[0] !== ethers.ZeroAddress) {
+      throw new Error(
+        `${account} is in a FactoryRegistry tree. Run task:unregisterFromRegistry --target ${account} instead. ` +
+          `It also removes every contract below ${account}.`,
+      );
+    }
     if ((await tm.accessList(account)) === add) {
       console.log(chalk.green(`${account}: already ${add ? "on" : "off"} the access list - nothing to do`));
       continue;
