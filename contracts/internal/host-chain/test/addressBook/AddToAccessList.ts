@@ -7,7 +7,6 @@ import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { installAddressBook } from "../helpers/addressBook";
-import { logsOf } from "../helpers/logs";
 import { taskManagerId } from "../../utils/addressBook";
 
 const { ethers } = hre;
@@ -139,45 +138,6 @@ describe("task:addToAccessList", function () {
     await handRoleToSafe();
     process.env.SAFE_ADMIN_ADDRESS = ethers.Wallet.createRandom().address;
     await expectRejection(hre.run("task:addToAccessList", { accounts: first }), /ACCESS_LIST_MANAGER_ROLE/);
-  });
-
-  it("task:removeFromAccessList removes listed contracts and skips the others", async function () {
-    await hre.run("task:addToAccessList", { accounts: `${first},${second}` });
-    await hre.run("task:removeFromAccessList", { accounts: first });
-    expect(await taskManager.accessList(first)).to.equal(false);
-    expect(await taskManager.accessList(second)).to.equal(true);
-
-    await hre.run("task:removeFromAccessList", { accounts: `${first},${second}` });
-    expect(await taskManager.accessList(second)).to.equal(false);
-    await expectRejection(hre.run("task:removeFromAccessList", { accounts: ethers.ZeroAddress }), /address\(0\)/);
-  });
-
-  it("task:removeFromAccessList warns that a removal blocks nothing while the list is disabled", async function () {
-    await hre.run("task:addToAccessList", { accounts: first });
-    const disabled = await logsOf(() => hre.run("task:removeFromAccessList", { accounts: first }));
-    expect(disabled).to.match(/removal blocks nothing now.*task:addToDenyList/);
-
-    await (await taskManager.enableAccessList()).wait();
-    await hre.run("task:addToAccessList", { accounts: first });
-    const enabled = await logsOf(() => hre.run("task:removeFromAccessList", { accounts: first }));
-    expect(enabled).not.to.match(/blocks nothing/);
-  });
-
-  it("task:removeFromAccessList removes as the Safe, or writes a batch without SAFE_OWNER_KEY", async function () {
-    await hre.run("task:addToAccessList", { accounts: `${first},${second}` });
-    const safe = await handRoleToSafe();
-
-    const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "access-list-")), "batch.json");
-    await hre.run("task:removeFromAccessList", { accounts: first, out: outPath });
-    const batch = JSON.parse(fs.readFileSync(outPath, "utf8"));
-    expect(batch.transactions[0].data).to.equal(
-      taskManager.interface.encodeFunctionData("removeFromAccessList", [[first]]),
-    );
-    expect(await taskManager.accessList(first)).to.equal(true);
-
-    process.env.SAFE_OWNER_KEY = safe.privateKey;
-    await hre.run("task:removeFromAccessList", { accounts: first });
-    expect(await taskManager.accessList(first)).to.equal(false);
   });
 
   it("writes a Safe batch when SAFE_OWNER_KEY is unset, changing nothing on chain", async function () {
