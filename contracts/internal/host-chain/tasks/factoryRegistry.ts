@@ -83,7 +83,8 @@ async function requireRegistry(hre: HardhatRuntimeEnvironment): Promise<{ regist
 
 // ---------------------------------------------------------------------------------------------
 // Who sends the calls. The first case that applies wins:
-//   1. The signer, when it holds every role the calls need.
+//   1. The signer, when it holds every role the calls need. The signer is the first Hardhat account of
+//      --network, from DEPLOYER_PRIVATE_KEY in .env. After the admin handover it holds no roles.
 //   2. The Safe at SAFE_ADMIN_ADDRESS, when SAFE_OWNER_KEY is set: each call is executed through the Safe
 //      with that owner key. On testnets the admin can be a plain wallet; then that wallet sends directly.
 //   3. Otherwise the task writes all calls into one Safe batch file. The Safe owners sign it later, and a
