@@ -77,7 +77,7 @@ describe("FactoryRegistry tasks", function () {
 
   async function ready(): Promise<any> {
     const registry = await deployed();
-    await hre.run("task:grantRegistryRole", {});
+    await hre.run("task:grantRegistryRole", { yes: true });
     return registry;
   }
 
@@ -97,16 +97,28 @@ describe("FactoryRegistry tasks", function () {
     const { tm, owner, other } = await loadFixture(fixture);
     const registry = await deployed();
     await (await registry.connect(owner).beginDefaultAdminTransfer(other.address)).wait();
-    await expectRejection(hre.run("task:grantRegistryRole", {}), /pending/);
+    await expectRejection(hre.run("task:grantRegistryRole", { yes: true }), /pending/);
 
     await (await registry.connect(owner).cancelDefaultAdminTransfer()).wait();
     await (await registry.connect(owner).changeDefaultAdminDelay(1)).wait(); // a pending delay change
-    await expectRejection(hre.run("task:grantRegistryRole", {}), /admin delay/);
+    await expectRejection(hre.run("task:grantRegistryRole", { yes: true }), /admin delay/);
 
     await (await registry.connect(owner).rollbackDefaultAdminDelay()).wait();
-    await hre.run("task:grantRegistryRole", {});
+    await hre.run("task:grantRegistryRole", { yes: true });
     expect(await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), await registry.getAddress())).to.equal(true);
-    await hre.run("task:grantRegistryRole", {}); // re-run: nothing to do
+    await hre.run("task:grantRegistryRole", { yes: true }); // re-run: nothing to do
+  });
+
+  it("refuses to grant the role when the record does not point at the deployed proxy", async function () {
+    const { tm } = await loadFixture(fixture);
+    const registry = await deployed();
+    // The implementation carries the same build but is not the proxy: a copied slot must not pass.
+    const implementation = await upgrades.erc1967.getImplementationAddress(await registry.getAddress());
+    const chainId = String((await ethers.provider.getNetwork()).chainId);
+    fs.writeFileSync(process.env.FACTORY_REGISTRY_FILE!, JSON.stringify({ [chainId]: { address: implementation } }));
+
+    await expectRejection(hre.run("task:grantRegistryRole", { yes: true }), /not the ERC1967 proxy/);
+    expect(await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), implementation)).to.equal(false);
   });
 
   it("approves a factory once, and refuses an address ops listed by hand", async function () {
@@ -258,7 +270,7 @@ describe("FactoryRegistry tasks", function () {
     await (await owner.sendTransaction({ to: safe.address, value: ethers.parseEther("1") })).wait();
     process.env.SAFE_ADMIN_ADDRESS = safe.address;
     const registry = await deployed(); // the Safe is the admin and holds every role
-    await hre.run("task:grantRegistryRole", {}); // the signer still holds the TaskManager admin role
+    await hre.run("task:grantRegistryRole", { yes: true }); // the signer still holds the TaskManager admin role
 
     const out = tempFile("batch.json");
     await hre.run("task:approveFactory", { factory: factory.address, out });

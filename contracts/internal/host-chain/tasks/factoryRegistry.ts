@@ -16,7 +16,14 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
 const REGISTRY_SOURCE = "contracts/FactoryRegistry.sol";
 const REGISTRY_NAME = "FactoryRegistry";
-const TX_GAS_CAP = 16_777_216n; // Ethereum's per-transaction cap (EIP-7825)
+// The exact proxy that upgrades.deployProxy deploys: read from the plugin's own copy of upgrades-core.
+const PROXY_DEPLOYED_BYTECODE: string = require(
+  require.resolve("@openzeppelin/upgrades-core/artifacts/@openzeppelin/contracts-v5/proxy/ERC1967/ERC1967Proxy.sol/ERC1967Proxy.json", {
+    paths: [require.resolve("@openzeppelin/hardhat-upgrades")],
+  }),
+).deployedBytecode;
+// Ethereum's per-transaction cap (EIP-7825), less a 10% margin for the Safe's execTransaction and MultiSend.
+const TX_GAS_CAP = (16_777_216n * 9n) / 10n;
 
 interface RegistryRecord {
   address: string;
@@ -55,6 +62,11 @@ async function recordedRegistry(hre: HardhatRuntimeEnvironment): Promise<{ regis
   const record = await readRecord(hre);
   if (!record || (await hre.ethers.provider.getCode(record.address)) === "0x") return null;
   return { registry: await hre.ethers.getContractAt(REGISTRY_NAME, record.address), address: record.address };
+}
+
+/** Whether the registry controls this TaskManager's list: it writes to it and holds its role. */
+async function controlsList(registry: any, address: string, tm: any, tmAddress: string): Promise<boolean> {
+  return (await registry.taskManager()) === tmAddress && (await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), address));
 }
 
 /** The deployed registry on this chain; throws when there is none. */
@@ -193,6 +205,7 @@ task("task:deployFactoryRegistry", "Deploy the FactoryRegistry proxy on this cha
   });
 
 task("task:grantRegistryRole", "Grant the TaskManager's ACCESS_LIST_MANAGER_ROLE to the FactoryRegistry")
+  .addFlag("yes", "Skip the confirmation prompt")
   .addOptionalParam("out", "Path for the Safe batch file, when one is written")
   .setAction(async function (taskArguments: TaskArguments, hre) {
     const { ethers } = hre;
@@ -201,6 +214,10 @@ task("task:grantRegistryRole", "Grant the TaskManager's ACCESS_LIST_MANAGER_ROLE
     const tm: any = await ethers.getContractAt("TaskManager", tmAddress);
 
     // The role lets the holder open or close the whole list, so check who controls the registry first.
+    // Any contract can copy the implementation slot, so the recorded address must be the proxy itself.
+    if ((await ethers.provider.getCode(address)) !== PROXY_DEPLOYED_BYTECODE) {
+      throw new Error(`${address} is not the ERC1967 proxy that task:deployFactoryRegistry deploys. Check ${recordFile(hre)}.`);
+    }
     if (!(await runsCurrentBuild(hre, address, REGISTRY_SOURCE, REGISTRY_NAME))) {
       throw new Error(
         `${address} is not a proxy running this FactoryRegistry build (implementation ` +
@@ -238,6 +255,11 @@ task("task:grantRegistryRole", "Grant the TaskManager's ACCESS_LIST_MANAGER_ROLE
       console.log(chalk.green(`The registry ${address} already holds ACCESS_LIST_MANAGER_ROLE - nothing to do.`));
       return;
     }
+    const question = `Grant ACCESS_LIST_MANAGER_ROLE on TaskManager ${tmAddress} to FactoryRegistry ${address} on ${hre.network.name}?`;
+    if (!(await confirm(question, taskArguments.yes))) {
+      console.log(chalk.yellow("Aborted - nothing was sent."));
+      return;
+    }
     const sender = await resolveSender(
       hre,
       tm,
@@ -272,14 +294,19 @@ task("task:approveFactory", "Approve a factory as the root of a new tree in the 
     const factory = ethers.getAddress(taskArguments.factory);
     if (factory === ethers.ZeroAddress) throw new Error("refusing to approve address(0).");
     const { registry, address } = await requireRegistry(hre);
-    const tm: any = await ethers.getContractAt("TaskManager", await registry.taskManager());
+    const tmAddress = await resolveTaskManager(hre);
+    const tm: any = await ethers.getContractAt("TaskManager", tmAddress);
+    if (!(await controlsList(registry, address, tm, tmAddress))) {
+      throw new Error(`The registry does not control TaskManager ${tmAddress}'s list. Run task:grantRegistryRole first.`);
+    }
 
     const [parent] = await registry.nodeOf(factory);
     if (parent === address) {
       if (!(await tm.accessList(factory))) {
+        // revokeAccess would unregister its whole tree; only the root's own entry is missing.
         throw new Error(
           `${factory} is approved in the registry but not on the TaskManager list (removed by hand?). ` +
-            `Run task:revokeAccess --accounts ${factory}, then task:approveFactory again.`,
+            `Add it back with task:addToAccessList --accounts ${factory}.`,
         );
       }
       console.log(chalk.green(`${factory} is already an approved factory - nothing to do.`));
@@ -299,7 +326,12 @@ task("task:approveFactory", "Approve a factory as the root of a new tree in the 
     const calls: { to: string; data: string; what: string }[] = [];
     if (parent !== ethers.ZeroAddress) {
       // Someone registered the factory's address under another tree first: take it back.
-      console.log(chalk.yellow(`${factory} is registered under ${parent}. It is unregistered first, in the same batch.`));
+      console.log(
+        chalk.yellow(
+          `${factory} is registered under ${parent}. It is unregistered first, in the same batch: ` +
+            "every contract registered below it loses access too.",
+        ),
+      );
       roles.push({ role: await registry.REVOKER_ROLE(), name: "REVOKER_ROLE" });
       calls.push({
         to: address,
@@ -415,14 +447,8 @@ task("task:revokeAccess", "Take CoFHE access away from accounts, through the Fac
       // While the list is disabled the TaskManager checks only the deny list, so a revoke blocks nothing yet.
       console.log(chalk.yellow("The access list is disabled - revoking blocks nothing now. To block now, use task:addToDenyList."));
     }
-    // The registry controls the list only while it writes to this TaskManager and holds its role.
     const recorded = await recordedRegistry(hre);
-    const live =
-      recorded &&
-      (await recorded.registry.taskManager()) === tmAddress &&
-      (await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), recorded.address))
-        ? recorded
-        : null;
+    const live = recorded && (await controlsList(recorded.registry, recorded.address, tm, tmAddress)) ? recorded : null;
     const inTree = async (a: string) => (await recorded!.registry.nodeOf(a))[0] !== ethers.ZeroAddress;
 
     // A tree node goes through unregister, so its subtree goes with it and no node is left without access.
