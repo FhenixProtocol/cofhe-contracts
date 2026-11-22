@@ -179,6 +179,8 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
         Node memory p = $.nodes[parent];
         if (p.parent == address(0)) revert NotRegistered();
         if (p.depth >= MAX_DEPTH) revert MaxDepthExceeded();
+        // A node taken off the list (by hand, or after setTaskManager) must not give access to others.
+        if (!listed && !IAccessListView(address($.taskManager)).accessList(parent)) revert CallerNotOnAccessList();
 
         address root = _rootOf(parent);
         Node storage rootNode = $.nodes[root];
