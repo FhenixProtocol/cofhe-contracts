@@ -228,6 +228,16 @@ describe("FactoryRegistry", function () {
       await expect(registry.connect(factory).register([worker.address])).to.be.revertedWithCustomError(registry, "AlreadyOnAccessList");
     });
 
+    it("rejects a registered caller that was taken off the list", async function () {
+      const { tm, registry, owner, factory, sub, worker } = await loadFixture(deployFixture);
+      await registry.connect(owner).approveFactory(factory.address);
+      await registry.connect(factory).register([sub.address]);
+      await tm.connect(owner).removeFromAccessList([sub.address]); // removed by hand, still in the tree
+
+      await expect(registry.connect(sub).register([worker.address])).to.be.revertedWithCustomError(registry, "CallerNotOnAccessList");
+      expect(await tm.accessList(worker.address)).to.equal(false);
+    });
+
     it("rejects a second parent, and a duplicate inside one batch", async function () {
       const { registry, owner, factory, otherFactory, worker } = await loadFixture(deployFixture);
       await registry.connect(owner).approveFactory(factory.address);
@@ -467,6 +477,9 @@ describe("FactoryRegistry", function () {
         .to.emit(registry, "TaskManagerSet")
         .withArgs(await tm.getAddress(), await mock.getAddress());
 
+      // The factory is not on the new TaskManager's list yet, so it cannot give access there.
+      await expect(registry.connect(factory).register([worker2.address])).to.be.revertedWithCustomError(registry, "CallerNotOnAccessList");
+      await (await mock.addToAccessList([factory.address])).wait();
       await registry.connect(factory).register([worker2.address]);
       expect(await mock.accessList(worker2.address)).to.equal(true);
       expect(await tm.accessList(worker2.address)).to.equal(false);
