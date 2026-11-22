@@ -251,8 +251,11 @@ task("task:grantRegistryRole", "Grant the TaskManager's ACCESS_LIST_MANAGER_ROLE
     if (!(await registry.hasRole(upgrader, admin))) {
       throw new Error(`The registry's admin ${admin} does not hold UPGRADER_ROLE.`);
     }
-    if (signer && signer.address !== admin && (await registry.hasRole(upgrader, signer.address))) {
-      throw new Error(`The signer ${signer.address} still holds the registry's UPGRADER_ROLE. Revoke it first.`);
+    // Either role in a leftover key gives that key the access list: UPGRADER by a new build, FACTORY_APPROVER directly.
+    for (const name of ["UPGRADER_ROLE", "FACTORY_APPROVER_ROLE"]) {
+      if (signer && signer.address !== admin && (await registry.hasRole(await registry[name](), signer.address))) {
+        throw new Error(`The signer ${signer.address} still holds the registry's ${name}. Revoke it first.`);
+      }
     }
 
     const role = await tm.ACCESS_LIST_MANAGER_ROLE();

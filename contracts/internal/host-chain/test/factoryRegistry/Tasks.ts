@@ -109,6 +109,18 @@ describe("FactoryRegistry tasks", function () {
     await hre.run("task:grantRegistryRole", { yes: true }); // re-run: nothing to do
   });
 
+  it("refuses to grant the role while the signer still holds FACTORY_APPROVER_ROLE", async function () {
+    const { tm, owner } = await loadFixture(fixture);
+    const safe = ethers.Wallet.createRandom().connect(ethers.provider);
+    await (await owner.sendTransaction({ to: safe.address, value: ethers.parseEther("1") })).wait();
+    process.env.SAFE_ADMIN_ADDRESS = safe.address;
+    const registry = await deployed(); // the Safe is the admin and holds every role
+    await (await registry.connect(safe).grantRole(await registry.FACTORY_APPROVER_ROLE(), owner.address)).wait();
+
+    await expectRejection(hre.run("task:grantRegistryRole", { yes: true }), /still holds the registry's FACTORY_APPROVER_ROLE/);
+    expect(await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), await registry.getAddress())).to.equal(false);
+  });
+
   it("refuses to grant the role when the record does not point at the deployed proxy", async function () {
     const { tm } = await loadFixture(fixture);
     const registry = await deployed();
