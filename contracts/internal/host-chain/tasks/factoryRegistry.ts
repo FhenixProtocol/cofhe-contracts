@@ -380,8 +380,11 @@ task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list i
       const chunk = todo.slice(i, i + 100);
       calls.push({
         to: address,
-        data: registry.interface.encodeFunctionData("adopt", [parent, chunk]),
-        what: `adopt(${parent}, ${chunk.length} accounts)`,
+        data:
+          parent === address
+            ? registry.interface.encodeFunctionData("adoptFactories", [chunk])
+            : registry.interface.encodeFunctionData("adopt", [parent, chunk]),
+        what: parent === address ? `adoptFactories(${chunk.length} accounts)` : `adopt(${parent}, ${chunk.length} accounts)`,
       });
     }
     const sender = await resolveSender(
