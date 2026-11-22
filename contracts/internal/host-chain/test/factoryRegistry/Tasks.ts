@@ -121,6 +121,13 @@ describe("FactoryRegistry tasks", function () {
     expect(await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), implementation)).to.equal(false);
   });
 
+  it("refuses to approve on a registry that does not control the list", async function () {
+    const { tm, factory } = await loadFixture(fixture);
+    await deployed(); // no TaskManager role yet
+    await expectRejection(hre.run("task:approveFactory", { factory: factory.address }), /does not control/);
+    expect(await tm.accessList(factory.address)).to.equal(false);
+  });
+
   it("approves a factory once, and refuses an address ops listed by hand", async function () {
     const { tm, owner, factory, other } = await loadFixture(fixture);
     const registry = await ready();
