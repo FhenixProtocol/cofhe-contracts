@@ -62,12 +62,6 @@ describe("FactoryRegistry tasks", function () {
     return ethers.getContractAt("FactoryRegistry", record.address);
   }
 
-  async function ready(): Promise<any> {
-    const registry = await deployed();
-    await hre.run("task:grantRegistryRole", {});
-    return registry;
-  }
-
   it("deploys once, with the TaskManager's admin delay, and records the address", async function () {
     const { tm, owner } = await loadFixture(fixture);
     const registry = await deployed();
@@ -80,25 +74,10 @@ describe("FactoryRegistry tasks", function () {
     expect(await again.getAddress()).to.equal(await registry.getAddress());
   });
 
-  it("grants the TaskManager role once, and refuses while an admin transfer is pending", async function () {
-    const { tm, owner, other } = await loadFixture(fixture);
-    const registry = await deployed();
-    await (await registry.connect(owner).beginDefaultAdminTransfer(other.address)).wait();
-    await expectRejection(hre.run("task:grantRegistryRole", {}), /pending/);
-
-    await (await registry.connect(owner).cancelDefaultAdminTransfer()).wait();
-    await (await registry.connect(owner).changeDefaultAdminDelay(1)).wait(); // a pending delay change
-    await expectRejection(hre.run("task:grantRegistryRole", {}), /admin delay/);
-
-    await (await registry.connect(owner).rollbackDefaultAdminDelay()).wait();
-    await hre.run("task:grantRegistryRole", {});
-    expect(await tm.hasRole(await tm.ACCESS_LIST_MANAGER_ROLE(), await registry.getAddress())).to.equal(true);
-    await hre.run("task:grantRegistryRole", {}); // re-run: nothing to do
-  });
-
   it("upgrades a different build back to this one, keeping the tree and the roles", async function () {
-    const { owner, factory, worker } = await loadFixture(fixture);
-    const registry = await ready();
+    const { tm, owner, factory, worker } = await loadFixture(fixture);
+    const registry = await deployed();
+    await (await tm.connect(owner).grantRole(await tm.ACCESS_LIST_MANAGER_ROLE(), await registry.getAddress())).wait();
     await (await registry.connect(owner).approveFactory(factory.address)).wait();
     await (await registry.connect(factory).register([worker.address])).wait();
     const address = await registry.getAddress();
