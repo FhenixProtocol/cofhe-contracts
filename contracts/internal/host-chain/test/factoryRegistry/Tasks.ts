@@ -124,6 +124,34 @@ describe("FactoryRegistry tasks", function () {
     await expectRejection(hre.run("task:approveFactory", { factory: factory.address }), /not on the TaskManager list/);
   });
 
+  it("adopts a hand-listed factory and its contracts, keeping their access", async function () {
+    const { tm, owner, factory, worker, other } = await loadFixture(fixture);
+    const registry = await ready();
+    await (await tm.connect(owner).addToAccessList([factory.address, worker.address])).wait();
+    await expectRejection(hre.run("task:approveFactory", { factory: factory.address }), /task:adoptIntoRegistry/);
+
+    await hre.run("task:adoptIntoRegistry", { accounts: factory.address });
+    await hre.run("task:adoptIntoRegistry", { accounts: worker.address, parent: factory.address });
+    expect(await registry.nodeOf(factory.address)).to.deep.equal([await registry.getAddress(), 0n]);
+    expect(await registry.nodeOf(worker.address)).to.deep.equal([factory.address, 1n]);
+    expect(await tm.accessList(worker.address)).to.equal(true);
+    await hre.run("task:adoptIntoRegistry", { accounts: worker.address, parent: factory.address }); // re-run: nothing to do
+
+    await expectRejection(hre.run("task:adoptIntoRegistry", { accounts: other.address, parent: factory.address }), /not on the TaskManager list/);
+  });
+
+  it("warns when an adopted account has since left the list", async function () {
+    const { tm, owner, factory, worker } = await loadFixture(fixture);
+    await ready();
+    await (await tm.connect(owner).addToAccessList([factory.address, worker.address])).wait();
+    await hre.run("task:adoptIntoRegistry", { accounts: factory.address });
+    await hre.run("task:adoptIntoRegistry", { accounts: worker.address, parent: factory.address });
+    await (await tm.connect(owner).removeFromAccessList([worker.address])).wait();
+
+    const logs = await logsOf(() => hre.run("task:adoptIntoRegistry", { accounts: worker.address, parent: factory.address }));
+    expect(logs).to.match(/adopted but no longer on the TaskManager list/);
+  });
+
   it("takes back a squatted factory address only as one atomic Safe batch", async function () {
     const { owner, factory, other } = await loadFixture(fixture);
     const safe = ethers.Wallet.createRandom().connect(ethers.provider);
