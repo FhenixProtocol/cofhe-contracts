@@ -152,6 +152,14 @@ describe("FactoryRegistry tasks", function () {
     await expectRejection(hre.run("task:adoptIntoRegistry", { accounts: other.address, parent: factory.address }), /not on the TaskManager list/);
   });
 
+  it("refuses to adopt into a registry that does not control the list", async function () {
+    const { tm, owner, factory } = await loadFixture(fixture);
+    const registry = await deployed(); // no TaskManager role yet
+    await (await tm.connect(owner).addToAccessList([factory.address])).wait();
+    await expectRejection(hre.run("task:adoptIntoRegistry", { accounts: factory.address }), /does not control/);
+    expect((await registry.nodeOf(factory.address))[0]).to.equal(ethers.ZeroAddress);
+  });
+
   it("warns when an adopted account has since left the list", async function () {
     const { tm, owner, factory, worker } = await loadFixture(fixture);
     await ready();

@@ -375,7 +375,12 @@ task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list i
   .setAction(async function (taskArguments: TaskArguments, hre) {
     const { ethers } = hre;
     const { registry, address } = await requireRegistry(hre);
-    const tm: any = await ethers.getContractAt("TaskManager", await registry.taskManager());
+    const tmAddress = await resolveTaskManager(hre);
+    const tm: any = await ethers.getContractAt("TaskManager", tmAddress);
+    // Adopted nodes must stay removable: on a registry that does not control the list, unregister reverts.
+    if (!(await controlsList(registry, address, tm, tmAddress))) {
+      throw new Error(`The registry does not control TaskManager ${tmAddress}'s list. Run task:grantRegistryRole first.`);
+    }
     const parent = taskArguments.parent ? ethers.getAddress(taskArguments.parent) : address;
     const accounts = [...new Set((taskArguments.accounts as string).split(",").map((a) => ethers.getAddress(a.trim())))];
     if (parent !== address && (await registry.nodeOf(parent))[0] === ethers.ZeroAddress) {
