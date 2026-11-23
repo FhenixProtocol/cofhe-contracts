@@ -22,6 +22,7 @@ interface ITaskManagerErrors {
     error InvalidSignature();
     error InvalidSigner(address signer, address expectedSigner);
     error UnsupportedType(uint256 t);
+    error ReturnTypeMismatch(uint256 returnType, uint256 actualType); // issue #153
     error LengthMismatch();
 
     // Access control errors
