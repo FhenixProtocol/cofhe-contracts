@@ -240,10 +240,10 @@ task("task:grantRegistryRole", "Grant the TaskManager's ACCESS_LIST_MANAGER_ROLE
 
     // The role lets the holder open or close the whole list, so check who controls the registry first.
     // Any contract can copy the implementation slot, so the recorded address must be the proxy itself.
-    if ((await ethers.provider.getCode(address)) !== PROXY_DEPLOYED_BYTECODE) {
+    if (!(await settled(hre, async () => (await ethers.provider.getCode(address)) === PROXY_DEPLOYED_BYTECODE))) {
       throw new Error(`${address} is not the ERC1967 proxy that task:deployFactoryRegistry deploys. Check ${recordFile(hre)}.`);
     }
-    if (!(await runsCurrentBuild(hre, address, REGISTRY_SOURCE, REGISTRY_NAME))) {
+    if (!(await settled(hre, () => runsCurrentBuild(hre, address, REGISTRY_SOURCE, REGISTRY_NAME)))) {
       throw new Error(
         `${address} is not a proxy running this FactoryRegistry build (implementation ` +
           `${await implementationOf(ethers, address)}). Grant the role only to a reviewed build.`,
