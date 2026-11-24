@@ -36,6 +36,9 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     /// @notice Returned if the sender is the delegatee address.
     error SenderCannotBeDelegateeAddress();
 
+    /// @notice Returned if the delegatee or delegatee contract address is zero.
+    error InvalidDelegateeAddress();
+
     /// @notice         Returned if the sender address is not allowed for allow operations.
     /// @param sender   Sender address.
     error SenderNotAllowed(address sender);
@@ -372,24 +375,31 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     /**
      * @notice                  Delegates the access of `handles` in the context of account abstraction for issuing
      *                          reencryption requests from a smart contract account.
+     * @dev                     The caller must be the Task Manager contract. The `delegator` is passed
+     *                          explicitly by the TaskManager (its `msg.sender`): storage must be keyed by
+     *                          the delegator, not by `msg.sender`, which is the TaskManager itself.
      * @param delegatee         Delegatee address.
      * @param delegateeContract Delegatee contract.
+     * @param delegator         Account delegating its access.
      */
-    function delegateAccount(address delegatee, address delegateeContract) public virtual {
+    function delegateAccount(address delegatee, address delegateeContract, address delegator) public virtual {
          if (msg.sender != _taskManager()) {
             revert DirectAllowForbidden(msg.sender);
         }
-        if (delegateeContract == msg.sender) {
+        if (delegatee == address(0) || delegateeContract == address(0)) {
+            revert InvalidDelegateeAddress();
+        }
+        if (delegatee == delegator || delegateeContract == delegator) {
             revert SenderCannotBeDelegateeAddress();
         }
 
         ACLStorage storage $ = _getACLStorage();
-        if ($.delegates[msg.sender][delegatee][delegateeContract]) {
+        if ($.delegates[delegator][delegatee][delegateeContract]) {
             revert AlreadyDelegated();
         }
 
-        $.delegates[msg.sender][delegatee][delegateeContract] = true;
-        emit NewDelegation(msg.sender, delegatee, delegateeContract);
+        $.delegates[delegator][delegatee][delegateeContract] = true;
+        emit NewDelegation(delegator, delegatee, delegateeContract);
     }
 
     /**
@@ -408,8 +418,8 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
     ) public view virtual returns (bool) {
         ACLStorage storage $ = _getACLStorage();
         return
-            $.persistedAllowedPairs[handle][account] &&
-            $.persistedAllowedPairs[handle][contractAddress] &&
+            isAllowed(handle, account) &&
+            isAllowed(handle, contractAddress) &&
             $.delegates[account][delegatee][contractAddress];
     }
 
