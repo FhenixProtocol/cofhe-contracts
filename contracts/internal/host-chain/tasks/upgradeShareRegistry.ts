@@ -7,42 +7,11 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { resolveTaskManager } from "../utils/addressBook";
 import { execTransactionThroughSafe, writeSafeBatch } from "../utils/safe";
 import { confirm } from "../utils/confirm";
+import { implementationOf, runsCurrentBuild, waitForNonce } from "../utils/upgrade";
 import { validateUpgrade } from "./storageLayout";
-
-const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-
-async function implementationOf(ethers: any, proxy: string): Promise<string> {
-  return ethers.getAddress("0x" + (await ethers.provider.getStorage(proxy, IMPLEMENTATION_SLOT)).slice(-40));
-}
 
 const REGISTRY_SOURCE = "contracts/ACPShareRegistry.sol";
 const REGISTRY_NAME = "ACPShareRegistry";
-
-/**
- * Whether the proxy's implementation is exactly this build of ACPShareRegistry. UUPSUpgradeable
- * keeps the implementation's own address as an immutable, so those bytes are zeroed (as they are
- * in the compiler output) before comparing.
- */
-async function runsCurrentBuild(hre: HardhatRuntimeEnvironment, proxy: string): Promise<boolean> {
-  const buildInfo = await hre.artifacts.getBuildInfo(`${REGISTRY_SOURCE}:${REGISTRY_NAME}`);
-  if (!buildInfo) {
-    throw new Error(`No build info for ${REGISTRY_NAME}. Run \`pnpm compile\` first.`);
-  }
-  const deployed = buildInfo.output.contracts[REGISTRY_SOURCE][REGISTRY_NAME].evm.deployedBytecode;
-  const expected = deployed.object.toLowerCase().replace(/^0x/, "");
-  let code: string = (await hre.ethers.provider.getCode(await implementationOf(hre.ethers, proxy)))
-    .toLowerCase()
-    .slice(2);
-  if (code.length !== expected.length) {
-    return false;
-  }
-  for (const refs of Object.values(deployed.immutableReferences ?? {}) as { start: number; length: number }[][]) {
-    for (const { start, length } of refs) {
-      code = code.slice(0, start * 2) + "00".repeat(length) + code.slice((start + length) * 2);
-    }
-  }
-  return code === expected;
-}
 
 /**
  * Whether the proxy runs a pointer-based implementation, told by `share(acp, metadata)` in its
@@ -81,23 +50,6 @@ async function resolveSender(ethers: any, registry: any, signer: any, viaSafe: b
     );
   }
   return safe;
-}
-
-/**
- * Waits until the RPC reports `address`'s nonce past `nonce`, i.e. the transaction that used it is
- * accepted, so the next transaction from the same key is not numbered from a stale count.
- */
-async function waitForNonce(ethers: any, address: string, nonce: number, timeoutMs = 30_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while ((await ethers.provider.getTransactionCount(address, "latest")) <= nonce) {
-    if (Date.now() > deadline) {
-      throw new Error(
-        `The RPC still reports ${address}'s nonce at ${nonce} after ${timeoutMs / 1000} s. ` +
-          `Nothing was upgraded - re-run the task.`,
-      );
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-  }
 }
 
 /**
@@ -180,7 +132,7 @@ async function upgradeShareRegistry(
   console.log(chalk.green("Current implementation:", oldImplementation));
 
   const Factory = await ethers.getContractFactory(REGISTRY_NAME);
-  if (await runsCurrentBuild(hre, proxy)) {
+  if (await runsCurrentBuild(hre, proxy, REGISTRY_SOURCE, REGISTRY_NAME)) {
     console.log(chalk.green("The proxy already runs this ACPShareRegistry build. Nothing to do."));
     return;
   }
