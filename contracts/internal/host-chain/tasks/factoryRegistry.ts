@@ -57,10 +57,30 @@ async function writeRecord(hre: HardhatRuntimeEnvironment, record: RegistryRecor
   fs.writeFileSync(recordFile(hre), JSON.stringify(records, null, 2) + "\n");
 }
 
-/** The registry the record names on this chain; null when there is no record or no code there. */
+/**
+ * Whether `check` holds, polled for up to 30 s. A public RPC balances calls across nodes, so a read
+ * right after a receipt can hit a node that has not seen that block yet.
+ */
+async function settled(hre: HardhatRuntimeEnvironment, check: () => Promise<boolean>): Promise<boolean> {
+  const deadline = Date.now() + (hre.network.name === "hardhat" ? 0 : 30_000);
+  while (!(await check())) {
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  return true;
+}
+
+/** The registry the record names on this chain; null when there is no record. */
 async function recordedRegistry(hre: HardhatRuntimeEnvironment): Promise<{ registry: any; address: string } | null> {
   const record = await readRecord(hre);
-  if (!record || (await hre.ethers.provider.getCode(record.address)) === "0x") return null;
+  if (!record) return null;
+  // Never read "no code" as "no registry": on a lagging node the deploy task would deploy a second one.
+  if (!(await settled(hre, async () => (await hre.ethers.provider.getCode(record.address)) !== "0x"))) {
+    throw new Error(
+      `${recordFile(hre)} records ${record.address} for chain ${await chainKey(hre)}, but it has no code. ` +
+        `If the chain was reset, delete that entry, then run task:deployFactoryRegistry.`,
+    );
+  }
   return { registry: await hre.ethers.getContractAt(REGISTRY_NAME, record.address), address: record.address };
 }
 
@@ -220,10 +240,10 @@ task("task:grantRegistryRole", "Grant the TaskManager's ACCESS_LIST_MANAGER_ROLE
 
     // The role lets the holder open or close the whole list, so check who controls the registry first.
     // Any contract can copy the implementation slot, so the recorded address must be the proxy itself.
-    if ((await ethers.provider.getCode(address)) !== PROXY_DEPLOYED_BYTECODE) {
+    if (!(await settled(hre, async () => (await ethers.provider.getCode(address)) === PROXY_DEPLOYED_BYTECODE))) {
       throw new Error(`${address} is not the ERC1967 proxy that task:deployFactoryRegistry deploys. Check ${recordFile(hre)}.`);
     }
-    if (!(await runsCurrentBuild(hre, address, REGISTRY_SOURCE, REGISTRY_NAME))) {
+    if (!(await settled(hre, () => runsCurrentBuild(hre, address, REGISTRY_SOURCE, REGISTRY_NAME)))) {
       throw new Error(
         `${address} is not a proxy running this FactoryRegistry build (implementation ` +
           `${await implementationOf(ethers, address)}). Grant the role only to a reviewed build.`,
@@ -288,7 +308,7 @@ task("task:grantRegistryRole", "Grant the TaskManager's ACCESS_LIST_MANAGER_ROLE
       taskArguments.out,
     );
     if (!sent) return;
-    if (!(await tm.hasRole(role, address))) {
+    if (!(await settled(hre, () => tm.hasRole(role, address)))) {
       throw new Error("The transaction executed but the registry still lacks ACCESS_LIST_MANAGER_ROLE.");
     }
     console.log(chalk.green(`The registry ${address} now holds ACCESS_LIST_MANAGER_ROLE.`));
@@ -369,8 +389,8 @@ task("task:approveFactory", "Approve a factory as the root of a new tree in the 
       taskArguments.out,
     );
     if (!sent) return;
-    const [now] = await registry.nodeOf(factory);
-    if (now !== address || !(await tm.accessList(factory))) {
+    const approved = async () => (await registry.nodeOf(factory))[0] === address && (await tm.accessList(factory));
+    if (!(await settled(hre, approved))) {
       throw new Error(`The transaction executed but ${factory} is not an approved factory on the TaskManager list.`);
     }
     console.log(chalk.green(`${factory} is approved and on the TaskManager list.`));
@@ -441,7 +461,9 @@ task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list i
     );
     if (!sent) return;
     for (const account of todo) {
-      if ((await registry.nodeOf(account))[0] !== parent) throw new Error(`The transaction executed but ${account} is not under ${parent}.`);
+      if (!(await settled(hre, async () => (await registry.nodeOf(account))[0] === parent))) {
+        throw new Error(`The transaction executed but ${account} is not under ${parent}.`);
+      }
     }
     console.log(chalk.green(`${todo.length} account(s) adopted under ${parent}.`));
   });
@@ -563,8 +585,12 @@ task("task:revokeAccess", "Take CoFHE access away from accounts, through the Fac
       const batch = { slug: "revoke-access", name: "CoFHE - revoke access", taskName: "task:revokeAccess" };
       if (!(await send(hre, sender, calls, batch, groups.length === 1 ? taskArguments.out : undefined))) continue;
       for (const account of groupAccounts) {
-        if (await tm.accessList(account)) throw new Error(`The transaction executed but ${account} is still on the TaskManager list.`);
-        if (live && (await inTree(account))) throw new Error(`The transaction executed but ${account} is still registered.`);
+        if (!(await settled(hre, async () => !(await tm.accessList(account))))) {
+          throw new Error(`The transaction executed but ${account} is still on the TaskManager list.`);
+        }
+        if (live && !(await settled(hre, async () => !(await inTree(account))))) {
+          throw new Error(`The transaction executed but ${account} is still registered.`);
+        }
         console.log(chalk.green(`${account}: access revoked`));
       }
     }
@@ -599,7 +625,7 @@ task("task:setRegistryRevoker", "Grant or revoke the FactoryRegistry's REVOKER_R
       taskArguments.out,
     );
     if (!sent) return;
-    if ((await registry.hasRole(role, account)) === revoke) {
+    if (!(await settled(hre, async () => (await registry.hasRole(role, account)) !== revoke))) {
       throw new Error(`The transaction executed but ${account}'s REVOKER_ROLE did not change.`);
     }
     console.log(chalk.green(`${account}: REVOKER_ROLE ${revoke ? "revoked" : "granted"}.`));
@@ -659,7 +685,7 @@ task("task:upgradeFactoryRegistry", "Upgrade the FactoryRegistry proxy in place 
       console.log(chalk.yellow("Re-run only after the batch executes: a re-run before that deploys another implementation."));
       return;
     }
-    if (!(await runsCurrentBuild(hre, address, REGISTRY_SOURCE, REGISTRY_NAME))) {
+    if (!(await settled(hre, () => runsCurrentBuild(hre, address, REGISTRY_SOURCE, REGISTRY_NAME)))) {
       throw new Error(`The upgrade executed but ${address} does not run this build (was ${oldImplementation}).`);
     }
     console.log(chalk.green(`Upgraded: implementation ${oldImplementation} -> ${newImplementation}`));

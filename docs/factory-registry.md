@@ -12,7 +12,7 @@ Run every command from `contracts/internal/host-chain`. Replace `<network>` with
 | `SAFE_ADMIN_ADDRESS` | The Fhenix Safe. It becomes the registry admin and holds every registry role. | The admin at deploy, the expected admin in `grantRegistryRole`, the Safe's roles in `inspectFactoryRegistry`, and every call that the signer cannot send |
 | `SAFE_OWNER_KEY` | Optional. A Safe owner key, for a Safe with threshold 1. | Executing through the Safe directly, instead of writing a batch file |
 
-`factory-registry.json` records the registry address for each chain. `task:deployFactoryRegistry` writes it. Commit it.
+`factory-registry.json` records the registry address for each chain. `task:deployFactoryRegistry` writes it. Commit it. When a chain is reset, delete its entry before you deploy again: the tasks stop on a recorded address that has no code.
 
 ## Who sends
 
