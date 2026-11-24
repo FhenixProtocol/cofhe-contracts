@@ -93,6 +93,17 @@ describe("FactoryRegistry tasks", function () {
     expect(await again.getAddress()).to.equal(await registry.getAddress());
   });
 
+  it("refuses to deploy a second registry when the recorded address shows no code", async function () {
+    await loadFixture(fixture);
+    const chainId = String((await ethers.provider.getNetwork()).chainId);
+    const empty = ethers.Wallet.createRandom().address; // what a lagging RPC node reports for a fresh deploy
+    fs.writeFileSync(process.env.FACTORY_REGISTRY_FILE!, JSON.stringify({ [chainId]: { address: empty } }));
+
+    await expectRejection(hre.run("task:deployFactoryRegistry", { yes: true }), /has no code/);
+    const record = JSON.parse(fs.readFileSync(process.env.FACTORY_REGISTRY_FILE!, "utf8"))[chainId];
+    expect(record.address).to.equal(empty);
+  });
+
   it("grants the TaskManager role once, and refuses while an admin transfer is pending", async function () {
     const { tm, owner, other } = await loadFixture(fixture);
     const registry = await deployed();
