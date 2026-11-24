@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **`FactoryRegistry`** lets an approved factory put the contracts it deploys on the TaskManager access list, with no TaskManager code change. A factory calls `register(children)` and `unregister(target)` from the new `IFactoryRegistry` interface in the package; a registered contract can register its own contracts. Each approved factory allows 8 levels and 500 live contracts, so unregistering a full tree fits in one Ethereum transaction (about 11.4M gas in the worst shape). The registry is a UUPS proxy with the TaskManager's access model: `DEFAULT_ADMIN_ROLE` with a delay, `UPGRADER_ROLE`, `FACTORY_APPROVER_ROLE` and `REVOKER_ROLE`. To migrate entries added to the access list by hand, `adoptFactories(factories)` makes them roots and `adopt(parent, accounts)` puts them below a node (`FACTORY_APPROVER_ROLE` only), without taking them off the list. It needs `ACCESS_LIST_MANAGER_ROLE` on the TaskManager; the deploy and admin tasks follow in a later change. Gas tests: `forge test -vv` in `contracts/internal/host-chain/test/foundry`.
+
 ## v1.0.3 - 2026-11-19 - deployed to staging and testnet-v2 2026-11-19
 
 ### Changed
