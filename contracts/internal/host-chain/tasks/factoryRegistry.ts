@@ -324,7 +324,10 @@ task("task:approveFactory", "Approve a factory as the root of a new tree in the 
       console.log(chalk.yellow(`${factory}: no code on ${hre.network.name}. An address without code is approved only if it is a wallet you trust.`));
     }
     if (parent === ethers.ZeroAddress && (await tm.accessList(factory))) {
-      throw new Error(`${factory} is on the TaskManager list by hand. task:approveFactory does not take over an entry Fhenix added.`);
+      throw new Error(
+        `${factory} is on the TaskManager list by hand. To keep its access, adopt it: ` +
+          `task:adoptIntoRegistry --accounts ${factory}.`,
+      );
     }
 
     const roles = [{ role: await registry.FACTORY_APPROVER_ROLE(), name: "FACTORY_APPROVER_ROLE" }];
@@ -371,6 +374,76 @@ task("task:approveFactory", "Approve a factory as the root of a new tree in the 
       throw new Error(`The transaction executed but ${factory} is not an approved factory on the TaskManager list.`);
     }
     console.log(chalk.green(`${factory} is approved and on the TaskManager list.`));
+  });
+
+task("task:adoptIntoRegistry", "Move addresses already on the TaskManager list into a FactoryRegistry tree")
+  .addParam("accounts", "Comma-separated addresses, all already on the TaskManager list")
+  .addOptionalParam("parent", "The registered parent; omit to adopt the accounts as approved factories")
+  .addOptionalParam("out", "Path for the Safe batch file, when one is written")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+    const { ethers } = hre;
+    const { registry, address } = await requireRegistry(hre);
+    const tmAddress = await resolveTaskManager(hre);
+    const tm: any = await ethers.getContractAt("TaskManager", tmAddress);
+    // Adopted nodes must stay removable: on a registry that does not control the list, unregister reverts.
+    if (!(await controlsList(registry, address, tm, tmAddress))) {
+      throw new Error(`The registry does not control TaskManager ${tmAddress}'s list. Run task:grantRegistryRole first.`);
+    }
+    const parent = taskArguments.parent ? ethers.getAddress(taskArguments.parent) : address;
+    const accounts = [...new Set((taskArguments.accounts as string).split(",").map((a) => ethers.getAddress(a.trim())))];
+    if (parent !== address && (await registry.nodeOf(parent))[0] === ethers.ZeroAddress) {
+      throw new Error(`The parent ${parent} is not registered in FactoryRegistry ${address}.`);
+    }
+
+    const todo: string[] = [];
+    for (const account of accounts) {
+      const [now] = await registry.nodeOf(account);
+      if (now === parent) {
+        // Adopted on an earlier run; flag it if someone took it off the list by hand since.
+        if (!(await tm.accessList(account))) {
+          console.log(chalk.yellow(`${account} is adopted but no longer on the TaskManager list. Unregister it, or add it back by hand.`));
+        }
+        continue;
+      }
+      if (now !== ethers.ZeroAddress) throw new Error(`${account} is already registered under ${now}.`);
+      if (!(await tm.accessList(account))) throw new Error(`${account} is not on the TaskManager list. Use task:approveFactory or register instead.`);
+      todo.push(account);
+    }
+    if (todo.length === 0) {
+      console.log(chalk.green("Every account is already adopted - nothing to do."));
+      return;
+    }
+    console.log(chalk.yellow(`Adopting ${todo.length} account(s) under ${parent === address ? "the registry, as approved factories" : parent}.`));
+    console.log(chalk.yellow("Their tree can now remove them, and they can register contracts. Check that they belong to it."));
+
+    const asRoots = parent === address;
+    const data = asRoots
+      ? registry.interface.encodeFunctionData("adoptFactories", [todo])
+      : registry.interface.encodeFunctionData("adopt", [parent, todo]);
+    const what = asRoots ? `adoptFactories(${todo.length} accounts)` : `adopt(${parent}, ${todo.length} accounts)`;
+    const sender = await resolveSender(
+      hre,
+      registry,
+      [{ role: await registry.FACTORY_APPROVER_ROLE(), name: "FACTORY_APPROVER_ROLE" }],
+      `FactoryRegistry ${address}`,
+    );
+    // About 53k gas per account (250 measured at 13.3M): fail here rather than in the Safe.
+    const gas = await ethers.provider.estimateGas({ from: sender.address, to: address, data });
+    if (gas > TX_GAS_CAP) {
+      throw new Error(`Adopting ${todo.length} accounts needs ${gas} gas, over the ${TX_GAS_CAP} cap. Split the list.`);
+    }
+    const sent = await send(
+      hre,
+      sender,
+      [{ to: address, data, what }],
+      { slug: "adopt", name: "CoFHE - adopt access-list entries into the FactoryRegistry", taskName: "task:adoptIntoRegistry" },
+      taskArguments.out,
+    );
+    if (!sent) return;
+    for (const account of todo) {
+      if ((await registry.nodeOf(account))[0] !== parent) throw new Error(`The transaction executed but ${account} is not under ${parent}.`);
+    }
+    console.log(chalk.green(`${todo.length} account(s) adopted under ${parent}.`));
   });
 
 task("task:revokeAccess", "Take CoFHE access away from accounts, through the FactoryRegistry or the TaskManager list")
