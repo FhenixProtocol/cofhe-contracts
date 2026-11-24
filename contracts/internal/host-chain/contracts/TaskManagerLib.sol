@@ -271,6 +271,20 @@ library TaskManagerLib {
             validateExtraInputs(extraInputs, funcId, functionName, securityZoneMin, securityZoneMax);
         }
 
+        // Issue #153: the returned placeholder handle embeds returnType, while the
+        // TaskCreated event reports the type the processor will actually compute from
+        // the extras. Bind the two so the handle type metadata cannot diverge from the
+        // executed computation.
+        if (funcId == FunctionId.trivialEncrypt) {
+            if (returnType != uint8(extraInputs[1])) {
+                revert E.ReturnTypeMismatch(returnType, uint8(extraInputs[1]));
+            }
+        } else if (funcId == FunctionId.cast) {
+            if (returnType != uint8(extraInputs[0])) {
+                revert E.ReturnTypeMismatch(returnType, uint8(extraInputs[0]));
+            }
+        }
+
         uint256[] memory inputs = TMCommon.combineInputs(encryptedHashes, extraInputs);
 
         int32 securityZone = getSecurityZone(funcId, encryptedHashes, extraInputs);
