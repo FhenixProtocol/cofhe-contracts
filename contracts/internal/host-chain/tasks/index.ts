@@ -11,3 +11,4 @@ export * from "./upgradeShareRegistry";
 export * from "./denyList";
 export * from "./goLive";
 export * from "./accessList";
+export * from "./factoryRegistry";
