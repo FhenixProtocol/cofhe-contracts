@@ -220,4 +220,36 @@ describe("ACL granting", function () {
       expect(await acl.isAllowed(handle, minter)).to.equal(false);
     });
   });
+
+  describe("transient share cannot escalate to permanent grants (#174)", function () {
+    let probe: Contract;
+    let probeAddr: string;
+
+    beforeEach(async function () {
+      const Probe = await ethers.getContractFactory("TransientEscalateProbe");
+      probe = await Probe.deploy(await taskManager.getAddress());
+      await probe.waitForDeployment();
+      probeAddr = await probe.getAddress();
+    });
+
+    it("rejects allowGlobal from a transient-only share receiver", async function () {
+      await (await taskManager.connect(holder).shareCtHash(handle, probeAddr)).wait();
+
+      await expect(probe.receiveAndAllowGlobal(handle, holder.address))
+        .to.be.revertedWithCustomError(acl, "SenderNotAllowed")
+        .withArgs(probeAddr);
+
+      expect(await acl.globalAllowed(handle)).to.equal(false);
+    });
+
+    it("rejects allowForDecryption from a transient-only share receiver", async function () {
+      await (await taskManager.connect(holder).shareCtHash(handle, probeAddr)).wait();
+
+      await expect(probe.receiveAndAllowForDecryption(handle, holder.address))
+        .to.be.revertedWithCustomError(acl, "SenderNotAllowed")
+        .withArgs(probeAddr);
+
+      expect(await acl.isAllowedForDecryption(handle)).to.equal(false);
+    });
+  });
 });
