@@ -622,19 +622,35 @@ export function shouldBehaveLikeCommitmentRegistry(): void {
       expect(await this.registry.getSize(VERSION_1)).to.equal(3);
     });
 
-    it("should silently skip already-committed handles", async function () {
+    it("should silently skip identical redeliveries without a conflict event", async function () {
       const handle = randomBytes32();
       const original = randomBytes32();
       const registryAsPoster = this.registry.connect(this.poster);
 
       await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [original]);
 
-      // Re-post same handle with a different commit hash — should NOT revert
-      // and should NOT overwrite the original.
-      await expect(
-        registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [randomBytes32()])
-      )
+      await expect(registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [original]))
         .to.emit(this.registry, "CommitmentsPostedSafe")
+        .withArgs(VERSION_1, 0, 1)
+        .and.to.not.emit(this.registry, "CommitmentConflict");
+
+      expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(original);
+      expect(await this.registry.getSize(VERSION_1)).to.equal(1);
+    });
+
+    it("should emit CommitmentConflict when a re-post disagrees with the stored hash", async function () {
+      const handle = randomBytes32();
+      const original = randomBytes32();
+      const conflicting = randomBytes32();
+      const registryAsPoster = this.registry.connect(this.poster);
+
+      await registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [original]);
+
+      // Conflicting re-post: keep the first commitment, surface the mismatch.
+      await expect(registryAsPoster.postCommitmentsSafe(VERSION_1, [handle], [conflicting]))
+        .to.emit(this.registry, "CommitmentConflict")
+        .withArgs(VERSION_1, handle, original, conflicting)
+        .and.to.emit(this.registry, "CommitmentsPostedSafe")
         .withArgs(VERSION_1, 0, 1);
 
       expect(await this.registry.getCommitment(VERSION_1, handle)).to.equal(original);
