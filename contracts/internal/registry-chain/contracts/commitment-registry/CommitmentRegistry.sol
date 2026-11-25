@@ -72,6 +72,15 @@ contract CommitmentRegistry is UUPSUpgradeable, AccessControlDefaultAdminRulesUp
     /// it was already committed under this version. `newlyPosted` is the count
     /// of handles that actually got written (i.e. `handles.length - skipped`).
     event CommitmentsPostedSafe(bytes32 indexed version, uint256 newlyPosted, uint256 skipped);
+    /// @notice Emitted by `postCommitmentsSafe` when a handle is skipped because it was
+    /// already committed under this version, but the incoming commit hash differs from the
+    /// stored one. The stored value is left unchanged; this event makes the conflict visible.
+    event CommitmentConflict(
+        bytes32 indexed version,
+        bytes32 indexed handle,
+        bytes32 storedCommitHash,
+        bytes32 incomingCommitHash
+    );
     event VersionStatusChanged(bytes32 indexed version, VersionStatus oldStatus, VersionStatus newStatus);
     event PosterAdded(address indexed poster);
     event PosterRemoved(address indexed poster);
@@ -178,13 +187,16 @@ contract CommitmentRegistry is UUPSUpgradeable, AccessControlDefaultAdminRulesUp
             bytes32 handle = handles[i];
             bytes32 commitHash = commitHashes[i];
             if (commitHash == bytes32(0)) revert ZeroCommitHash(handle);
-            if (versionMap[handle] == bytes32(0)) {
+            bytes32 stored = versionMap[handle];
+            if (stored == bytes32(0)) {
                 versionMap[handle] = commitHash;
                 $.handlesByVersion[version].push(handle);
                 unchecked { ++newlyPosted; }
+            } else if (stored != commitHash) {
+                // Conflicting re-post: keep the first commitment, but surface the mismatch.
+                emit CommitmentConflict(version, handle, stored, commitHash);
             }
-            // else: handle already committed — silently skip. The desired end
-            // state (commitment recorded under (version, handle)) is unchanged.
+            // else: identical redelivery — silently skip.
             unchecked { ++i; }
         }
         emit CommitmentsPostedSafe(version, newlyPosted, len - newlyPosted);
