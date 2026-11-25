@@ -9,6 +9,8 @@ contract PubliclyAllowedTest {
 
     function createAndAllowGlobal(uint8 value) public returns (euint8) {
         euint8 encrypted = FHE.asEuint8(value);
+        // Persist to this contract first: allowGlobal no longer accepts transient-only holding.
+        FHE.allow(encrypted, address(this));
         FHE.allowGlobal(encrypted);
         lastHandle = encrypted;
         return encrypted;

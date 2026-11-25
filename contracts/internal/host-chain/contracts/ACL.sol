@@ -172,7 +172,8 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
 
     /**
      * @notice              Allows the use of `handle` globally (all accounts).
-     * @dev                 The caller must be allowed to use `handle` for allowGlobal() to succeed. If not, allowGlobal() reverts.
+     * @dev                 The requester must hold `handle` persistently (or already globally)
+     *                      for allowGlobal() to succeed. Transient-only access is not enough.
      * @param handle        Handle.
      * @param requester     Address of the account giving the permissions.
      */
@@ -181,7 +182,9 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
             revert DirectAllowForbidden(msg.sender);
         }
 
-        if (!isAllowed(handle, requester)) {
+        // Permanent grants require persistent (or already-global) holding. Transient-only
+        // access from a one-transaction share must not escalate to allowGlobal.
+        if (!persistAllowed(handle, requester) && !globalAllowed(handle)) {
             revert SenderNotAllowed(requester);
         }
 
@@ -204,7 +207,9 @@ contract ACL is UUPSUpgradeable, AccessControlDefaultAdminRulesUpgradeable, Perm
 
         for (uint256 k = 0; k < len; k++) {
             uint256 handle = handlesList[k];
-            if (!isAllowed(handle, requester)) {
+            // Same persistent-holding gate as allowGlobal — transient share must not mark
+            // a handle permanently decryptable.
+            if (!persistAllowed(handle, requester) && !globalAllowed(handle)) {
                 revert SenderNotAllowed(requester);
             }
             $.allowedForDecryption[handle] = true;
