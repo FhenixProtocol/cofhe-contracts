@@ -339,4 +339,58 @@ describe("FactoryRegistry tasks", function () {
     await hre.run("task:upgradeFactoryRegistry", { yes: true }); // re-run: nothing to do
     await hre.run("task:inspectFactoryRegistry", {});
   });
+
+  /** An approved factory with 3 direct children, one of which has 2 of its own: 6 contracts below the factory. */
+  async function suspendableTree() {
+    const f = await loadFixture(fixture);
+    const registry = await ready();
+    await hre.run("task:approveFactory", { factory: f.factory.address });
+    const direct = [f.worker.address, ethers.Wallet.createRandom().address, ethers.Wallet.createRandom().address];
+    await (await registry.connect(f.factory).register(direct)).wait();
+    const deeper = [ethers.Wallet.createRandom().address, ethers.Wallet.createRandom().address];
+    await (await registry.connect(f.worker).register(deeper)).wait();
+    return { ...f, registry, all: [f.factory.address, ...direct, ...deeper] };
+  }
+
+  it("suspends a tree in batches: the first closes registration, and a re-run sends nothing", async function () {
+    const { tm, registry, factory, worker, all } = await suspendableTree();
+    await hre.run("task:suspendFactory", { factory: factory.address, batch: 3, yes: true });
+
+    expect(await registry.isSuspended(factory.address)).to.equal(true);
+    for (const a of all) expect(await tm.accessList(a)).to.equal(false);
+    expect(await registry.treeSizeOf(factory.address)).to.equal(5n); // registry entries stay
+    // Off the list now, so register stops at that check; a still-listed one gets FactoryIsSuspended (contract tests).
+    await expectRejection(registry.connect(worker).register.staticCall([ethers.Wallet.createRandom().address]), /CallerNotOnAccessList/);
+
+    const logs = await logsOf(() => hre.run("task:suspendFactory", { factory: factory.address, yes: true }));
+    expect(logs).to.match(/0 contracts on the list - nothing to do/);
+  });
+
+  it("writes only the first batch as a Safe file, because it must freeze the tree before the rest is listed", async function () {
+    const { tm, registry, owner, factory, all } = await suspendableTree();
+    const safe = ethers.Wallet.createRandom().address;
+    await (await registry.connect(owner).grantRole(await registry.REVOKER_ROLE(), safe)).wait();
+    await (await registry.connect(owner).renounceRole(await registry.REVOKER_ROLE(), owner.address)).wait();
+    process.env.SAFE_ADMIN_ADDRESS = safe;
+    const out = tempFile("suspend");
+
+    const logs = await logsOf(() => hre.run("task:suspendFactory", { factory: factory.address, batch: 3, yes: true, out }));
+    expect(logs).to.match(/Execute batch 1 first/);
+    const batch = JSON.parse(fs.readFileSync(`${out}-1.json`, "utf8"));
+    expect(batch.transactions).to.have.length(1);
+    expect(fs.existsSync(`${out}-2.json`)).to.equal(false);
+    expect(await registry.isSuspended(factory.address)).to.equal(false);
+    for (const a of all) expect(await tm.accessList(a)).to.equal(true);
+  });
+
+  it("resumes a suspended factory once, so its tree can register again", async function () {
+    const { registry, factory, worker } = await suspendableTree();
+    await hre.run("task:suspendFactory", { factory: factory.address, yes: true });
+    await hre.run("task:resumeFactory", { factory: factory.address });
+    expect(await registry.isSuspended(factory.address)).to.equal(false);
+    const logs = await logsOf(() => hre.run("task:resumeFactory", { factory: factory.address }));
+    expect(logs).to.match(/not suspended - nothing to do/);
+    // Its contracts stay off the list until re-listed, so they cannot register either.
+    await expectRejection(registry.connect(worker).register.staticCall([ethers.Wallet.createRandom().address]), /CallerNotOnAccessList/);
+  });
 });

@@ -34,6 +34,8 @@ A batch file runs as one transaction, so its calls succeed or fail together.
 | `task:approveFactory` | Approve a factory, so it can register contracts. | `npx hardhat task:approveFactory --network <network> --factory <address>` |
 | `task:adoptIntoRegistry` | Move entries that ops added to the list by hand into a tree. They keep access, with no gap. Without `--parent`, they become approved factories. | `npx hardhat task:adoptIntoRegistry --network <network> --accounts <a,b> [--parent <address>]` |
 | `task:revokeAccess` | Take access away. A tree node is unregistered with everything below it; any other account is removed from the list by hand. | `npx hardhat task:revokeAccess --network <network> --accounts <a,b>` |
+| `task:suspendFactory` | Cut off a whole factory, of any size. It stops the tree from registering, then takes its contracts off the list in batches. Registry entries stay. | `npx hardhat task:suspendFactory --network <network> --factory <address> [--batch 1300]` |
+| `task:resumeFactory` | Let a suspended factory's tree register again. Its contracts stay off the list. | `npx hardhat task:resumeFactory --network <network> --factory <address>` |
 | `task:upgradeFactoryRegistry` | Upgrade the registry in place, after the storage-layout check. `--onlyvalidate true` stops after the check. | `npx hardhat task:upgradeFactoryRegistry --network <network> [--onlyvalidate true]` |
 | `task:inspectFactoryRegistry` | Print the registry's state: build, admin, delay, TaskManager, role, and the Safe's roles. Sends nothing. | `npx hardhat task:inspectFactoryRegistry --network <network>` |
 
@@ -131,8 +133,25 @@ npx hardhat task:revokeAccess --network <network> --accounts <a,b>
 ```
 
 - The task shows what it removes, and asks to confirm.
-- Unregistering a factory removes every contract below it.
+- Unregistering a factory removes every contract below it, in one transaction. That fits about 500 contracts. For a larger factory, suspend it.
 - While the access list is disabled, the TaskManager checks only the deny list, so a removal blocks nothing yet. To block an address then, use `task:addToDenyList`.
+
+## Suspend a factory
+
+Use this to cut off a factory of any size. `REVOKER_ROLE` signs it, so an ops key can act without the Safe.
+
+```bash
+npx hardhat task:suspendFactory --network <network> --factory <factory>
+```
+
+1. The task walks the factory's tree and keeps the contracts still on the list. It sends nothing for this.
+2. Batch 1 holds the factory itself. From that block, no contract in the tree can register.
+3. The task walks the tree again, now frozen, and sends the rest in batches of 1,300.
+4. Run it again to check. It ends with `0 contracts on the list`.
+
+With a Safe batch file, the first run writes only batch 1. Execute it, then run the task again: it writes the remaining batches, one file each. Execute them in order.
+
+The registry entries stay. To restore the factory, run `task:resumeFactory`, then re-list its contracts with `task:addToAccessList`. To free the addresses for reuse, unregister them.
 
 ## Stop the registry in an emergency
 

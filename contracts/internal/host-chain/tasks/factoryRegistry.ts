@@ -596,6 +596,136 @@ task("task:revokeAccess", "Take CoFHE access away from accounts, through the Fac
     }
   });
 
+// ---------------------------------------------------------------------------------------------
+// Suspend: cut off a tree too large to unregister in one transaction. The walk and the filter are
+// free eth_calls, all pinned to one block so a concurrent swap-and-pop cannot skip a contract.
+// ---------------------------------------------------------------------------------------------
+
+const PAGE = 1_000;
+// shortcut: plain parallel eth_calls, not Multicall3 (absent on local chains); switch if an RPC rate-limits.
+const READS_IN_FLIGHT = 50;
+
+async function inGroups<T, R>(items: T[], read: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += READS_IN_FLIGHT) out.push(...(await Promise.all(items.slice(i, i + READS_IN_FLIGHT).map(read))));
+  return out;
+}
+
+/** Every contract in `factory`'s tree still on the TaskManager list at `blockTag`, the factory first, then by depth. */
+async function listedInTree(registry: any, tm: any, factory: string, blockTag: number): Promise<string[]> {
+  const size = Number(await registry.treeSizeOf(factory, { blockTag }));
+  const children = async (node: string) => {
+    const n = Number(await registry.childCount(node, { blockTag }));
+    const kids: string[] = [];
+    for (let s = 0; s < n; s += PAGE) kids.push(...(await registry.childrenOf(node, s, PAGE, { blockTag })));
+    return kids;
+  };
+  const tree = [factory];
+  // Stops once every live contract is found, so a flat tree needs no leaf reads.
+  for (let level = [factory]; level.length && tree.length - 1 < size; ) {
+    level = (await inGroups(level, children)).flat();
+    tree.push(...level);
+  }
+  if (tree.length - 1 !== size) throw new Error(`Walked ${tree.length - 1} contracts below ${factory}, but treeSizeOf says ${size}.`);
+  const listed = await inGroups(tree, (a) => tm.accessList(a, { blockTag }));
+  return tree.filter((_, i) => listed[i]);
+}
+
+task("task:suspendFactory", "Cut off a factory's whole tree: stop it registering and take its contracts off the list in batches")
+  .addParam("factory", "The approved factory")
+  .addOptionalParam("batch", "Contracts per transaction", 1_300, types.int)
+  .addFlag("yes", "Skip the confirmation prompt")
+  .addOptionalParam("out", "Path prefix for the Safe batch files, when they are written")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+    const { ethers } = hre;
+    const factory = ethers.getAddress(taskArguments.factory);
+    const { registry, address } = await requireRegistry(hre);
+    if ((await registry.nodeOf(factory))[0] !== address) throw new Error(`${factory} is not an approved factory in ${address}.`);
+    const tm: any = await ethers.getContractAt("TaskManager", await registry.taskManager());
+    const sender = await resolveSender(hre, registry, [{ role: await registry.REVOKER_ROLE(), name: "REVOKER_ROLE" }], `FactoryRegistry ${address}`);
+
+    const pending = async () => {
+      const block = await ethers.provider.getBlockNumber();
+      return { suspended: (await registry.isSuspended(factory, { blockTag: block })) as boolean, listed: await listedInTree(registry, tm, factory, block) };
+    };
+    let { suspended, listed } = await pending();
+    if (suspended && listed.length === 0) {
+      console.log(chalk.green(`${factory}: suspended, 0 contracts on the list - nothing to do.`));
+      return;
+    }
+    const question =
+      `Suspend ${factory} and take ${listed.length} contract(s) off the TaskManager list ` +
+      `in ${Math.max(1, Math.ceil(listed.length / taskArguments.batch))} transaction(s), as ${sender.address}?`;
+    if (!(await confirm(question, taskArguments.yes))) {
+      console.log(chalk.yellow("Aborted - nothing was sent."));
+      return;
+    }
+
+    const sendBatches = async (batches: string[][], first: number) => {
+      for (let i = 0; i < batches.length; i++) {
+        const data = registry.interface.encodeFunctionData("suspend", [factory, batches[i]]);
+        const gas = await ethers.provider.estimateGas({ from: sender.address, to: address, data });
+        if (gas > TX_GAS_CAP) throw new Error(`A batch of ${batches[i].length} needs ${gas} gas, over the ${TX_GAS_CAP} cap. Use a smaller --batch.`);
+        const n = first + i;
+        const out = taskArguments.out ? `${taskArguments.out}-${n}.json` : undefined;
+        const what = `suspend(${factory}, ${batches[i].length} contracts), batch ${n}`;
+        const meta = { slug: `suspend-factory-${n}`, name: `CoFHE - suspend a factory, batch ${n}`, taskName: "task:suspendFactory" };
+        if (!(await send(hre, sender, [{ to: address, data, what }], meta, out))) return false;
+      }
+      return true;
+    };
+    const chunk = (list: string[]) => {
+      const batches: string[][] = [];
+      for (let i = 0; i < list.length; i += taskArguments.batch) batches.push(list.slice(i, i + taskArguments.batch));
+      return batches.length ? batches : [[]];
+    };
+
+    if (!suspended) {
+      // The first batch closes registration. Until it runs, the tree can still grow, so the rest is listed after it.
+      if (!(await sendBatches([chunk(listed)[0]], 1))) {
+        console.log(chalk.yellow("Execute batch 1 first: it freezes the tree. Then re-run this task for the rest."));
+        return;
+      }
+      if (!(await settled(hre, () => registry.isSuspended(factory)))) throw new Error(`The transaction executed but ${factory} is not suspended.`);
+      ({ listed } = await pending());
+    }
+    // The tree is frozen now, so every remaining batch can be prepared at once.
+    if (listed.length && !(await sendBatches(chunk(listed), 2))) {
+      console.log(chalk.yellow("Execute the batches in order, then re-run this task to verify."));
+      return;
+    }
+    if (!(await settled(hre, async () => (await pending()).listed.length === 0))) {
+      throw new Error(`The transactions executed but contracts of ${factory} are still on the list. Re-run this task.`);
+    }
+    console.log(chalk.green(`${factory}: suspended, 0 contracts on the list.`));
+  });
+
+task("task:resumeFactory", "Let a suspended factory's tree register again (its contracts stay off the list)")
+  .addParam("factory", "The suspended factory")
+  .addOptionalParam("out", "Path for the Safe batch file, when one is written")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+    const { ethers } = hre;
+    const factory = ethers.getAddress(taskArguments.factory);
+    const { registry, address } = await requireRegistry(hre);
+    if (!(await registry.isSuspended(factory))) {
+      console.log(chalk.green(`${factory} is not suspended - nothing to do.`));
+      return;
+    }
+    const sender = await resolveSender(
+      hre,
+      registry,
+      [{ role: await registry.FACTORY_APPROVER_ROLE(), name: "FACTORY_APPROVER_ROLE" }],
+      `FactoryRegistry ${address}`,
+    );
+    const data = registry.interface.encodeFunctionData("resume", [factory]);
+    const meta = { slug: "resume-factory", name: "CoFHE - resume a factory", taskName: "task:resumeFactory" };
+    if (!(await send(hre, sender, [{ to: address, data, what: `resume(${factory})` }], meta, taskArguments.out))) return;
+    if (!(await settled(hre, async () => !(await registry.isSuspended(factory))))) {
+      throw new Error(`The transaction executed but ${factory} is still suspended.`);
+    }
+    console.log(chalk.green(`${factory} can register again. Its contracts are still off the list: re-list them with task:addToAccessList.`));
+  });
+
 task("task:setRegistryRevoker", "Grant or revoke the FactoryRegistry's REVOKER_ROLE, e.g. for an ops key")
   .addParam("account", "The account")
   .addParam("revoke", "Revoke instead of grant", false, types.boolean)
