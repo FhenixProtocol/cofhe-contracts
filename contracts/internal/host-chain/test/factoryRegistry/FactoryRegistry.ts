@@ -44,6 +44,23 @@ function randomAddresses(n: number): string[] {
   return Array.from({ length: n }, () => ethers.Wallet.createRandom().address);
 }
 
+const REGISTRY_SLOT = "0xa14bafdf5c2c5943ba3887932aad2dcb76fb2dff21a26e6897a0bc07379eba00";
+const TREE_SIZE_MAX = 65_535n;
+
+/** Writes a root's treeSize in storage: filling 65,535 contracts by registering is too slow for a test. */
+async function setTreeSize(registry: any, root: string, size: bigint) {
+  // nodes is the first field of the ERC-7201 struct; Node packs parent | depth | index | treeSize | suspended.
+  const slot = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "bytes32"], [root, REGISTRY_SLOT]));
+  const word = BigInt(await ethers.provider.getStorage(await registry.getAddress(), slot));
+  const cleared = word & ~(0xffffn << 200n);
+  await hre.network.provider.send("hardhat_setStorageAt", [
+    await registry.getAddress(),
+    slot,
+    ethers.toBeHex(cleared | (size << 200n), 32),
+  ]);
+  expect(await registry.treeSizeOf(root)).to.equal(size);
+}
+
 describe("FactoryRegistry", function () {
   describe("approve", function () {
     it("lets only FACTORY_APPROVER_ROLE approve a factory, and gives it access", async function () {
@@ -150,12 +167,12 @@ describe("FactoryRegistry", function () {
     it("counts adopted contracts toward the tree size limit", async function () {
       const { tm, registry, owner, factory } = await loadFixture(deployFixture);
       await registry.connect(owner).approveFactory(factory.address);
-      for (let i = 0; i < 499; i += 100) await registry.connect(factory).register(randomAddresses(Math.min(100, 499 - i)));
+      await setTreeSize(registry, factory.address, TREE_SIZE_MAX - 1n);
       const two = randomAddresses(2);
       await tm.connect(owner).addToAccessList(two);
       await expect(registry.connect(owner).adopt(factory.address, two)).to.be.revertedWithCustomError(registry, "TreeFull");
       await registry.connect(owner).adopt(factory.address, [two[0]]);
-      expect(await registry.treeSizeOf(factory.address)).to.equal(500n);
+      expect(await registry.treeSizeOf(factory.address)).to.equal(TREE_SIZE_MAX);
     });
 
     it("adopts roots with no TaskManager call; an adopted child registers its own children", async function () {
@@ -271,16 +288,16 @@ describe("FactoryRegistry", function () {
       await expect(registry.connect(parent).register([chain[8].address])).to.be.revertedWithCustomError(registry, "MaxDepthExceeded");
     });
 
-    it("stops at 500 live contracts per root, and the room comes back after unregister", async function () {
+    it("stops at 65,535 live contracts per root, so treeSize never wraps, and the room comes back after unregister", async function () {
       const { registry, owner, factory } = await loadFixture(deployFixture);
       await registry.connect(owner).approveFactory(factory.address);
-      const addrs = randomAddresses(500);
-      for (let i = 0; i < 500; i += 100) await registry.connect(factory).register(addrs.slice(i, i + 100));
-      expect(await registry.treeSizeOf(factory.address)).to.equal(500n);
+      const addrs = randomAddresses(1);
+      await registry.connect(factory).register(addrs);
+      await setTreeSize(registry, factory.address, TREE_SIZE_MAX);
 
       await expect(registry.connect(factory).register(randomAddresses(1))).to.be.revertedWithCustomError(registry, "TreeFull");
       await registry.connect(factory).unregister(addrs[0]);
-      expect(await registry.treeSizeOf(factory.address)).to.equal(499n);
+      expect(await registry.treeSizeOf(factory.address)).to.equal(TREE_SIZE_MAX - 1n);
       await expect(registry.connect(factory).register(randomAddresses(1))).to.not.be.reverted;
     });
   });
@@ -433,6 +450,120 @@ describe("FactoryRegistry", function () {
       console.log(`      unregister of 500: ${receipt.gasUsed} gas used (after refunds)`);
       expect(await tm.accessList(addrs[0])).to.equal(false);
       expect(await tm.accessList(addrs[499])).to.equal(false);
+    });
+
+    it("unregisters a branch with the memory of the branch, not of its whole tree", async function () {
+      const { registry, owner, factory, sub } = await loadFixture(deployFixture);
+      await registry.connect(owner).approveFactory(factory.address);
+      await registry.connect(factory).register([sub.address]);
+      const kids = randomAddresses(3);
+      await registry.connect(sub).register(kids);
+      await setTreeSize(registry, factory.address, TREE_SIZE_MAX); // as if the rest of the tree were full
+
+      const receipt = await (await registry.connect(factory).unregister(sub.address)).wait();
+      // Sized by the tree, the memory alone would cost about 8.6M gas.
+      expect(receipt.gasUsed).to.be.lessThan(500_000n);
+      expect(await registry.treeSizeOf(factory.address)).to.equal(TREE_SIZE_MAX - 4n);
+    });
+  });
+
+  describe("suspend", function () {
+    async function tree() {
+      const f = await loadFixture(deployFixture);
+      await f.registry.connect(f.owner).approveFactory(f.factory.address);
+      await f.registry.connect(f.factory).register([f.sub.address, f.worker.address]);
+      await f.registry.connect(f.sub).register([f.worker2.address]);
+      return f;
+    }
+
+    it("lets only REVOKER_ROLE suspend, and only an approved factory", async function () {
+      const { registry, owner, factory, sub, outsider } = await tree();
+      await expect(registry.connect(outsider).suspend(factory.address, []))
+        .to.be.revertedWithCustomError(registry, "AccessControlUnauthorizedAccount")
+        .withArgs(outsider.address, await registry.REVOKER_ROLE());
+      await expect(registry.connect(owner).suspend(sub.address, [])).to.be.revertedWithCustomError(registry, "NotRegistered");
+    });
+
+    it("closes registration for the whole tree on the first call, and takes each batch off the list", async function () {
+      const { tm, registry, owner, factory, sub, worker, worker2 } = await tree();
+      await expect(registry.connect(owner).suspend(factory.address, [factory.address, sub.address]))
+        .to.emit(registry, "FactorySuspended")
+        .withArgs(factory.address, owner.address);
+      expect(await registry.isSuspended(factory.address)).to.equal(true);
+      expect(await tm.accessList(factory.address)).to.equal(false);
+      expect(await tm.accessList(sub.address)).to.equal(false);
+      // Not yet in a batch: still listed, but it cannot register.
+      expect(await tm.accessList(worker.address)).to.equal(true);
+      await expect(registry.connect(worker).register(randomAddresses(1))).to.be.revertedWithCustomError(registry, "FactoryIsSuspended");
+
+      // Later batches: the flag is already set, so no second event.
+      await expect(registry.connect(owner).suspend(factory.address, [worker.address, worker2.address])).not.to.emit(
+        registry,
+        "FactorySuspended",
+      );
+      expect(await tm.accessList(worker2.address)).to.equal(false);
+      // The registry entries stay, for a restore.
+      expect(await registry.treeSizeOf(factory.address)).to.equal(3n);
+    });
+
+    it("refuses an address outside the factory's tree, so a revoker key cannot cut other entries", async function () {
+      const { tm, registry, owner, factory, outsider, otherFactory } = await tree();
+      await tm.connect(owner).addToAccessList([outsider.address]); // listed by hand
+      await registry.connect(owner).approveFactory(otherFactory.address);
+      await expect(registry.connect(owner).suspend(factory.address, [outsider.address])).to.be.revertedWithCustomError(
+        registry,
+        "NotRegistered",
+      );
+      await expect(registry.connect(owner).suspend(factory.address, [otherFactory.address])).to.be.revertedWithCustomError(
+        registry,
+        "NotUnderFactory",
+      );
+      expect(await tm.accessList(outsider.address)).to.equal(true);
+      expect(await tm.accessList(otherFactory.address)).to.equal(true);
+    });
+
+    it("blocks adoption into a suspended tree, but still lets contracts unregister", async function () {
+      const { tm, registry, owner, factory, sub, outsider } = await tree();
+      await registry.connect(owner).suspend(factory.address, [sub.address]);
+      await tm.connect(owner).addToAccessList([outsider.address]);
+      await expect(registry.connect(owner).adopt(factory.address, [outsider.address])).to.be.revertedWithCustomError(
+        registry,
+        "FactoryIsSuspended",
+      );
+      await registry.connect(factory).unregister(sub.address); // cleanup works while suspended
+      expect((await registry.nodeOf(sub.address))[0]).to.equal(ethers.ZeroAddress);
+    });
+
+    it("lets only FACTORY_APPROVER_ROLE resume, after which the tree registers again", async function () {
+      const { tm, registry, owner, factory } = await tree();
+      await registry.connect(owner).suspend(factory.address, []);
+      await registry.connect(owner).grantRole(await registry.REVOKER_ROLE(), factory.address);
+      await expect(registry.connect(factory).resume(factory.address))
+        .to.be.revertedWithCustomError(registry, "AccessControlUnauthorizedAccount")
+        .withArgs(factory.address, await registry.FACTORY_APPROVER_ROLE());
+
+      await expect(registry.connect(owner).resume(factory.address))
+        .to.emit(registry, "FactoryResumed")
+        .withArgs(factory.address, owner.address);
+      expect(await registry.isSuspended(factory.address)).to.equal(false);
+      expect(await tm.accessList(factory.address)).to.equal(true); // never taken off here
+      await expect(registry.connect(factory).register(randomAddresses(1))).to.not.be.reverted;
+    });
+  });
+
+  describe("views", function () {
+    it("pages a node's direct children", async function () {
+      const { registry, owner, factory } = await loadFixture(deployFixture);
+      await registry.connect(owner).approveFactory(factory.address);
+      const kids = randomAddresses(5);
+      await registry.connect(factory).register(kids);
+
+      expect(await registry.childCount(factory.address)).to.equal(5n);
+      expect(await registry.childrenOf(factory.address, 0, 2)).to.deep.equal(kids.slice(0, 2));
+      expect(await registry.childrenOf(factory.address, 2, 10)).to.deep.equal(kids.slice(2)); // clipped at the end
+      expect(await registry.childrenOf(factory.address, 5, 10)).to.deep.equal([]);
+      expect(await registry.childrenOf(factory.address, 1, ethers.MaxUint256)).to.deep.equal(kids.slice(1)); // "all", no overflow
+      expect(await registry.childCount(kids[0])).to.equal(0n);
     });
   });
 

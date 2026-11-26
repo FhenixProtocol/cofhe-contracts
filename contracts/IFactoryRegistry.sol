@@ -28,8 +28,10 @@ interface IFactoryRegistry {
     error AlreadyOnAccessList();
     /// @notice The child would sit more than `MAX_DEPTH` levels below its approved factory.
     error MaxDepthExceeded();
-    /// @notice The approved factory's tree would hold more than `MAX_TREE_SIZE` live contracts.
+    /// @notice The approved factory's tree would hold more than 65,535 live contracts.
     error TreeFull();
+    /// @notice Fhenix suspended this approved factory's tree, so no contract in it can register.
+    error FactoryIsSuspended();
     /// @notice The caller may not unregister this target.
     error NotAllowed();
 
@@ -50,8 +52,9 @@ interface IFactoryRegistry {
     /// @notice The live contracts below the approved factory `root`.
     function treeSizeOf(address root) external view returns (uint256);
 
-    /// @notice The most live contracts one approved factory's tree can hold.
-    function MAX_TREE_SIZE() external view returns (uint256);
+    /// @notice Whether Fhenix suspended the approved factory `factory`. While suspended, its tree
+    ///         can register nothing.
+    function isSuspended(address factory) external view returns (bool);
 
     /// @notice The most levels below an approved factory.
     function MAX_DEPTH() external view returns (uint256);

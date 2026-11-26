@@ -226,6 +226,27 @@ contract FactoryRegistryDeepTreeGas is RegistryGasBase {
     }
 }
 
+/// @dev One batch of the suspend path: the size the revoke task sends per transaction.
+contract FactoryRegistrySuspendGas is RegistryGasBase {
+    function workersEach() internal pure override returns (uint256) {
+        return 1_400;
+    }
+
+    function test_suspend_batch_1500() public {
+        address[] memory batch = new address[](1_400);
+        batch[0] = F;
+        for (uint256 i = 1; i < 1_400; i++) batch[i] = addr(i);
+        uint256 g = gasleft();
+        reg.suspend(F, batch);
+        uint256 txGas = g - gasleft() + TX_BASE + 1_400 * 368; // calldata: 20 non-zero + 12 zero bytes each
+        console.log("suspend a batch of 1,400: tx gas", txGas);
+        console.log("  per contract", txGas / 1_400);
+        console.log("  room under the 2^24 cap", TX_CAP - txGas);
+        require(txGas < TX_CAP, "exceeds Ethereum's per-transaction gas cap");
+        require(!tm.accessList(addr(1_399)), "still listed");
+    }
+}
+
 contract FactoryRegistryFullTreeGas is RegistryGasBase {
     function workersEach() internal pure override returns (uint256) {
         return 500;

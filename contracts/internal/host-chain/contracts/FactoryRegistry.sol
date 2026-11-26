@@ -19,7 +19,7 @@ interface IAccessListView {
  * registered contracts; the TaskManager itself is unchanged and keeps checking its flat list. The
  * registry keeps the tree behind that list: each contract's parent, and each contract's direct
  * children. Both lists stay exact (removal is swap-and-pop), so a root's live count can go down
- * again, and an unregister never reads more than MAX_TREE_SIZE contracts.
+ * again. A tree too large to unregister in one transaction is cut off with suspend instead.
  *
  * Roles, rated by worst case, as in the TaskManager:
  *   DEFAULT_ADMIN_ROLE     everything; changes only through a delayed two-step transfer.
@@ -36,26 +36,28 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
 
     /// @inheritdoc IFactoryRegistry
     uint256 public constant MAX_DEPTH = 8;
-    /// @inheritdoc IFactoryRegistry
-    /// @dev Sized so that unregistering a full tree stays well under Ethereum's 2^24 per-transaction
-    ///      gas cap (EIP-7825): about 10.3M gas measured for 500 flat, 11.4M for the worst shape
-    ///      (62 chains of depth 8). See test/foundry.
-    uint256 public constant MAX_TREE_SIZE = 500;
 
     /// @notice A factory was approved as the root of a new tree.
     event FactoryApproved(address indexed factory);
     /// @notice The registry now writes to `current` instead of `previous`.
     event TaskManagerSet(address indexed previous, address indexed current);
+    /// @notice `factory`'s tree can register nothing until resume.
+    event FactorySuspended(address indexed factory, address indexed caller);
+    /// @notice `factory`'s tree can register again. Its contracts get access back only when re-listed.
+    event FactoryResumed(address indexed factory, address indexed caller);
 
     /// @notice adopt() or adoptFactories() got an address that is not on the TaskManager list.
     error MustBeOnAccessList();
+    /// @notice suspend() got an address that is not the given factory or below it.
+    error NotUnderFactory();
 
-    /// @dev 27 bytes, one storage slot.
+    /// @dev 28 bytes, one storage slot.
     struct Node {
         address parent; // zero: not registered; this registry: an approved factory (a root)
         uint8 depth; // levels below the root
         uint32 index; // position in the parent's child list, for swap-and-pop
         uint16 treeSize; // live contracts below a root; unused on other nodes
+        bool suspended; // on a root: its tree can register nothing; unused on other nodes
     }
 
     /// @custom:storage-location erc7201:cofhe.storage.FactoryRegistry
@@ -129,8 +131,9 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
 
         bool isRoot = t.parent == address(this);
         address root = isRoot ? target : _rootOf(t.parent);
-        // A subtree is never larger than its root's live count, so no counting pass is needed.
-        address[] memory removed = new address[](isRoot ? uint256(t.treeSize) + 1 : $.nodes[root].treeSize);
+        // Memory cost grows with the square of the array size, so a branch is counted first rather than
+        // sized by its whole tree. The count's reads make the collect pass's reads warm.
+        address[] memory removed = new address[](isRoot ? uint256(t.treeSize) + 1 : _count(target));
 
         if (!isRoot) _removeFromParent(t.parent, t.index);
         uint256 count = _collect(target, removed, 0);
@@ -142,6 +145,57 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
 
         $.taskManager.removeFromAccessList(removed);
         emit Unregistered(target, msg.sender, count);
+    }
+
+    /// @notice Stops `factory`'s tree from registering and takes `accounts` off the TaskManager list.
+    ///         Their registry entries stay, so a resume plus re-listing restores the tree as it was.
+    /// @dev    For a tree too large to unregister in one transaction: the first call closes
+    ///         registration, and later calls take the rest off the list in batches. `accounts` may
+    ///         include the factory itself.
+    function suspend(address factory, address[] calldata accounts) external onlyRole(REVOKER_ROLE) {
+        RegistryStorage storage $ = _s();
+        Node storage f = $.nodes[factory];
+        if (f.parent != address(this)) revert NotRegistered();
+        if (!f.suspended) {
+            f.suspended = true;
+            emit FactorySuspended(factory, msg.sender);
+        }
+        for (uint256 i = 0; i < accounts.length; i++) {
+            // Keeps a revoker key to the trees: entries Fhenix listed by hand are not its to remove.
+            if (_rootOf(accounts[i]) != factory) revert NotUnderFactory();
+        }
+        $.taskManager.removeFromAccessList(accounts);
+    }
+
+    /// @notice Lets `factory`'s tree register again. Suspended contracts stay off the list until
+    ///         Fhenix adds them back.
+    /// @dev    FACTORY_APPROVER_ROLE, not REVOKER_ROLE: reopening gives power back.
+    function resume(address factory) external onlyRole(FACTORY_APPROVER_ROLE) {
+        Node storage f = _s().nodes[factory];
+        if (f.parent != address(this)) revert NotRegistered();
+        f.suspended = false;
+        emit FactoryResumed(factory, msg.sender);
+    }
+
+    /// @inheritdoc IFactoryRegistry
+    function isSuspended(address factory) external view returns (bool) {
+        return _s().nodes[factory].suspended;
+    }
+
+    /// @notice The number of contracts registered directly below `node`.
+    function childCount(address node) external view returns (uint256) {
+        return _s().childrenOf[node].length;
+    }
+
+    /// @notice Up to `count` of `node`'s direct children, from position `start`. Paged, so off-chain
+    ///         tooling can walk a tree of any size within an RPC's eth_call gas limit.
+    function childrenOf(address node, uint256 start, uint256 count) external view returns (address[] memory page) {
+        address[] storage list = _s().childrenOf[node];
+        uint256 end = list.length;
+        if (start >= end) return page;
+        if (count < end - start) end = start + count;
+        page = new address[](end - start);
+        for (uint256 i = start; i < end; i++) page[i - start] = list[i];
     }
 
     /// @inheritdoc IFactoryRegistry
@@ -169,7 +223,7 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
 
     function _makeRoot(address account, bool listed) private {
         _checkNewNode(account, listed);
-        _s().nodes[account] = Node({parent: address(this), depth: 0, index: 0, treeSize: 0});
+        _s().nodes[account] = Node({parent: address(this), depth: 0, index: 0, treeSize: 0, suspended: false});
         emit FactoryApproved(account);
     }
 
@@ -184,8 +238,10 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
 
         address root = _rootOf(parent);
         Node storage rootNode = $.nodes[root];
+        if (rootNode.suspended) revert FactoryIsSuspended();
         uint256 size = rootNode.treeSize + children.length;
-        if (size > MAX_TREE_SIZE) revert TreeFull();
+        // The only size limit: treeSize must not wrap.
+        if (size > type(uint16).max) revert TreeFull();
         rootNode.treeSize = uint16(size);
 
         address[] storage list = $.childrenOf[parent];
@@ -193,7 +249,7 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
         for (uint256 i = 0; i < children.length; i++) {
             address child = children[i];
             _checkNewNode(child, listed);
-            $.nodes[child] = Node({parent: parent, depth: depth, index: uint32(list.length), treeSize: 0});
+            $.nodes[child] = Node({parent: parent, depth: depth, index: uint32(list.length), treeSize: 0, suspended: false});
             list.push(child);
             emit Registered(child, parent, root);
         }
@@ -245,6 +301,12 @@ contract FactoryRegistry is IFactoryRegistry, UUPSUpgradeable, AccessControlDefa
             $.nodes[moved].index = index;
         }
         list.pop();
+    }
+
+    function _count(address node) private view returns (uint256 n) {
+        address[] storage kids = _s().childrenOf[node];
+        n = 1;
+        for (uint256 i = 0; i < kids.length; i++) n += _count(kids[i]);
     }
 
     /// @dev Deletes the lists of every removed contract, so an address registered again later
